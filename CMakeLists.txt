@@ -24,6 +24,10 @@ qt_add_executable (ClarusCAD
     ${SRC_DIR}/model/Point.cpp
     ${SRC_DIR}/model/Scene.h
     ${SRC_DIR}/model/Scene.cpp
+    ${SRC_DIR}/model/Segment.h
+    ${SRC_DIR}/model/Segment.cpp
+    ${SRC_DIR}/view/LinePropertiesWidget.h
+    ${SRC_DIR}/view/LinePropertiesWidget.cpp
 )
 
 #директории с заголовочными файлами
