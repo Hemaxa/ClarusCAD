@@ -2,15 +2,17 @@
 #include "ViewportWidget.h"
 #include "Scene.h"
 #include "LinePropertiesWidget.h"
+#include "ToolbarPanel.h" // Подключаем новую панель
+#include "LineCreationTool.h" // Подключаем инструмент
 
 #include <QDockWidget>
 #include <QListWidget>
-#include <QLabel>
 #include <QToolBar>
 #include <QAction>
+#include <QButtonGroup>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), m_currentTool(nullptr)
 {
     setWindowTitle("ClarusCAD");
     resize(1280, 720);
@@ -22,26 +24,21 @@ MainWindow::MainWindow(QWidget *parent)
     m_viewportWidget = new ViewportWidget();
     m_viewportWidget->setScene(m_scene);
     m_sceneObjectsList = new QListWidget();
-
-    // Создаем наш новый виджет свойств
     m_propertiesWidget = new LinePropertiesWidget();
-    m_bottomRightWidget = new QLabel("Эта область пока свободна");
+    m_toolbarPanel = new ToolbarPanel(); // Создаем панель
 
     // Создаем док-виджеты
     createDockWindows();
 
-    // Создаем панель инструментов (Toolbar)
-    QToolBar* mainToolBar = new QToolBar("Инструменты", this);
-    addToolBar(mainToolBar);
+    // Создаем инструменты
+    m_lineCreationTool = new LineCreationTool(this);
 
-    // Добавляем действие (кнопку) для создания отрезка
-    QAction* createLineAction = new QAction("Создать отрезок", this);
-    // В будущем сюда можно добавить иконку: createLineAction->setIcon(...)
-    mainToolBar->addAction(createLineAction);
+    // Активируем инструмент по умолчанию
+    activateLineCreationTool();
 
     // Соединяем сигналы и слоты
-    connect(createLineAction, &QAction::triggered, this, &MainWindow::showLineCreationTool);
     connect(m_propertiesWidget, &LinePropertiesWidget::createSegmentRequested, this, &MainWindow::handleCreateSegment);
+    connect(m_toolbarPanel, &ToolbarPanel::createLineToolActivated, this, &MainWindow::activateLineCreationTool);
 }
 
 MainWindow::~MainWindow() {
@@ -50,7 +47,6 @@ MainWindow::~MainWindow() {
 
 void MainWindow::createDockWindows()
 {
-    // Убираем центральный виджет, чтобы все пространство делили доки
     setCentralWidget(nullptr);
 
     QDockWidget *viewportDock = new QDockWidget("Рабочая область", this);
@@ -65,34 +61,29 @@ void MainWindow::createDockWindows()
     propertiesDock->setWidget(m_propertiesWidget);
     addDockWidget(Qt::LeftDockWidgetArea, propertiesDock);
 
-    QDockWidget *bottomRightDock = new QDockWidget("Дополнительно", this);
-    bottomRightDock->setWidget(m_bottomRightWidget);
-    addDockWidget(Qt::RightDockWidgetArea, bottomRightDock);
+    // Заменяем правый нижний виджет на панель инструментов
+    QDockWidget *toolbarDock = new QDockWidget("Инструменты", this);
+    toolbarDock->setWidget(m_toolbarPanel);
+    addDockWidget(Qt::RightDockWidgetArea, toolbarDock);
 
-    // Теперь "склеим" их, чтобы получить сетку 2x2
     splitDockWidget(viewportDock, propertiesDock, Qt::Vertical);
-    splitDockWidget(sceneListDock, bottomRightDock, Qt::Vertical);
+    splitDockWidget(sceneListDock, toolbarDock, Qt::Vertical);
 }
 
 void MainWindow::handleCreateSegment(const Point& start, const Point& end)
 {
-    // 1. Создаем объект отрезка и добавляем его в сцену
     Segment segment(start, end);
     m_scene->addSegment(segment);
 
-    // 2. Обновляем список объектов на сцене
     m_sceneObjectsList->addItem(QString("Отрезок (%1, %2) - (%3, %4)")
                                     .arg(start.x()).arg(start.y()).arg(end.x()).arg(end.y()));
-
-    // 3. Перерисовываем рабочую область, чтобы увидеть результат
     m_viewportWidget->update();
 }
 
-void MainWindow::showLineCreationTool()
+void MainWindow::activateLineCreationTool()
 {
-    // Эта функция может быть сложнее в будущем
-    // Например, она может менять видимость разных виджетов свойств.
-    // Пока просто убедимся, что док-виджет с параметрами виден.
+    m_currentTool = m_lineCreationTool;
+    m_viewportWidget->setActiveTool(m_currentTool);
+    // Показываем виджет свойств для линии, если он был скрыт
     m_propertiesWidget->parentWidget()->show();
-    m_propertiesWidget->parentWidget()->raise(); // И поднимаем его наверх
 }

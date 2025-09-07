@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.19)
 project(ClarusCAD VERSION 1.0 LANGUAGES CXX)
 
 #определение используемых пакетов
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Gui)
 
 qt_standard_project_setup()
 
@@ -13,33 +13,47 @@ qt_standard_project_setup()
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 #обозначение исходных файлов
-qt_add_executable (ClarusCAD
-    WIN32 MACOSX_BUNDLE
+qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/Main.cpp
-    ${SRC_DIR}/view/MainWindow.cpp
+
+    #view
     ${SRC_DIR}/view/MainWindow.h
+    ${SRC_DIR}/view/MainWindow.cpp
     ${SRC_DIR}/view/ViewportWidget.h
     ${SRC_DIR}/view/ViewportWidget.cpp
-    ${SRC_DIR}/model/Point.h
-    ${SRC_DIR}/model/Point.cpp
-    ${SRC_DIR}/model/Scene.h
-    ${SRC_DIR}/model/Scene.cpp
-    ${SRC_DIR}/model/Segment.h
-    ${SRC_DIR}/model/Segment.cpp
     ${SRC_DIR}/view/LinePropertiesWidget.h
     ${SRC_DIR}/view/LinePropertiesWidget.cpp
+    ${SRC_DIR}/view/ToolbarPanel.h
+    ${SRC_DIR}/view/ToolbarPanel.cpp
+
+    #model
+    ${SRC_DIR}/model/Scene.h
+    ${SRC_DIR}/model/Scene.cpp
+    ${SRC_DIR}/model/BasePrimitive.h
+    ${SRC_DIR}/model/primitives/Point.h
+    ${SRC_DIR}/model/primitives/Point.cpp
+    ${SRC_DIR}/model/primitives/Segment.h
+    ${SRC_DIR}/model/primitives/Segment.cpp
+
+    #controller
+    ${SRC_DIR}/controller/BaseTool.h
+    ${SRC_DIR}/controller/tools/LineCreationTool.h
+    ${SRC_DIR}/controller/tools/LineCreationTool.cpp
 )
 
 #директории с заголовочными файлами
 target_include_directories(ClarusCAD PRIVATE
     ${SRC_DIR}/controller
+    ${SRC_DIR}/controller/tools
     ${SRC_DIR}/model
+    ${SRC_DIR}/model/primitives
     ${SRC_DIR}/view
 )
 
 #подключение необходимых библиотек
 target_link_libraries(ClarusCAD PRIVATE
     Qt::Core
+    Qt::Gui
     Qt::Widgets
 )
 

@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class Scene;
+class BaseTool;
 
 class ViewportWidget : public QWidget
 {
@@ -11,10 +12,15 @@ class ViewportWidget : public QWidget
 public:
     explicit ViewportWidget(QWidget *parent = nullptr);
     void setScene(Scene* scene);
-
-private:
-    Scene* m_scene = nullptr;
+    void setActiveTool(BaseTool* tool);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
+private:
+    Scene* m_scene;
+    BaseTool* m_activeTool;
 };

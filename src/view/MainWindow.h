@@ -1,13 +1,14 @@
 #pragma once
 
 #include <QMainWindow>
-
 #include "Point.h"
 
 class ViewportWidget;
 class Scene;
 class QListWidget;
 class LinePropertiesWidget;
+class BaseTool;
+class ToolbarPanel;
 
 class MainWindow : public QMainWindow
 {
@@ -19,7 +20,7 @@ public:
 
 private slots:
     void handleCreateSegment(const Point& start, const Point& end);
-    void showLineCreationTool();
+    void activateLineCreationTool();
 
 private:
     void createDockWindows();
@@ -28,5 +29,9 @@ private:
     ViewportWidget* m_viewportWidget;
     QListWidget* m_sceneObjectsList;
     LinePropertiesWidget* m_propertiesWidget;
-    QWidget* m_bottomRightWidget;
+    ToolbarPanel* m_toolbarPanel; // Новая панель инструментов
+
+    // Инструменты
+    BaseTool* m_currentTool;
+    BaseTool* m_lineCreationTool;
 };

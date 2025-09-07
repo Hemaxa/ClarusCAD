@@ -1,6 +1,8 @@
 #pragma once
 
-class Point
+#include "BasePrimitive.h"
+
+class Point : public BasePrimitive
 {
 
 public:
@@ -11,6 +13,8 @@ public:
 
     double y() const;
     void setY(double y);
+
+    PrimitiveType getType() const override { return PrimitiveType::Point; }
 
 private:
     double m_x;
