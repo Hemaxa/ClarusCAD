@@ -1,25 +1,42 @@
+#определение минимальной версии CMake
 cmake_minimum_required(VERSION 3.19)
-project(ClarusCAD LANGUAGES CXX)
 
+#определение версии проекта
+project(ClarusCAD VERSION 1.0 LANGUAGES CXX)
+
+#определение используемых пакетов
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
 
 qt_standard_project_setup()
 
+#создание переменной для src директории
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-qt_add_executable(ClarusCAD
+#обозначение исходных файлов
+qt_add_executable (ClarusCAD
     WIN32 MACOSX_BUNDLE
-    src/Main.cpp
-    src/view/MainWindow.cpp
-    src/view/MainWindow.h
-    src/view/ViewportWidget.h
-    src/view/ViewportWidget.cpp
+    ${SRC_DIR}/Main.cpp
+    ${SRC_DIR}/view/MainWindow.cpp
+    ${SRC_DIR}/view/MainWindow.h
+    ${SRC_DIR}/view/ViewportWidget.h
+    ${SRC_DIR}/view/ViewportWidget.cpp
+    ${SRC_DIR}/model/Point.h
+    ${SRC_DIR}/model/Point.cpp
+    ${SRC_DIR}/model/Scene.h
+    ${SRC_DIR}/model/Scene.cpp
 )
 
-target_link_libraries(ClarusCAD
-    PRIVATE
-        Qt::Core
-        Qt::Widgets
+#директории с заголовочными файлами
+target_include_directories(ClarusCAD PRIVATE
+    ${SRC_DIR}/controller
+    ${SRC_DIR}/model
+    ${SRC_DIR}/view
+)
+
+#подключение необходимых библиотек
+target_link_libraries(ClarusCAD PRIVATE
+    Qt::Core
+    Qt::Widgets
 )
 
 include(GNUInstallDirs)

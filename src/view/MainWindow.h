@@ -1,7 +1,9 @@
 #pragma once
+
 #include <QMainWindow>
 
 class ViewportWidget;
+class Scene;
 
 class MainWindow : public QMainWindow
 {
@@ -13,4 +15,5 @@ public:
 
 private:
     ViewportWidget* m_viewportWidget;
+    Scene* m_scene;
 };
