@@ -1,37 +1,56 @@
 #pragma once
-
 #include <QMainWindow>
-#include "Point.h"
+#include <memory>
+#include "PointCreationPrimitive.h"
 
-class ViewportWidget;
+// Предварительные объявления всех классов
 class Scene;
-class QListWidget;
-class LinePropertiesWidget;
 class BaseTool;
-class ToolbarPanel;
+class ViewportPanelWidget;
+class SegmentCreationTool;
+class BasePrimitive;
+class ToolbarPanelWidget;
+class PropertiesPanelWidget;
+class SceneObjectsPanelWidget;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
+public slots:
+    // Слот для создания отрезка из панели свойств
+    void handleCreateSegmentFromProperties(const PointCreationPrimitive& start, const PointCreationPrimitive& end);
+
 private slots:
-    void handleCreateSegment(const Point& start, const Point& end);
-    void activateLineCreationTool();
+    // Слот для активации инструмента
+    void activateSegmentCreationTool();
+    // Слот для добавления примитива в сцену (из любого источника)
+    void addPrimitiveToScene(BasePrimitive* primitive);
+
+signals:
+    // Сигнал, который сообщает панелям, что сцена изменилась
+    void sceneChanged(const Scene* scene);
+    // Сигнал для будущего: сообщает, что объект выбран
+    void objectSelected(BasePrimitive* primitive);
 
 private:
+    void createTools();
     void createDockWindows();
+    void createConnections();
 
     Scene* m_scene;
-    ViewportWidget* m_viewportWidget;
-    QListWidget* m_sceneObjectsList;
-    LinePropertiesWidget* m_propertiesWidget;
-    ToolbarPanel* m_toolbarPanel; // Новая панель инструментов
+    BaseTool* m_currentTool;
 
     // Инструменты
-    BaseTool* m_currentTool;
-    BaseTool* m_lineCreationTool;
+    SegmentCreationTool* m_segmentCreationTool;
+
+    // Панели
+    ViewportPanelWidget* m_viewportPanelWidget;
+    ToolbarPanelWidget* m_toolbarPanel;
+    PropertiesPanelWidget* m_propertiesPanel;
+    SceneObjectsPanelWidget* m_sceneObjectsPanel;
 };

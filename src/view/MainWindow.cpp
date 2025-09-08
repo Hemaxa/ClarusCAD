@@ -1,17 +1,17 @@
 #include "MainWindow.h"
-#include "ViewportWidget.h"
 #include "Scene.h"
-#include "LinePropertiesWidget.h"
-#include "ToolbarPanel.h" // Подключаем новую панель
-#include "LineCreationTool.h" // Подключаем инструмент
+#include "SegmentCreationTool.h"
+
+// ГЛАВНОЕ ИСПРАВЛЕНИЕ: Убедитесь, что все эти #include на месте.
+// Компилятор должен "видеть" чертежи всех классов, которые вы используете.
+#include "ViewportPanelWidget.h"
+#include "ToolbarPanelWidget.h"
+#include "PropertiesPanelWidget.h"
+#include "SceneObjectsPanelWidget.h"
 
 #include <QDockWidget>
-#include <QListWidget>
-#include <QToolBar>
-#include <QAction>
-#include <QButtonGroup>
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), m_currentTool(nullptr)
 {
     setWindowTitle("ClarusCAD");
@@ -20,70 +20,79 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_scene = new Scene();
 
-    // Создаем виджеты
-    m_viewportWidget = new ViewportWidget();
-    m_viewportWidget->setScene(m_scene);
-    m_sceneObjectsList = new QListWidget();
-    m_propertiesWidget = new LinePropertiesWidget();
-    m_toolbarPanel = new ToolbarPanel(); // Создаем панель
-
-    // Создаем док-виджеты
+    // ПЕРЕНЕСЕНО: Лучше сначала создать инструменты, потом окна, потом соединения
+    createTools();
     createDockWindows();
+    createConnections();
 
-    // Создаем инструменты
-    m_lineCreationTool = new LineCreationTool(this);
-
-    // Активируем инструмент по умолчанию
-    activateLineCreationTool();
-
-    // Соединяем сигналы и слоты
-    connect(m_propertiesWidget, &LinePropertiesWidget::createSegmentRequested, this, &MainWindow::handleCreateSegment);
-    connect(m_toolbarPanel, &ToolbarPanel::createLineToolActivated, this, &MainWindow::activateLineCreationTool);
+    activateSegmentCreationTool();
 }
 
-MainWindow::~MainWindow() {
+MainWindow::~MainWindow()
+{
     delete m_scene;
+}
+
+// ДОБАВЛЕНО: Отдельный метод для создания инструментов
+void MainWindow::createTools()
+{
+    m_segmentCreationTool = new SegmentCreationTool(this);
 }
 
 void MainWindow::createDockWindows()
 {
-    setCentralWidget(nullptr);
+    // Viewport
+    m_viewportPanelWidget = new ViewportPanelWidget();
+    m_viewportPanelWidget->setScene(m_scene);
+    setCentralWidget(m_viewportPanelWidget);
 
-    QDockWidget *viewportDock = new QDockWidget("Рабочая область", this);
-    viewportDock->setWidget(m_viewportWidget);
-    addDockWidget(Qt::LeftDockWidgetArea, viewportDock);
+    // Панели
+    m_toolbarPanel = new ToolbarPanelWidget("Инструменты", this);
+    m_propertiesPanel = new PropertiesPanelWidget("Свойства", this);
+    m_sceneObjectsPanel = new SceneObjectsPanelWidget("Объекты на сцене", this);
 
-    QDockWidget *sceneListDock = new QDockWidget("Объекты на сцене", this);
-    sceneListDock->setWidget(m_sceneObjectsList);
-    addDockWidget(Qt::RightDockWidgetArea, sceneListDock);
-
-    QDockWidget *propertiesDock = new QDockWidget("Параметры объекта", this);
-    propertiesDock->setWidget(m_propertiesWidget);
-    addDockWidget(Qt::LeftDockWidgetArea, propertiesDock);
-
-    // Заменяем правый нижний виджет на панель инструментов
-    QDockWidget *toolbarDock = new QDockWidget("Инструменты", this);
-    toolbarDock->setWidget(m_toolbarPanel);
-    addDockWidget(Qt::RightDockWidgetArea, toolbarDock);
-
-    splitDockWidget(viewportDock, propertiesDock, Qt::Vertical);
-    splitDockWidget(sceneListDock, toolbarDock, Qt::Vertical);
+    addDockWidget(Qt::LeftDockWidgetArea, m_toolbarPanel);
+    addDockWidget(Qt::LeftDockWidgetArea, m_propertiesPanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_sceneObjectsPanel);
 }
 
-void MainWindow::handleCreateSegment(const Point& start, const Point& end)
+// ДОБАВЛЕНО: Отдельный метод для всех соединений
+void MainWindow::createConnections()
 {
-    Segment segment(start, end);
-    m_scene->addSegment(segment);
+    // Инструмент "Отрезок" сообщает, что создал примитив
+    connect(m_segmentCreationTool, &SegmentCreationTool::primitiveCreated, this, &MainWindow::addPrimitiveToScene);
 
-    m_sceneObjectsList->addItem(QString("Отрезок (%1, %2) - (%3, %4)")
-                                    .arg(start.x()).arg(start.y()).arg(end.x()).arg(end.y()));
-    m_viewportWidget->update();
+    // Кнопка на панели инструментов сообщает, что нужно активировать инструмент
+    connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
+
+    // Панель свойств сообщает, что нужно создать отрезок по координатам
+    connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::handleCreateSegmentFromProperties);
+
+    // Главное окно сообщает панели объектов, что сцена изменилась и нужно обновиться
+    connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 }
 
-void MainWindow::activateLineCreationTool()
+void MainWindow::activateSegmentCreationTool()
 {
-    m_currentTool = m_lineCreationTool;
-    m_viewportWidget->setActiveTool(m_currentTool);
-    // Показываем виджет свойств для линии, если он был скрыт
-    m_propertiesWidget->parentWidget()->show();
+    m_currentTool = m_segmentCreationTool;
+    m_viewportPanelWidget->setActiveTool(m_currentTool);
+}
+
+void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
+{
+    if (primitive) {
+        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive));
+        m_viewportPanelWidget->update();
+
+        // ИСПРАВЛЕНИЕ: Нужно отправлять сигнал, чтобы список объектов обновился
+        emit sceneChanged(m_scene);
+
+        emit objectSelected(primitive);
+    }
+}
+
+void MainWindow::handleCreateSegmentFromProperties(const PointCreationPrimitive& start, const PointCreationPrimitive& end)
+{
+    auto segment = std::make_unique<SegmentCreationPrimitive>(start, end);
+    addPrimitiveToScene(segment.release());
 }

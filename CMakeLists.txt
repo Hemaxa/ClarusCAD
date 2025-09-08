@@ -16,38 +16,55 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/Main.cpp
 
-    #view
-    ${SRC_DIR}/view/MainWindow.h
-    ${SRC_DIR}/view/MainWindow.cpp
-    ${SRC_DIR}/view/ViewportWidget.h
-    ${SRC_DIR}/view/ViewportWidget.cpp
-    ${SRC_DIR}/view/LinePropertiesWidget.h
-    ${SRC_DIR}/view/LinePropertiesWidget.cpp
-    ${SRC_DIR}/view/ToolbarPanel.h
-    ${SRC_DIR}/view/ToolbarPanel.cpp
-
-    #model
-    ${SRC_DIR}/model/Scene.h
-    ${SRC_DIR}/model/Scene.cpp
-    ${SRC_DIR}/model/BasePrimitive.h
-    ${SRC_DIR}/model/primitives/Point.h
-    ${SRC_DIR}/model/primitives/Point.cpp
-    ${SRC_DIR}/model/primitives/Segment.h
-    ${SRC_DIR}/model/primitives/Segment.cpp
-
     #controller
     ${SRC_DIR}/controller/BaseTool.h
-    ${SRC_DIR}/controller/tools/LineCreationTool.h
-    ${SRC_DIR}/controller/tools/LineCreationTool.cpp
+
+    ${SRC_DIR}/controller/tools/SegmentCreationTool.h
+    ${SRC_DIR}/controller/tools/SegmentCreationTool.cpp
+
+    #model
+    ${SRC_DIR}/model/BasePrimitive.h
+    ${SRC_DIR}/model/Scene.h
+    ${SRC_DIR}/model/Scene.cpp
+
+    ${SRC_DIR}/model/primitives/PointCreationPrimitive.h
+    ${SRC_DIR}/model/primitives/PointCreationPrimitive.cpp
+    ${SRC_DIR}/model/primitives/SegmentCreationPrimitive.h
+    ${SRC_DIR}/model/primitives/SegmentCreationPrimitive.cpp
+
+    #view
+    ${SRC_DIR}/view/BaseDockWidget.h
+    ${SRC_DIR}/view/BasePropertiesWidget.h
+    ${SRC_DIR}/view/MainWindow.h
+    ${SRC_DIR}/view/MainWindow.cpp
+
+    ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.h
+    ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.cpp
+    ${SRC_DIR}/view/dock-widgets/SceneObjectsPanelWidget.h
+    ${SRC_DIR}/view/dock-widgets/SceneObjectsPanelWidget.cpp
+    ${SRC_DIR}/view/dock-widgets/ToolbarPanelWidget.h
+    ${SRC_DIR}/view/dock-widgets/ToolbarPanelWidget.cpp
+    ${SRC_DIR}/view/dock-widgets/ViewportPanelWidget.h
+    ${SRC_DIR}/view/dock-widgets/ViewportPanelWidget.cpp
+
+    ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.h
+    ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.cpp
 )
 
 #директории с заголовочными файлами
 target_include_directories(ClarusCAD PRIVATE
+    #controller
     ${SRC_DIR}/controller
     ${SRC_DIR}/controller/tools
+
+    #model
     ${SRC_DIR}/model
     ${SRC_DIR}/model/primitives
+
+    #view
     ${SRC_DIR}/view
+    ${SRC_DIR}/view/dock-widgets
+    ${SRC_DIR}/view/properities-widgets
 )
 
 #подключение необходимых библиотек

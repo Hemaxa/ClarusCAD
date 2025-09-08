@@ -2,19 +2,19 @@
 
 #include "BasePrimitive.h"
 
-class Point : public BasePrimitive
+class PointCreationPrimitive : public BasePrimitive
 {
 
 public:
-    Point(double x = 0.0, double y = 0.0);
+    PointCreationPrimitive(double x = 0.0, double y = 0.0);
+
+    PrimitiveType getType() const override { return PrimitiveType::Point; }
 
     double x() const;
     void setX(double x);
 
     double y() const;
     void setY(double y);
-
-    PrimitiveType getType() const override { return PrimitiveType::Point; }
 
 private:
     double m_x;

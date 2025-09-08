@@ -1,23 +1,21 @@
 #pragma once
 
-#include "Point.h"
-#include "Segment.h"
+#include "BasePrimitive.h"
+#include "PointCreationPrimitive.h"
+#include "SegmentCreationPrimitive.h"
 
 #include <vector>
+#include <memory>
+
 
 class Scene
 {
 
 public:
     Scene();
-
-    void addPoint(const Point& point);
-    const std::vector<Point>& getPoints() const;
-
-    void addSegment(const Segment& segment);
-    const std::vector<Segment>& getSegments() const;
+    void addPrimitive(std::unique_ptr<BasePrimitive> primitive);
+    const std::vector<std::unique_ptr<BasePrimitive>>& getPrimitives() const;
 
 private:
-    std::vector<Point> m_points;
-    std::vector<Segment> m_segments;
+    std::vector<std::unique_ptr<BasePrimitive>> m_primitives;
 };
