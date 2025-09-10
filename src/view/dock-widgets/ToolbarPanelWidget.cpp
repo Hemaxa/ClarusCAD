@@ -6,8 +6,7 @@
 ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent)
     : BaseDockWidget(title, parent)
 {
-    auto* panel = new QWidget();
-    auto* layout = new QVBoxLayout(panel);
+    auto* layout = new QVBoxLayout(canvas());
     layout->setAlignment(Qt::AlignTop);
 
     auto* createSegmentBtn = new QToolButton();
@@ -18,5 +17,5 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent)
 
     connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
-    setWidget(panel);
+    setMinimumWidth(200);
 }

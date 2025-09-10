@@ -7,6 +7,7 @@ class QStackedWidget;
 class SegmentPropertiesWidget;
 class BasePrimitive;
 
+//наслдедуется от базового класса BaseDockWidget
 class PropertiesPanelWidget : public BaseDockWidget
 {
     Q_OBJECT
@@ -15,15 +16,20 @@ public:
     explicit PropertiesPanelWidget(const QString& title, QWidget* parent = nullptr);
 
 public slots:
-    // Слот, который решает, какую "начинку" показать
+    //слот, определяющий параметры какого объекта необходимо показать
     void showPropertiesFor(BasePrimitive* primitive);
 
+    //слот, показывающий пустые параметры при создании нового объекта
+    void showPropertiesFor(PrimitiveType type);
+
 signals:
-    // Сигнал, который отправляется наверх в MainWindow
+    //сигнал, информирующий MainWindow о создании объекта "Отрезок"
     void createSegmentRequested(const PointCreationPrimitive& start, const PointCreationPrimitive& end);
 
 private:
-    QStackedWidget* m_stack; // "Стопка" виджетов для переключения
-    SegmentPropertiesWidget* m_segmentProperties;
-    QWidget* m_emptyWidget; // Пустой виджет, когда ничего не выбрано
+    QStackedWidget* m_stack; //сама панель виджетов без содержимого
+
+    SegmentPropertiesWidget* m_segmentProperties; //виджет свойств объекта "Отрезок"
+
+    QWidget* m_emptyWidget; //пустой виджет
 };

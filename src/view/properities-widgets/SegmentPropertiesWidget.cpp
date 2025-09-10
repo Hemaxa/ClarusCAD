@@ -34,10 +34,17 @@ void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
 {
     m_currentSegment = dynamic_cast<SegmentCreationPrimitive*>(primitive);
     if (m_currentSegment) {
+        // Если передан существующий отрезок - показываем его координаты
         m_startXEdit->setText(QString::number(m_currentSegment->getStart().x()));
         m_startYEdit->setText(QString::number(m_currentSegment->getStart().y()));
         m_endXEdit->setText(QString::number(m_currentSegment->getEnd().x()));
         m_endYEdit->setText(QString::number(m_currentSegment->getEnd().y()));
+    } else {
+        // Если примитив не передан (инструмент только активирован) - сбрасываем на "0.0"
+        m_startXEdit->setText("0.0");
+        m_startYEdit->setText("0.0");
+        m_endXEdit->setText("0.0");
+        m_endYEdit->setText("0.0");
     }
 }
 

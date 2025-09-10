@@ -1,55 +1,67 @@
 #pragma once
-#include <QMainWindow>
-#include <memory>
+
 #include "PointCreationPrimitive.h"
 
-// Предварительные объявления всех классов
+#include <QMainWindow>
+#include <QShowEvent>
+
+//предварительные объявления всех классов
 class Scene;
-class BaseTool;
-class ViewportPanelWidget;
-class SegmentCreationTool;
 class BasePrimitive;
+class BaseTool;
+class SegmentCreationTool;
+class ViewportPanelWidget;
 class ToolbarPanelWidget;
 class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
 
+//QMainWindow - базовый шаблон Qt для создания главного окна
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
+    //конструктор и деструктор
     MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
 public slots:
-    // Слот для создания отрезка из панели свойств
+    //слот создания отрезка
     void handleCreateSegmentFromProperties(const PointCreationPrimitive& start, const PointCreationPrimitive& end);
 
 private slots:
-    // Слот для активации инструмента
+    //слот для активации инструмента создания отрезка
     void activateSegmentCreationTool();
-    // Слот для добавления примитива в сцену (из любого источника)
+
+    //слот добавления примитива в сцену
     void addPrimitiveToScene(BasePrimitive* primitive);
 
 signals:
-    // Сигнал, который сообщает панелям, что сцена изменилась
+    //сигнал, который сообщает панелям, что сцена изменилась
     void sceneChanged(const Scene* scene);
-    // Сигнал для будущего: сообщает, что объект выбран
+
+    //сигнал, который сообщает, что объект выбран
     void objectSelected(BasePrimitive* primitive);
 
+    //сигнал, который сообщает, что инструмент был активирован
+    void toolActivated(PrimitiveType type);
+
 private:
-    void createTools();
-    void createDockWindows();
-    void createConnections();
+    void createTools(); //метод создания инструментов
+    void createDockWindows(); //метод создания интерфейсных панелей
+    void createConnections(); //метод создания взаимодействий
+    void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
-    Scene* m_scene;
-    BaseTool* m_currentTool;
+    Scene* m_scene; //указатель на объект сцены
+    BaseTool* m_currentTool; //указатель на выбранный инструмент
 
-    // Инструменты
+    bool m_isInitialResizeDone = false;
+
+    //инструменты
     SegmentCreationTool* m_segmentCreationTool;
 
-    // Панели
-    ViewportPanelWidget* m_viewportPanelWidget;
+    //интерфейсные панели
+    ViewportPanelWidget* m_viewportPanel;
     ToolbarPanelWidget* m_toolbarPanel;
     PropertiesPanelWidget* m_propertiesPanel;
     SceneObjectsPanelWidget* m_sceneObjectsPanel;
