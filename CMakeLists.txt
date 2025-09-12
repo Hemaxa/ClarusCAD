@@ -5,12 +5,18 @@ cmake_minimum_required(VERSION 3.19)
 project(ClarusCAD VERSION 1.0 LANGUAGES CXX)
 
 #определение используемых пакетов
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Gui)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Gui Svg)
 
 qt_standard_project_setup()
 
-#создание переменной для src директории
+#создание переменной для src и res директорий
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
+
+#добавление файла ресурсов
+qt_add_resources(RESOURCES
+    ${RES_DIR}/resources.qrc
+)
 
 #обозначение исходных файлов
 qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
@@ -39,6 +45,8 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/view/BasePropertiesWidget.h
     ${SRC_DIR}/view/MainWindow.h
     ${SRC_DIR}/view/MainWindow.cpp
+    ${SRC_DIR}/view/SettingsDialog.h
+    ${SRC_DIR}/view/SettingsDialog.cpp
 
     ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.h
     ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.cpp
@@ -52,6 +60,8 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.cpp
 )
+
+target_sources(ClarusCAD PRIVATE ${RESOURCES})
 
 #директории с заголовочными файлами
 target_include_directories(ClarusCAD PRIVATE
@@ -74,6 +84,7 @@ target_link_libraries(ClarusCAD PRIVATE
     Qt::Core
     Qt::Gui
     Qt::Widgets
+    Qt::Svg
 )
 
 include(GNUInstallDirs)

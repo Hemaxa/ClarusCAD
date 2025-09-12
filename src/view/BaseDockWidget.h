@@ -1,14 +1,18 @@
+//BaseDockWidget — базовый класс для всех остальных панелей в приложении
+//Предоставляет общую функциональность, которую наследуют дочерние классы
+
 #pragma once
 
 #include <QDockWidget>
 #include <QWidget>
 
-//QDockWidget - шаблон Qt для создания DockWidget (умеет перемещаться, стыковаться и пр.)
+//QDockWidget - шаблон Qt для создания DockWidget (умеет перемещаться, стыковаться, прикпепляться к краям и пр.)
 class BaseDockWidget : public QDockWidget
 {
     Q_OBJECT
 
 public:
+    //explicit запрещает неявное преобразование типов
     explicit BaseDockWidget(const QString& title, QWidget* parent = nullptr) : QDockWidget(title, parent)
     {
         //создание пустого универсального холста для окна

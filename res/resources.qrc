@@ -1,5 +1,8 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource prefix="/">
-    <file>themes/dark_green.qss</file>
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/segment.svg</file>
+    </qresource>
+    <qresource prefix="/themes">
+        <file>themes/ClarusCAD.qss</file>
     </qresource>
 </RCC>

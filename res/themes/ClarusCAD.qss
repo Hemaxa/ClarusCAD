@@ -1,0 +1,68 @@
+/* --- Общий стиль для всех виджетов --- */
+QWidget {
+    background-color: #2b2b2b; /* Темно-серый фон */
+    color: #f0f0f0; /* Светлый текст */
+    border: none;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* --- Стили для QMainWindow и QDockWidget --- */
+QMainWindow, QDockWidget {
+    background-color: #2b2b2b;
+}
+
+QDockWidget {
+    titlebar-close-icon: none; /* Скрываем стандартные иконки, если нужно */
+    titlebar-normal-icon: none;
+}
+
+QDockWidget::title {
+    background-color: #3c3c3c; /* Фон заголовка панели */
+    text-align: center;
+    padding: 4px;
+}
+
+/* --- Панель инструментов и кнопки --- */
+QToolButton {
+    background-color: transparent;
+    padding: 5px;
+    margin: 1px;
+    border-radius: 4px;
+}
+
+QToolButton:hover {
+    background-color: #4a4a4a; /* Затемнение при наведении */
+}
+
+QToolButton:checked {
+    background-color: #00ff7f; /* Ярко-зеленый акцент для активного инструмента */
+    border: 1px solid #00b359;
+}
+
+/* --- Список объектов --- */
+QListWidget {
+    background-color: #3c3c3c;
+    border-radius: 4px;
+}
+
+QListWidget::item:hover {
+    background-color: #4a4a4a;
+}
+
+QListWidget::item:selected {
+    background-color: #00ff7f; /* Акцентный цвет для выделенного объекта */
+    color: #1e1e1e; /* Темный текст на светлом фоне */
+}
+
+/* --- Разделители панелей (сплиттеры) --- */
+QSplitter::handle {
+    background-color: #3c3c3c;
+}
+
+QSplitter::handle:hover {
+    background-color: #00ff7f; /* Акцент при наведении на разделитель */
+}
+
+QSplitter::handle:pressed {
+    background-color: #00b359;
+}

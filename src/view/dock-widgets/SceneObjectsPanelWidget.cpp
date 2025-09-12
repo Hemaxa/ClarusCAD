@@ -5,14 +5,12 @@
 #include <QListWidget>
 #include <QVBoxLayout>
 
-SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* parent)
-    : BaseDockWidget(title, parent)
+SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
 {
     m_listWidget = new QListWidget();
 
-    // ‼️ ИЗМЕНЕНИЕ: Добавляем QListWidget на холст через компоновщик
     auto* layout = new QVBoxLayout(canvas());
-    layout->setContentsMargins(0, 0, 0, 0); // Убираем отступы
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(m_listWidget);
 
     connect(m_listWidget, &QListWidget::currentItemChanged, this, &SceneObjectsPanelWidget::onSelectionChanged);
