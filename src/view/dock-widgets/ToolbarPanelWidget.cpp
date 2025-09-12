@@ -7,15 +7,16 @@
 
 ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
 {
+    //вертикальный шаблон компоновки, объекты прижимаются к верху
     auto* layout = new QVBoxLayout(canvas());
     layout->setAlignment(Qt::AlignTop);
 
-    m_buttonGroup = new QButtonGroup(this);
+    m_buttonGroup = new QButtonGroup(this); //создание группы кнопок
     m_buttonGroup->setExclusive(true); //возможность выбора только одной кнопки
 
-    //создание и добавление кнопок
+    //создание и добавление кнопок в группу
     //текст описания, путь до иконки, горячая клавиша
-    auto* createSegmentBtn = createToolButton("Отрезок", ":/icons/icons/segment.svg", Qt::Key_S);
+    auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
 
     //подключение сигнала
     connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);

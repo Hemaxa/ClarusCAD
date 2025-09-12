@@ -7,47 +7,58 @@
 #include <QMouseEvent>
 #include <QEvent>
 
-ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent)
-    : BaseDockWidget(title, parent)
+ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
 {
-    // --- НОВАЯ ЛОГИКА ---
-
-    // Включаем отслеживание мыши для холста, а не для всей панели
+    //отслеживание мыши для canvas
     canvas()->setMouseTracking(true);
 
-    // Устанавливаем обработчик событий для холста с помощью лямбда-функции.
-    // Это позволяет нам "пробросить" события от холста к нашей панели.
+    //отправка информации о взаимодействии с canvas
     canvas()->installEventFilter(this);
 }
 
-// Переопределяем метод фильтра событий
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
-    // Убеждаемся, что событие пришло именно от нашего холста
+    //проверка, что событие пришло от холста
     if (obj == canvas()) {
         switch (event->type()) {
+        //перерисовка
         case QEvent::Paint:
-            // Если холст нужно перерисовать, вызываем нашу функцию отрисовки
+            //вызов функции перерисовки
             paintCanvas(static_cast<QPaintEvent*>(event));
-            return true; // Сообщаем, что мы обработали событие
+            return true; //событие обработано
 
+        //нажатие кнопки мыши
         case QEvent::MouseButtonPress: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+
+            //если выбран инструмент, он получает информацию о действие мыши
             if (m_activeTool) m_activeTool->onMousePress(mouseEvent, m_scene, this);
+
+            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
             update();
             return true;
         }
 
+        //перемещение мыши
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+
+            //если выбран инструмент, он получает информацию о действие мыши
             if (m_activeTool) m_activeTool->onMouseMove(mouseEvent, m_scene, this);
+
+            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
             update();
             return true;
         }
 
+        //отпускание кнопки мыши
         case QEvent::MouseButtonRelease: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+
+            //если выбран инструмент, он получает информацию о действие мыши
             if (m_activeTool) m_activeTool->onMouseRelease(mouseEvent, m_scene, this);
+
+            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
             update();
             return true;
         }
@@ -56,22 +67,23 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             break;
         }
     }
-    // Для всех остальных событий вызываем стандартный обработчик
+    //все остальные события используют стандартный обработчик
     return BaseDockWidget::eventFilter(obj, event);
 }
 
-
-// Эта функция теперь рисует НА ХОЛСТЕ
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    // Создаем QPainter для холста, а не для this
+    //создается QPainter для рисования на canvas
     QPainter painter(canvas());
+
+    //включение сглаживания для лучшего качества
     painter.setRenderHint(QPainter::Antialiasing);
 
+    //цвет кисти (В БУДУЩЕМ БУДЕТ ЗАВИСЕТЬ ОТ ТЕМЫ)
     painter.setBrush(QColor(45, 45, 45));
-    painter.drawRect(canvas()->rect()); // Рисуем в границах холста
+    painter.drawRect(canvas()->rect()); //отрисовка в границах холста
 
     if (!m_scene) return;
 
@@ -91,8 +103,9 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     }
 }
 
+//обновление содержимого
+void ViewportPanelWidget::update() { canvas()->update(); }
 
-// Методы-пробросы остаются простыми
+//сеттеры
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseTool* tool) { m_activeTool = tool; }
-void ViewportPanelWidget::update() { canvas()->update(); }

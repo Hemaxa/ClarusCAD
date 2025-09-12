@@ -1,5 +1,4 @@
 //BaseDockWidget — базовый класс для всех остальных панелей в приложении
-//Предоставляет общую функциональность, которую наследуют дочерние классы
 
 #pragma once
 
@@ -12,7 +11,7 @@ class BaseDockWidget : public QDockWidget
     Q_OBJECT
 
 public:
-    //explicit запрещает неявное преобразование типов
+    //explicit запрещает неявное преобразование типов для конструктора
     explicit BaseDockWidget(const QString& title, QWidget* parent = nullptr) : QDockWidget(title, parent)
     {
         //создание пустого универсального холста для окна
@@ -22,7 +21,7 @@ public:
         setWidget(m_canvas);
     }
 
-    //деструктор создается автоматически
+    //virtual означает, что деструктор создается автоматически из унаследованного класса
     virtual ~BaseDockWidget() = default;
 
 protected:

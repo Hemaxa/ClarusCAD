@@ -1,3 +1,5 @@
+//Main - точка входа в программу
+
 #include "MainWindow.h"
 
 #include <QApplication>

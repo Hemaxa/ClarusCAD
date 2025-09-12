@@ -1,29 +1,35 @@
+//SceneObjectsPanelWidget - панель объектов сцены
+
 #pragma once
+
 #include "BaseDockWidget.h"
 
 class QListWidget;
 class Scene;
 class BasePrimitive;
 
+//наслдедуется от базового класса BaseDockWidget
 class SceneObjectsPanelWidget : public BaseDockWidget
 {
     Q_OBJECT
 
 public:
+    //конструктор
     explicit SceneObjectsPanelWidget(const QString& title, QWidget* parent = nullptr);
 
 public slots:
+    //слот обновления списка объектов
     void updateView(const Scene* scene);
 
 signals:
-    // Сигнал, который отправляется, когда пользователь выбирает примитив в списке
+    //сигнал, информирующий о выборе объекта в списке
     void primitiveSelected(BasePrimitive* primitive);
 
 private slots:
-    // Слот, который будет реагировать на изменение выбора в списке
+    //слот, реагирующий на изменение выбора в списке
     void onSelectionChanged();
 
 private:
-    QListWidget* m_listWidget;
-    const Scene* m_currentScene = nullptr;
+    QListWidget* m_listWidget; //список объектов в сцене
+    const Scene* m_currentScene = nullptr; //указатель на текущую сцену
 };

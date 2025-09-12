@@ -1,3 +1,5 @@
+//ViewportPanelWidget - панель окна просмотра сцены
+
 #pragma once
 
 #include "BaseDockWidget.h"
@@ -5,26 +7,23 @@
 class Scene;
 class BaseTool;
 
+//наслдедуется от базового класса BaseDockWidget
 class ViewportPanelWidget : public BaseDockWidget
 {
     Q_OBJECT
 
 public:
+    //конструктор
     explicit ViewportPanelWidget(const QString& title, QWidget* parent = nullptr);
 
-    void setScene(Scene* scene);
-    void setActiveTool(BaseTool* tool);
-    void update();
-
-    // Мы больше не переопределяем paintEvent и события мыши здесь
-    // Вместо этого мы будем обрабатывать их по-другому
+    void setScene(Scene* scene); //метод установки сцены для отрисовки
+    void setActiveTool(BaseTool* tool); //метод установки активного элемента
+    void update(); //метод перерисовки содержимого
 
 private:
-    // Эти поля теперь будут отвечать за данные для отрисовки на холсте
-    Scene* m_scene = nullptr;
-    BaseTool* m_activeTool = nullptr;
+    Scene* m_scene = nullptr; //указатель на сцену
+    BaseTool* m_activeTool = nullptr; //указатель на выбранный инструмент
 
-    // Метод для отрисовки, который будет вызываться событием
-    void paintCanvas(QPaintEvent* event);
-    bool eventFilter(QObject* obj, QEvent* event);
+    void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
+    bool eventFilter(QObject* obj, QEvent* event); //метод перехвата действий с холстом
 };

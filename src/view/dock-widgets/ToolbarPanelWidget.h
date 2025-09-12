@@ -9,6 +9,7 @@
 class QToolButton;
 class QButtonGroup;
 
+//наслдедуется от базового класса BaseDockWidget
 class ToolbarPanelWidget : public BaseDockWidget
 {
     Q_OBJECT

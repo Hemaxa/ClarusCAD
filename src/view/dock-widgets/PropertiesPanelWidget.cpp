@@ -18,9 +18,9 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_stack->addWidget(m_emptyWidget);
     m_stack->addWidget(m_segmentProperties);
 
-    auto* layout = new QVBoxLayout(canvas()); //вертикальное расположение параметров
+    auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
     layout->setContentsMargins(0, 0, 0, 0); //убирает отступы, чтобы занять всю допустимую область панели
-    layout->addWidget(m_stack); //добавление содержимого панели на холст
+    layout->addWidget(m_stack); //добавление содержимого панели в canvas
 
     //сигнал от инструмента "Отрезок" пересылается в MainWindow
     connect(m_segmentProperties, &SegmentPropertiesWidget::createSegmentRequested, this, &PropertiesPanelWidget::createSegmentRequested);
