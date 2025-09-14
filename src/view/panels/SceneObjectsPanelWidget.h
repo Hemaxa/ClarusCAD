@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include "BaseDockWidget.h"
+#include "BasePanelWidget.h"
 
 class QListWidget;
 class Scene;
 class BasePrimitive;
 
-//наслдедуется от базового класса BaseDockWidget
-class SceneObjectsPanelWidget : public BaseDockWidget
+//наслдедуется от базового класса BasePanelWidget
+class SceneObjectsPanelWidget : public BasePanelWidget
 {
     Q_OBJECT
 
@@ -18,7 +18,7 @@ public:
     explicit SceneObjectsPanelWidget(const QString& title, QWidget* parent = nullptr);
 
 public slots:
-    //слот обновления списка объектов
+    //слот обновления списка объектов (подключен к сигналу sceneChanged из MainWindow)
     void updateView(const Scene* scene);
 
 signals:

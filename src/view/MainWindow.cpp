@@ -1,5 +1,8 @@
 #include "MainWindow.h"
 #include "Scene.h"
+#include "BaseDrawingTool.h"
+#include "SegmentPrimitive.h"
+#include "SegmentDrawingTool.h"
 #include "SegmentCreationTool.h"
 #include "ViewportPanelWidget.h"
 #include "ToolbarPanelWidget.h"
@@ -8,8 +11,7 @@
 
 #include <QDockWidget>
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), m_currentTool(nullptr)
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
     //настройки окна приложения
     setWindowTitle("ClarusCAD");
@@ -19,9 +21,10 @@ MainWindow::MainWindow(QWidget* parent)
     //создание экземпляра сцены
     m_scene = new Scene();
 
-    //вызов методов создания интерфейса и связей
+    //вызов всех методов создания
     createTools();
-    createDockWindows();
+    createDrawingTools();
+    createPanelWindows();
     createConnections();
 }
 
@@ -35,7 +38,12 @@ void MainWindow::createTools()
     m_segmentCreationTool = new SegmentCreationTool(this);
 }
 
-void MainWindow::createDockWindows()
+void MainWindow::createDrawingTools()
+{
+    m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
+}
+
+void MainWindow::createPanelWindows()
 {
     //создание интерфейсных панелей
     m_viewportPanel = new ViewportPanelWidget("Рабочая область", this);
@@ -43,8 +51,9 @@ void MainWindow::createDockWindows()
     m_propertiesPanel = new PropertiesPanelWidget("Свойства", this);
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
 
-    //передача сцены в панель просмотра
+    //передача сцены и отрисовщиков в панель просмотра
     m_viewportPanel->setScene(m_scene);
+    m_viewportPanel->setDrawingTools(&m_drawingTools);
 
     //расстановка панелей интерфейса
     //левая колонка
@@ -62,49 +71,50 @@ void MainWindow::createDockWindows()
 
 void MainWindow::createConnections()
 {
-    //инструмент "Отрезок" сообщает, что создал примитив
-    connect(m_segmentCreationTool, &SegmentCreationTool::primitiveCreated, this, &MainWindow::addPrimitiveToScene);
+    //1) инструмент и панель свойств сообщают данные -> в главном окне вызывается слот создания соответствующего объекта
+    connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::createNewSegment);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::createNewSegment);
 
-    //кнопка на панели инструментов сообщает, что нужно активировать инструмент
+    //2) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
-    //панель свойств сообщает, что нужно создать отрезок по координатам
-    connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::handleCreateSegmentFromProperties);
-
-    //главное окно сообщает панели объектов, что сцена изменилась и нужно обновиться
+    //3) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов обновляется
     connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 
-    //главное окно сообщает панели объектов, что нужно показать параметры выбранного объекта
+    //4) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
+    //QOverload используется, т.к. showPropertiesFor перегружен
     connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor));
 
+    //5) главное окно сообщает панели свойств, что выбран объект -> панель свойств показывает его свойства
     connect(this, &MainWindow::objectSelected, m_propertiesPanel, QOverload<BasePrimitive*>::of(&PropertiesPanelWidget::showPropertiesFor));
 
+    //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (5 пункт)
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
 }
 
 void MainWindow::activateSegmentCreationTool()
 {
-    m_currentTool = m_segmentCreationTool;
-    m_viewportPanel->setActiveTool(m_currentTool);
+    m_currentTool = m_segmentCreationTool; //обновляется указатель на текущий инструмент
+    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
-    emit toolActivated(PrimitiveType::Segment);
+    emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
+}
+
+void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimitive& end)
+{
+    auto* segment = new SegmentPrimitive(start, end);
+    addPrimitiveToScene(segment); //метод добавления примитива в сцену
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
 {
     if (primitive) {
-        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive));
-        m_viewportPanel->update();
+        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive)); //добавление примитива в вектор сцены
+        m_viewportPanel->update(); //обновление окна просмотра
 
-        emit sceneChanged(m_scene);
-        emit objectSelected(primitive);
+        emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
+        emit objectSelected(primitive); //посылается сигнал, о выбранном объекте
     }
-}
-
-void MainWindow::handleCreateSegmentFromProperties(const PointCreationPrimitive& start, const PointCreationPrimitive& end)
-{
-    auto segment = std::make_unique<SegmentCreationPrimitive>(start, end);
-    addPrimitiveToScene(segment.release());
 }
 
 void MainWindow::showEvent(QShowEvent* event)

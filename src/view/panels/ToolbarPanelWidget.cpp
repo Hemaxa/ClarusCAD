@@ -1,24 +1,27 @@
 #include "ToolbarPanelWidget.h"
 
 #include <QToolButton>
+#include <QButtonGroup>
 #include <QVBoxLayout>
 #include <QIcon>
-#include <QButtonGroup>
 
-ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
+ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
     //вертикальный шаблон компоновки, объекты прижимаются к верху
     auto* layout = new QVBoxLayout(canvas());
     layout->setAlignment(Qt::AlignTop);
 
-    m_buttonGroup = new QButtonGroup(this); //создание группы кнопок
+    m_buttonGroup = new QButtonGroup(this); //создание группы кнопок (this - указатель на родителя для автоматического контроля памяти)
     m_buttonGroup->setExclusive(true); //возможность выбора только одной кнопки
 
     //создание и добавление кнопок в группу
-    //текст описания, путь до иконки, горячая клавиша
+    //шаблон: текст описания, путь до иконки, горячая клавиша
     auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
 
-    //подключение сигнала
+    //установка кнопки изначально активной
+    //createSegmentBtn->setChecked(true);
+
+    //подключение сигналов от кнопок
     connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
     //минимальная ширина окна
@@ -29,14 +32,14 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
 {
     //создание кнопки
     auto* button = new QToolButton();
-    button->setToolTip(text); //текст для кнопки
+    button->setToolTip(text); //текст для описания кнопки
     button->setCheckable(true); //"залипающее" поведение кнопки
 
     //установка иконки
     button->setIcon(QIcon(iconPath));
-    button->setIconSize(QSize(30, 30));
+    button->setIconSize(QSize(30, 30)); //размер иконки
 
-    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly); //показывается только иконка, без текста
     button->setAutoRaise(true);
 
     //установка горячей клавиши

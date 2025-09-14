@@ -2,15 +2,15 @@
 
 #pragma once
 
-#include "BaseDockWidget.h"
-#include "PointCreationPrimitive.h"
+#include "BasePanelWidget.h"
+#include "PointPrimitive.h"
 
 class QStackedWidget;
 class SegmentPropertiesWidget;
 class BasePrimitive;
 
-//наслдедуется от базового класса BaseDockWidget
-class PropertiesPanelWidget : public BaseDockWidget
+//наслдедуется от базового класса BasePanelWidget
+class PropertiesPanelWidget : public BasePanelWidget
 {
     Q_OBJECT
 
@@ -19,15 +19,16 @@ public:
     explicit PropertiesPanelWidget(const QString& title, QWidget* parent = nullptr);
 
 public slots:
-    //слот, определяющий параметры какого объекта необходимо показать
+    //перегрузка слота showPropertiesFor
+    //слот, определяющий параметры какого объекта необходимо показать (уже существующий объект)
     void showPropertiesFor(BasePrimitive* primitive);
 
-    //слот, показывающий пустые параметры при создании нового объекта
+    //слот, показывающий пустые параметры при создании нового объекта (при активации инструмента создания объекта)
     void showPropertiesFor(PrimitiveType type);
 
 signals:
     //сигналы, информирующие MainWindow о создании объекта
-    void createSegmentRequested(const PointCreationPrimitive& start, const PointCreationPrimitive& end);
+    void createSegmentRequested(const PointPrimitive& start, const PointPrimitive& end);
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого

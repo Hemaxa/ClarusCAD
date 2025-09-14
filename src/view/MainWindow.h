@@ -1,6 +1,9 @@
+//MainWindow - класс, который владеет, компонует и связвыет остальные классы между собой
+
 #pragma once
 
-#include "PointCreationPrimitive.h"
+#include "PointPrimitive.h"
+#include "BasePrimitive.h"
 
 #include <QMainWindow>
 #include <QShowEvent>
@@ -8,12 +11,14 @@
 //предварительные объявления всех классов
 class Scene;
 class BasePrimitive;
-class BaseTool;
+class BaseCreationTool;
+class BaseDrawingTool;
 class SegmentCreationTool;
 class ViewportPanelWidget;
 class ToolbarPanelWidget;
 class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
+class PointPrimitive;
 
 //QMainWindow - базовый шаблон Qt для создания главного окна
 class MainWindow : public QMainWindow
@@ -25,37 +30,40 @@ public:
     MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
-public slots:
-    //слот создания отрезка
-    void handleCreateSegmentFromProperties(const PointCreationPrimitive& start, const PointCreationPrimitive& end);
-
 private slots:
-    //слот для активации инструмента создания отрезка
+    //слоты активации инструмента создания объекта
     void activateSegmentCreationTool();
 
-    //слот добавления примитива в сцену
-    void addPrimitiveToScene(BasePrimitive* primitive);
+    //слоты создания новых объектов
+    void createNewSegment(const PointPrimitive& start, const PointPrimitive& end);
 
 signals:
-    //сигнал, который сообщает панелям, что сцена изменилась
+    //сигнал, который сообщает, что сцена изменилась
+    //SceneObjectsPanelWidget слушает этот сигнал, чтобы обновить свой список
     void sceneChanged(const Scene* scene);
 
     //сигнал, который сообщает, что объект выбран
+    //PropertiesPanelWidget слушает этот сигнал, чтобы показать свойства этого объекта
     void objectSelected(BasePrimitive* primitive);
 
     //сигнал, который сообщает, что инструмент был активирован
+    //PropertiesPanelWidget слушает этот сигнал, чтобы показать пустую форму для создания нового объекта.
     void toolActivated(PrimitiveType type);
 
 private:
     void createTools(); //метод создания инструментов
-    void createDockWindows(); //метод создания интерфейсных панелей
+    void createDrawingTools(); //метод создание отрисовщиков
+    void createPanelWindows(); //метод создания интерфейсных панелей
     void createConnections(); //метод создания взаимодействий
+
+    void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
     Scene* m_scene; //указатель на объект сцены
-    BaseTool* m_currentTool; //указатель на выбранный инструмент
+    BaseCreationTool* m_currentTool; //указатель на выбранный инструмент
+    std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools; //контейнер отрисовщиков
 
-    bool m_isInitialResizeDone = false;
+    bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
 
     //инструменты
     SegmentCreationTool* m_segmentCreationTool;

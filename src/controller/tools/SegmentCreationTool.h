@@ -1,23 +1,39 @@
+//SegmentCreationTool - инструмент создания отрезка
+
 #pragma once
 
-#include "BaseTool.h"
-#include "PointCreationPrimitive.h"
+#include "BaseCreationTool.h"
+#include "PointPrimitive.h"
 
-class SegmentCreationTool : public BaseTool
+//наслдедуется от базового класса BaseCreationTool
+class SegmentCreationTool : public BaseCreationTool
 {
     Q_OBJECT
 
 public:
+    //конструктор
     explicit SegmentCreationTool(QObject* parent = nullptr);
 
+    //переопределение методов действий мыши
     void onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
     void onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
     void onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
+
+    //переопределение вспомогательного метода для дополнительной геометрии
     void onPaint(QPainter& painter) override;
 
+signals:
+    //сигнал, сообщающий об окончании ввода параметров и передающий координаты
+    void segmentDataReady(const PointPrimitive& start, const PointPrimitive& end);
+
 private:
-    enum class State { Idle, WaitingForSecondPoint };
-    State m_currentState;
-    PointCreationPrimitive m_firstPoint;
-    PointCreationPrimitive m_currentMousePos;
+    //состояние ввода
+    enum class State {
+        Idle,
+        WaitingForSecondPoint
+    };
+
+    State m_currentState; //текущее состояние ввода
+    PointPrimitive m_firstPoint; //переменная хранения координат первой точки
+    PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
 };

@@ -23,10 +23,8 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/Main.cpp
 
     #controller
-    ${SRC_DIR}/controller/BaseTool.h
+    ${SRC_DIR}/controller/BaseCreationTool.h
 
-    ${SRC_DIR}/controller/tools/DeleteTool.h
-    ${SRC_DIR}/controller/tools/DeleteTool.cpp
     ${SRC_DIR}/controller/tools/SegmentCreationTool.h
     ${SRC_DIR}/controller/tools/SegmentCreationTool.cpp
 
@@ -35,30 +33,32 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/model/Scene.h
     ${SRC_DIR}/model/Scene.cpp
 
-    ${SRC_DIR}/model/primitives/PointCreationPrimitive.h
-    ${SRC_DIR}/model/primitives/PointCreationPrimitive.cpp
-    ${SRC_DIR}/model/primitives/SegmentCreationPrimitive.h
-    ${SRC_DIR}/model/primitives/SegmentCreationPrimitive.cpp
+    ${SRC_DIR}/model/primitives/PointPrimitive.h
+    ${SRC_DIR}/model/primitives/PointPrimitive.cpp
+    ${SRC_DIR}/model/primitives/SegmentPrimitive.h
+    ${SRC_DIR}/model/primitives/SegmentPrimitive.cpp
 
     #view
-    ${SRC_DIR}/view/BaseDockWidget.h
+    ${SRC_DIR}/view/BasePanelWidget.h
+    ${SRC_DIR}/view/BaseDrawingTool.h
     ${SRC_DIR}/view/BasePropertiesWidget.h
     ${SRC_DIR}/view/MainWindow.h
     ${SRC_DIR}/view/MainWindow.cpp
-    ${SRC_DIR}/view/SettingsDialog.h
-    ${SRC_DIR}/view/SettingsDialog.cpp
 
-    ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.h
-    ${SRC_DIR}/view/dock-widgets/PropertiesPanelWidget.cpp
-    ${SRC_DIR}/view/dock-widgets/SceneObjectsPanelWidget.h
-    ${SRC_DIR}/view/dock-widgets/SceneObjectsPanelWidget.cpp
-    ${SRC_DIR}/view/dock-widgets/ToolbarPanelWidget.h
-    ${SRC_DIR}/view/dock-widgets/ToolbarPanelWidget.cpp
-    ${SRC_DIR}/view/dock-widgets/ViewportPanelWidget.h
-    ${SRC_DIR}/view/dock-widgets/ViewportPanelWidget.cpp
+    ${SRC_DIR}/view/drawing/SegmentDrawingTool.h
+    ${SRC_DIR}/view/drawing/SegmentDrawingTool.cpp
 
-    ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.h
-    ${SRC_DIR}/view/properities-widgets/SegmentPropertiesWidget.cpp
+    ${SRC_DIR}/view/panels/PropertiesPanelWidget.h
+    ${SRC_DIR}/view/panels/PropertiesPanelWidget.cpp
+    ${SRC_DIR}/view/panels/SceneObjectsPanelWidget.h
+    ${SRC_DIR}/view/panels/SceneObjectsPanelWidget.cpp
+    ${SRC_DIR}/view/panels/ToolbarPanelWidget.h
+    ${SRC_DIR}/view/panels/ToolbarPanelWidget.cpp
+    ${SRC_DIR}/view/panels/ViewportPanelWidget.h
+    ${SRC_DIR}/view/panels/ViewportPanelWidget.cpp
+
+    ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
+    ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
 )
 
 target_sources(ClarusCAD PRIVATE ${RESOURCES})
@@ -75,8 +75,9 @@ target_include_directories(ClarusCAD PRIVATE
 
     #view
     ${SRC_DIR}/view
-    ${SRC_DIR}/view/dock-widgets
-    ${SRC_DIR}/view/properities-widgets
+    ${SRC_DIR}/view/drawing
+    ${SRC_DIR}/view/panels
+    ${SRC_DIR}/view/properties
 )
 
 #подключение необходимых библиотек

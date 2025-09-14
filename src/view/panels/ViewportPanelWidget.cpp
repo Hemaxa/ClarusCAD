@@ -1,15 +1,15 @@
 #include "ViewportPanelWidget.h"
 #include "Scene.h"
-#include "BaseTool.h"
-#include "SegmentCreationPrimitive.h"
+#include "BaseCreationTool.h"
+#include "BaseDrawingTool.h"
 
-#include <QPainter>
-#include <QMouseEvent>
-#include <QEvent>
+#include <QPainter> //класс Qt для рисования
+#include <QMouseEvent> //класс Qt, содержащий информацию о событиях мыши
+#include <QEvent> //базовый класс Qt для всех событий
 
-ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
+ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
-    //отслеживание мыши для canvas
+    //отслеживание мыши для canvas, даже если клавиши не нажаты
     canvas()->setMouseTracking(true);
 
     //отправка информации о взаимодействии с canvas
@@ -20,7 +20,10 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
     //проверка, что событие пришло от холста
     if (obj == canvas()) {
+        //switch используется для определения типа события
         switch (event->type()) {
+
+        //базовое событие QEvent* вызывает собственную обработку (QPaintEvent* или QMouseEvent*)
         //перерисовка
         case QEvent::Paint:
             //вызов функции перерисовки
@@ -67,8 +70,8 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             break;
         }
     }
-    //все остальные события используют стандартный обработчик
-    return BaseDockWidget::eventFilter(obj, event);
+    //все остальные события используют стандартный обработчик QEvent*
+    return BasePanelWidget::eventFilter(obj, event);
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
@@ -81,31 +84,35 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     //включение сглаживания для лучшего качества
     painter.setRenderHint(QPainter::Antialiasing);
 
-    //цвет кисти (В БУДУЩЕМ БУДЕТ ЗАВИСЕТЬ ОТ ТЕМЫ)
+    //настройка кисти
     painter.setBrush(QColor(45, 45, 45));
     painter.drawRect(canvas()->rect()); //отрисовка в границах холста
 
-    if (!m_scene) return;
+    //если нет сцены или инструментов для рисования, отрисовка прекращается
+    if (!m_scene || !m_drawingTools) return;
 
-    painter.setPen(Qt::white);
+    //проход по каждому объекту в сцене
     for (const auto& primitive : m_scene->getPrimitives()) {
-        if (primitive->getType() == PrimitiveType::Segment) {
-            auto* segment = static_cast<SegmentCreationPrimitive*>(primitive.get());
-            painter.drawLine(
-                QPointF(segment->getStart().x(), segment->getStart().y()),
-                QPointF(segment->getEnd().x(), segment->getEnd().y())
-                );
+        PrimitiveType type = primitive->getType();
+
+        //ищется нужный отрисовщик в реестре, соответствующий типу примитива
+        auto it = m_drawingTools->find(type);
+
+        //если отрисовщик найден, то происходит обращение по указателю для отрисовки
+        if (it != m_drawingTools->end()) {
+            const auto& drawer = it->second;
+            drawer->draw(painter, primitive.get());
         }
     }
 
+    //отрисовка вспомогательной геометрии
     if (m_activeTool) {
         m_activeTool->onPaint(painter);
     }
 }
 
-//обновление содержимого
 void ViewportPanelWidget::update() { canvas()->update(); }
 
-//сеттеры
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
-void ViewportPanelWidget::setActiveTool(BaseTool* tool) { m_activeTool = tool; }
+void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
+void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }

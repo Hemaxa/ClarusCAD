@@ -5,9 +5,9 @@
 #include <QListWidget>
 #include <QVBoxLayout>
 
-SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* parent) : BaseDockWidget(title, parent)
+SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
-    //создание экземпляра QListWidget
+    //создание экземпляра QListWidget для списка
     m_listWidget = new QListWidget();
 
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
@@ -23,7 +23,7 @@ SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* 
 
 void SceneObjectsPanelWidget::updateView(const Scene* scene)
 {
-    //если нет указателя на сцену, функция не отрабатывает
+    //если нет указателя на обновленную сцену, функция не отрабатывает
     if (!scene) return;
 
     //сохранение указателя на сцену
@@ -32,8 +32,10 @@ void SceneObjectsPanelWidget::updateView(const Scene* scene)
     //удаление старых объектов списка
     m_listWidget->clear();
 
-    //получение из класса Scene ссылку на все объекты сцены
+    //получение из класса Scene ссылки на все объекты сцены
     const auto& primitives = scene->getPrimitives();
+
+    //цикл прохода по всем примитивам в векторе, полученном из класса Scene
     for (int i = 0; i < primitives.size(); ++i) {
         //цикл записи примитивов "Отрезок"
         if (primitives[i]->getType() == PrimitiveType::Segment) {
@@ -55,7 +57,7 @@ void SceneObjectsPanelWidget::onSelectionChanged()
         //получение указателя на примитив из сцены по этому индексу
         BasePrimitive* selectedPrimitive = primitives[index].get();
 
-        //отправка сигнала, что примитив выбран
+        //отправка сигнала в MainWindow, что примитив выбран
         emit primitiveSelected(selectedPrimitive);
     }
 }
