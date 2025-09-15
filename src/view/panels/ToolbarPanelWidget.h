@@ -18,11 +18,15 @@ public:
     //конструктор
     explicit ToolbarPanelWidget(const QString& title, QWidget* parent = nullptr);
 
-    //метод обновления иконок
+    //метод обновления иконок (перекрашивание)
     void updateIcons();
+
+    //метод снятия выделения с инструментов
+    void clearSelection();
 
 signals:
     //сигналы нажатия соответствующих кнопок
+    void deleteToolActivated();
     void segmentToolActivated();
 
 private:

@@ -7,18 +7,20 @@
 
 #include <QMainWindow>
 #include <QShowEvent>
+#include <QKeyEvent>
 
 //предварительные объявления всех классов
 class Scene;
 class BasePrimitive;
 class BaseCreationTool;
 class BaseDrawingTool;
+class DeleteTool;
 class SegmentCreationTool;
+class PointPrimitive;
 class ViewportPanelWidget;
 class ToolbarPanelWidget;
 class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
-class PointPrimitive;
 
 //QMainWindow - базовый шаблон Qt для создания главного окна
 class MainWindow : public QMainWindow
@@ -31,7 +33,8 @@ public:
     ~MainWindow();
 
 private slots:
-    //слоты активации инструмента создания объекта
+    //слоты активации инструмента
+    void activateDeleteTool();
     void activateSegmentCreationTool();
 
     //слоты создания новых объектов
@@ -39,6 +42,9 @@ private slots:
 
     //слот вызова окна настроек
     void openSettingsDialog();
+
+    //слот отключения выбранного инструмента
+    void deactivateCurrentTool();
 
 signals:
     //сигнал, который сообщает, что сцена изменилась
@@ -50,8 +56,12 @@ signals:
     void objectSelected(BasePrimitive* primitive);
 
     //сигнал, который сообщает, что инструмент был активирован
-    //PropertiesPanelWidget слушает этот сигнал, чтобы показать пустую форму для создания нового объекта.
+    //PropertiesPanelWidget слушает этот сигнал, чтобы показать пустую форму для создания нового объекта
     void toolActivated(PrimitiveType type);
+
+protected:
+    //переопределение метода перехватки событий клавиатуры
+    void keyPressEvent(QKeyEvent* event) override;
 
 private:
     void createTools(); //метод создания инструментов
@@ -73,7 +83,10 @@ private:
 
     bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
 
+    BasePrimitive* m_selectedPrimitive = nullptr;
+
     //инструменты
+    DeleteTool* m_deleteTool;
     SegmentCreationTool* m_segmentCreationTool;
 
     //интерфейсные панели

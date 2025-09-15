@@ -25,6 +25,9 @@ public:
     virtual void onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) = 0;
     virtual void onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) = 0;
 
-    //вспомогательный метод для дополнительной геометрии
+    //виртуальный метод очистки инструмента
+    virtual void reset() {}
+
+    //виртуальный вспомогательный метод для дополнительной геометрии
     virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }
 };

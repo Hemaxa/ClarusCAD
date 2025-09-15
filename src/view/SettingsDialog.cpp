@@ -6,8 +6,7 @@
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
 
-SettingsDialog::SettingsDialog(QWidget* parent)
-    : QDialog(parent)
+SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
 {
     setWindowTitle("Настройки приложения");
 
@@ -41,6 +40,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 void SettingsDialog::populateThemeComboBox()
 {
     // Добавляем темы. Второй аргумент (userData) - это системное имя файла темы.
+    m_themeComboBox->addItem("Тема ClarusCAD", "ClarusCAD");
     m_themeComboBox->addItem("Темная тема", "Dark");
     m_themeComboBox->addItem("Светлая тема", "Light");
 }

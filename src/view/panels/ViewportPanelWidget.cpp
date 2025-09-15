@@ -3,65 +3,92 @@
 #include "BaseCreationTool.h"
 #include "BaseDrawingTool.h"
 
-#include <QPainter> //класс Qt для рисования
-#include <QMouseEvent> //класс Qt, содержащий информацию о событиях мыши
-#include <QEvent> //базовый класс Qt для всех событий
+#include <QPainter>
+#include <QMouseEvent>
+#include <QEvent>
 
 ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
-    //отслеживание мыши для canvas, даже если клавиши не нажаты
+    //включение отслеживания действий мыши
     canvas()->setMouseTracking(true);
 
-    //отправка информации о взаимодействии с canvas
+    //включение "фильтра событий" на холст, чтобы все события холста проходили через метод eventFilter
     canvas()->installEventFilter(this);
+
+    //позволяет виджету получать фокус (например, по клику), что необходимо для обработки нажатий клавиш
+    setFocusPolicy(Qt::StrongFocus);
+
+    //курсор по умолчанию - стрелка
+    canvas()->setCursor(Qt::ArrowCursor);
+
+    //начальная позиция камеры
+    m_panOffset = QPointF(50.0, 50.0);
 }
 
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
-    //проверка, что событие пришло от холста
+    //проверка, что событие пришло именно от холста (canvas), а не от другого элемента
     if (obj == canvas()) {
-        //switch используется для определения типа события
+        //используется switch для определения типа события
         switch (event->type()) {
-
-        //базовое событие QEvent* вызывает собственную обработку (QPaintEvent* или QMouseEvent*)
-        //перерисовка
+        //событие перерисовки
         case QEvent::Paint:
-            //вызов функции перерисовки
             paintCanvas(static_cast<QPaintEvent*>(event));
-            return true; //событие обработано
+            return true;
 
-        //нажатие кнопки мыши
+        //событие нажатия клавиши мыши
         case QEvent::MouseButtonPress: {
+            //преобразование общего события QEvent в более конкретный QMouseEvent
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
-
-            //если выбран инструмент, он получает информацию о действие мыши
-            if (m_activeTool) m_activeTool->onMousePress(mouseEvent, m_scene, this);
-
-            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
+            //если нажата ЛКМ и нет активного инструмента (перемещение по холсту)
+            if (mouseEvent->button() == Qt::LeftButton && !m_activeTool) {
+                m_isPanning = true; //включение режима панорамирования
+                m_lastPanPos = mouseEvent->pos(); //сохранение начальной позиции мыши
+                canvas()->setCursor(Qt::ClosedHandCursor); //изменение курсора на руку
+            }
+            //если есть активный инструмент (создание объекта)
+            else if (m_activeTool) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+                m_activeTool->onMousePress(&transformedEvent, m_scene, this);
+            }
             update();
             return true;
         }
 
-        //перемещение мыши
+        //событие перемещения мыши
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
-
-            //если выбран инструмент, он получает информацию о действие мыши
-            if (m_activeTool) m_activeTool->onMouseMove(mouseEvent, m_scene, this);
-
-            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
-            update();
+            //если активен режим панорамирования
+            if (m_isPanning) {
+                QPoint delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
+                m_lastPanPos = mouseEvent->pos(); //обновляется последняя позиция
+                m_panOffset += QPointF(delta.x() / m_zoomFactor, -delta.y() / m_zoomFactor); //добавление смещения к общему смещению вида, скорректировав на зум
+                update(); //прерисовка
+            }
+            //если есть активный инструмент
+            else if (m_activeTool) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+                m_activeTool->onMouseMove(&transformedEvent, m_scene, this);
+                update();
+            }
             return true;
         }
 
-        //отпускание кнопки мыши
+        //событие отпускания мыши
         case QEvent::MouseButtonRelease: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            if (mouseEvent->button() == Qt::LeftButton && m_isPanning) {
+                m_isPanning = false;
+                canvas()->setCursor(Qt::ArrowCursor);
+            }
 
-            //если выбран инструмент, он получает информацию о действие мыши
-            if (m_activeTool) m_activeTool->onMouseRelease(mouseEvent, m_scene, this);
-
-            //вызов перерисовки, т.к. действие инструмента могло изменить сцену
+            if (m_activeTool) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+                m_activeTool->onMouseRelease(&transformedEvent, m_scene, this);
+            }
             update();
             return true;
         }
@@ -70,68 +97,181 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             break;
         }
     }
-    //все остальные события используют стандартный обработчик QEvent*
     return BasePanelWidget::eventFilter(obj, event);
+}
+
+void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
+{
+    // Вместо центра экрана используем переданную позицию курсора (anchorPoint)
+    QPointF worldPosBeforeZoom = screenToWorld(anchorPoint);
+
+    m_zoomFactor *= factor;
+    // Более строгие и понятные границы для зума
+    m_zoomFactor = std::max(0.05, std::min(m_zoomFactor, 50.0));
+
+    QPointF worldPosAfterZoom = screenToWorld(anchorPoint);
+
+    m_panOffset += worldPosBeforeZoom - worldPosAfterZoom;
+
+    update();
 }
 
 void ViewportPanelWidget::paintGrid(QPainter& painter)
 {
-    //цвет сетки
-    painter.setPen(QPen(QColor(60, 60, 60), 1.0));
+    QPen gridPen(QColor(60, 60, 60), 1.0); //перо для обычной сетки
+    QPen axisXPen(Qt::red, 1.5); //перо для оси X
+    QPen axisYPen(Qt::green, 1.5); //перо для оси Y
 
-    int width = canvas()->width();
-    int height = canvas()->height();
+    painter.setPen(gridPen);
 
-    //отрисовка вертикальных линии
-    for (int x = m_gridStep; x < width; x += m_gridStep) {
-        painter.drawLine(x, 0, x, height);
+    const int width = canvas()->width();
+    const int height = canvas()->height();
+
+    QPointF topLeft = screenToWorld(QPoint(0, 0));
+    QPointF bottomRight = screenToWorld(QPoint(width, height));
+
+    //рассчет видимого размера шага сетки в пикселях
+    double visualGridStep = m_gridStep * m_zoomFactor;
+
+    //корректировка шага, чтобы он оставался в комфортных пределах
+    double dynamicGridStep = m_gridStep;
+    while (visualGridStep < 50) {
+        dynamicGridStep *= 2;
+        visualGridStep *= 2;
     }
-    //отрисовка горизонтальных линии
-    for (int y = m_gridStep; y < height; y += m_gridStep) {
-        painter.drawLine(0, y, width, y);
+    while (visualGridStep > 100) {
+        dynamicGridStep /= 2;
+        visualGridStep /= 2;
     }
+
+    double startX = std::floor(topLeft.x() / dynamicGridStep) * dynamicGridStep;
+    double startY = std::floor(bottomRight.y() / dynamicGridStep) * dynamicGridStep;
+
+    //отрисовка вертикальных линий
+    for (double x = startX; x <= bottomRight.x(); x += dynamicGridStep) {
+        if (std::abs(x) < 1e-9) {
+            painter.setPen(axisYPen);
+        }
+        else {
+            painter.setPen(gridPen);
+        }
+        QPointF p1 = worldToScreen(QPointF(x, topLeft.y()));
+        QPointF p2 = worldToScreen(QPointF(x, bottomRight.y()));
+        painter.drawLine(p1, p2);
+    }
+
+    //отрисовка горизонтальных линий
+    for (double y = startY; y <= topLeft.y(); y += dynamicGridStep) {
+        if (std::abs(y) < 1e-9) {
+            painter.setPen(axisXPen);
+        } else {
+            painter.setPen(gridPen);
+        }
+        QPointF p1 = worldToScreen(QPointF(topLeft.x(), y));
+        QPointF p2 = worldToScreen(QPointF(bottomRight.x(), y));
+        painter.drawLine(p1, p2);
+    }
+
+    //отрисовка тоцки в центре координат
+    QPointF originPointScreen = worldToScreen(QPointF(0.0, 0.0));
+    painter.setPen(Qt::white);
+    painter.setBrush(Qt::white);
+    painter.drawEllipse(originPointScreen, 3, 3);
+}
+
+void ViewportPanelWidget::paintGizmo(QPainter& painter)
+{
+    painter.save(); //сохранение текущих трансформаций
+    painter.resetTransform(); //сбрасывание всех трансформаций, чтобы рисовать в экранных координатах
+    painter.setRenderHint(QPainter::Antialiasing); //сглаживание для красивых стрелок
+
+    int gizmoSize = 50; //длина оси
+    int padding = 15; //отступ от края окна
+    QPoint origin(padding, canvas()->height() - padding); //начало координат гизмо
+
+    //ось X
+    painter.setPen(QPen(Qt::red, 2.0));
+    painter.setBrush(Qt::red);
+    painter.drawLine(origin, origin + QPoint(gizmoSize, 0));
+
+    QPolygonF arrowHeadX;
+    arrowHeadX << QPointF(origin.x() + gizmoSize, origin.y())
+               << QPointF(origin.x() + gizmoSize - 8, origin.y() - 4)
+               << QPointF(origin.x() + gizmoSize - 8, origin.y() + 4);
+    painter.drawPolygon(arrowHeadX);
+
+    //ось Y
+    painter.setPen(QPen(Qt::green, 2.0));
+    painter.setBrush(Qt::green);
+    painter.drawLine(origin, origin - QPoint(0, gizmoSize));
+
+    QPolygonF arrowHeadY;
+    arrowHeadY << QPointF(origin.x(), origin.y() - gizmoSize)
+               << QPointF(origin.x() - 4, origin.y() - gizmoSize + 8)
+               << QPointF(origin.x() + 4, origin.y() - gizmoSize + 8);
+    painter.drawPolygon(arrowHeadY);
+
+    //точка в начале координат
+    painter.setPen(Qt::black);
+    painter.setBrush(Qt::black);
+    painter.drawEllipse(origin, 3, 3);
+
+    //подписи осей
+    painter.setPen(Qt::white);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawText(origin + QPoint(gizmoSize + 8, 4), "X");
+    painter.drawText(origin - QPoint(4, gizmoSize + 8), "Y");
+
+    painter.restore(); //восстановление состояния QPainter
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 {
     Q_UNUSED(event);
-
-    //создается QPainter для рисования на canvas
     QPainter painter(canvas());
-
-    //включение сглаживания для лучшего качества
     painter.setRenderHint(QPainter::Antialiasing);
-
+    painter.fillRect(canvas()->rect(), QColor(45, 45, 45));
     paintGrid(painter);
-
-    //если нет сцены или инструментов для рисования, отрисовка прекращается
+    paintGizmo(painter);
     if (!m_scene || !m_drawingTools) return;
-
-    //проход по каждому объекту в сцене
+    painter.setTransform(QTransform()
+                             .translate(0, canvas()->height())
+                             .scale(1, -1)
+                             .scale(m_zoomFactor, m_zoomFactor)
+                             .translate(m_panOffset.x(), m_panOffset.y()));
     for (const auto& primitive : m_scene->getPrimitives()) {
         PrimitiveType type = primitive->getType();
-
-        //ищется нужный отрисовщик в реестре, соответствующий типу примитива
         auto it = m_drawingTools->find(type);
-
-        //если отрисовщик найден, то происходит обращение по указателю для отрисовки
         if (it != m_drawingTools->end()) {
             const auto& drawer = it->second;
             drawer->draw(painter, primitive.get());
         }
     }
-
-    //отрисовка вспомогательной геометрии
     if (m_activeTool) {
         m_activeTool->onPaint(painter);
     }
 }
 
-void ViewportPanelWidget::update() { canvas()->update(); }
+QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
+{
+    double screenX = (worldPos.x() + m_panOffset.x()) * m_zoomFactor;
+    double screenY = (worldPos.y() + m_panOffset.y()) * m_zoomFactor;
+    return QPointF(screenX, canvas()->height() - screenY);
+}
 
+QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
+{
+    double invertedY = canvas()->height() - screenPos.y();
+    double worldX = (screenPos.x() / m_zoomFactor) - m_panOffset.x();
+    double worldY = (invertedY / m_zoomFactor) - m_panOffset.y();
+    return QPointF(worldX, worldY);
+}
+
+void ViewportPanelWidget::update() { canvas()->update(); }
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; update(); } }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
+QWidget* ViewportPanelWidget::getCanvas() const { return canvas(); }

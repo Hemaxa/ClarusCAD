@@ -7,7 +7,6 @@
 #include <vector>
 #include <memory>
 
-
 class Scene
 {
 
@@ -17,6 +16,9 @@ public:
 
     //метод добавления примитива в сцену
     void addPrimitive(std::unique_ptr<BasePrimitive> primitive);
+
+    //метод удаления примитива из сцены
+    void removePrimitive(BasePrimitive* primitive);
 
     //метод получения доступа ко всем примитивам
     const std::vector<std::unique_ptr<BasePrimitive>>& getPrimitives() const;

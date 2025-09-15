@@ -17,9 +17,11 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
 
     //создание и добавление кнопок в группу
     //шаблон: текст описания, путь до иконки, горячая клавиша
+    auto* deleteBtn = createToolButton("Удалить [Del]", ":/icons/icons/delete.svg", Qt::Key_Delete);
     auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
 
     //подключение сигналов от кнопок
+    connect(deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
     connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
     //минимальная ширина окна
@@ -53,12 +55,21 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     return button;
 }
 
-// НОВЫЙ МЕТОД
 void ToolbarPanelWidget::updateIcons()
 {
     QColor iconColor = ThemeManager::instance().getIconColor();
     if (m_createSegmentBtn) {
         m_createSegmentBtn->setIcon(ThemeManager::colorizeSvgIcon(":/icons/icons/segment.svg", iconColor));
     }
-    // Здесь же обновлять иконки для других кнопок, когда они появятся
+}
+
+void ToolbarPanelWidget::clearSelection()
+{
+    //получение указателя на активную кнопку
+    if (m_buttonGroup->checkedButton()) {
+        //отключение кнопки
+        m_buttonGroup->setExclusive(false);
+        m_buttonGroup->checkedButton()->setChecked(false);
+        m_buttonGroup->setExclusive(true);
+    }
 }

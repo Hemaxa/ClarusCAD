@@ -8,9 +8,6 @@ QMainWindow, QDialog {
     color: #000000;
 }
 
-QDockWidget {
-}
-
 QDockWidget::title {
     background-color: #d0d0d0;
     padding: 5px;
@@ -50,4 +47,20 @@ QLineEdit {
     border: 1px solid #c0c0c0;
     padding: 4px;
     border-radius: 4px;
+}
+
+/* --- Список объектов --- */
+QListWidget {
+    background-color: #ffffff; /* Белый фон для списка */
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+}
+
+QListWidget::item:hover {
+    background-color: #e0e0e0;
+}
+
+QListWidget::item:selected {
+    background-color: #0078d7; /* Синий акцент */
+    color: #ffffff;
 }

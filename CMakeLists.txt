@@ -25,6 +25,8 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     #controller
     ${SRC_DIR}/controller/BaseCreationTool.h
 
+    ${SRC_DIR}/controller/tools/DeleteTool.h
+    ${SRC_DIR}/controller/tools/DeleteTool.cpp
     ${SRC_DIR}/controller/tools/SegmentCreationTool.h
     ${SRC_DIR}/controller/tools/SegmentCreationTool.cpp
 

@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "Scene.h"
 #include "BaseDrawingTool.h"
+#include "DeleteTool.h"
 #include "SegmentPrimitive.h"
 #include "SegmentDrawingTool.h"
 #include "SegmentCreationTool.h"
@@ -14,6 +15,8 @@
 #include <QDockWidget>
 #include <QMenuBar>
 #include <QMenu>
+#include <QKeyEvent>
+#include <QCursor>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
@@ -46,6 +49,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::createTools()
 {
+    m_deleteTool = new DeleteTool(this);
     m_segmentCreationTool = new SegmentCreationTool(this);
 }
 
@@ -91,6 +95,7 @@ void MainWindow::createConnections()
     connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::createNewSegment);
 
     //2) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
+    connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
     //3) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов обновляется
@@ -100,25 +105,11 @@ void MainWindow::createConnections()
     //QOverload используется, т.к. showPropertiesFor перегружен
     connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor));
 
-    //5) главное окно сообщает панели свойств, что выбран объект -> панель свойств показывает его свойства
-    connect(this, &MainWindow::objectSelected, m_propertiesPanel, QOverload<BasePrimitive*>::of(&PropertiesPanelWidget::showPropertiesFor));
+    //5) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
+    connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
 
     //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (5 пункт)
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
-}
-
-void MainWindow::activateSegmentCreationTool()
-{
-    m_currentTool = m_segmentCreationTool; //обновляется указатель на текущий инструмент
-    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
-
-    emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
-}
-
-void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimitive& end)
-{
-    auto* segment = new SegmentPrimitive(start, end);
-    addPrimitiveToScene(segment); //метод добавления примитива в сцену
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -132,7 +123,12 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
     }
 }
 
-// НОВЫЙ МЕТОД
+void MainWindow::updateApplicationIcons()
+{
+    //отправка команды на обновление всем панелям, где есть иконки
+    m_toolbarPanel->updateIcons();
+}
+
 void MainWindow::createActions()
 {
     m_settingsAction = new QAction("Настройки...", this);
@@ -140,42 +136,109 @@ void MainWindow::createActions()
     connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
 }
 
-// НОВЫЙ МЕТОД
 void MainWindow::createMenus()
 {
     QMenu* fileMenu = menuBar()->addMenu("Файл");
     fileMenu->addAction(m_settingsAction);
 }
 
-// НОВЫЙ СЛОТ
+void MainWindow::activateDeleteTool()
+{
+    deactivateCurrentTool(); //дективация старого инструмента
+
+    m_currentTool = m_deleteTool; //обновляется указатель на текущий инструмент
+    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
+}
+
+void MainWindow::activateSegmentCreationTool()
+{
+    deactivateCurrentTool(); //дективация старого инструмента
+
+    m_currentTool = m_segmentCreationTool; //обновляется указатель на текущий инструмент
+    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
+
+    emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
+}
+
+void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimitive& end)
+{
+    auto* segment = new SegmentPrimitive(start, end);
+    addPrimitiveToScene(segment); //метод добавления примитива в сцену
+}
+
 void MainWindow::openSettingsDialog()
 {
     SettingsDialog dialog(this);
 
-    // Передаем в диалог ТЕКУЩИЕ настройки приложения
+    //передаются текущие настройки приложения
     dialog.setCurrentTheme(ThemeManager::instance().currentThemeName());
-    // Примечание: здесь также нужно будет передать текущий шаг сетки, когда вы его реализуете
-    // dialog.setGridStep(m_viewportPanel->getGridStep());
+    dialog.setGridStep(m_viewportPanel->getGridStep());
 
+    //если нажата клавиша "ок", используются новые значения из диалога
     if (dialog.exec() == QDialog::Accepted) {
-        // Если пользователь нажал "OK", получаем НОВЫЕ значения из диалога
         QString selectedTheme = dialog.selectedThemeName();
         ThemeManager::instance().applyTheme(selectedTheme);
 
-        // Также получаем и применяем новый шаг сетки
-        // int newGridStep = dialog.gridStep();
-        // m_viewportPanel->setGridStep(newGridStep);
+        //применяется новый шаг сетки
+        int newGridStep = dialog.gridStep();
+        m_viewportPanel->setGridStep(newGridStep);
 
-        // ВАЖНО: После применения темы обновить все UI элементы
+        //обновляются UI элементы
         updateApplicationIcons();
     }
 }
 
-// НОВЫЙ МЕТОД
-void MainWindow::updateApplicationIcons()
+void MainWindow::deactivateCurrentTool()
 {
-    // Отправляем команду на обновление всем панелям, где есть иконки
-    m_toolbarPanel->updateIcons();
+    //если какой-либо инструмент активен
+    if (m_currentTool) {
+        m_currentTool->reset(); //сбрасывается состояние инструмента
+        m_currentTool = nullptr; //сбрасывается указатель на инструмент
+        m_viewportPanel->setActiveTool(nullptr); //сброс активного инструмента в окне просмотра
+        m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
+        m_propertiesPanel->showPropertiesFor(nullptr); //панель свойств очищается
+        m_viewportPanel->update(); //обновление окна просмотра
+    }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+    //1) Esc
+    if (event->key() == Qt::Key_Escape) {
+        deactivateCurrentTool();
+        return;
+    }
+
+    //2) Delete / Backspace
+    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedPrimitive) {
+        m_scene->removePrimitive(m_selectedPrimitive);
+        m_selectedPrimitive = nullptr;
+
+        deactivateCurrentTool(); // Сбрасываем любой активный инструмент
+        m_viewportPanel->update(); // Обновляем вид
+        emit sceneChanged(m_scene); // Обновляем список объектов
+        return; // Событие обработано, выходим
+    }
+
+    //3) Cmd + / Cmd -
+    bool cursorIsOverViewport = m_viewportPanel->underMouse();
+
+    if (cursorIsOverViewport) {
+        // cmd + или cmd =
+        if ((event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) && (event->modifiers() & Qt::MetaModifier)) {
+            //считается позиция курсора относительно холста окна просмотра
+            QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
+            m_viewportPanel->applyZoom(1.25, mousePos); //больше на 25%
+            return;
+        }
+        // cmd -
+        if (event->key() == Qt::Key_Minus && (event->modifiers() & Qt::MetaModifier)) {
+            QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
+            m_viewportPanel->applyZoom(0.75, mousePos); //меньше на 25%
+            return;
+        }
+    }
+    QMainWindow::keyPressEvent(event);
 }
 
 void MainWindow::showEvent(QShowEvent* event)

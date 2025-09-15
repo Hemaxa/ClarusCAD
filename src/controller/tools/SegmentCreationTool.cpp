@@ -59,6 +59,12 @@ void SegmentCreationTool::onMouseRelease(QMouseEvent* event, Scene* scene, Viewp
     Q_UNUSED(viewport);
 }
 
+void SegmentCreationTool::reset()
+{
+    //состояние сбрасывается в "Покой"
+    m_currentState = State::Idle;
+}
+
 void SegmentCreationTool::onPaint(QPainter& painter)
 {
     //если запущен процесс создания отрезка
