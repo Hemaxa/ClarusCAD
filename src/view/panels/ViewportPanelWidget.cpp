@@ -74,6 +74,24 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
     return BasePanelWidget::eventFilter(obj, event);
 }
 
+void ViewportPanelWidget::paintGrid(QPainter& painter)
+{
+    //цвет сетки
+    painter.setPen(QPen(QColor(60, 60, 60), 1.0));
+
+    int width = canvas()->width();
+    int height = canvas()->height();
+
+    //отрисовка вертикальных линии
+    for (int x = m_gridStep; x < width; x += m_gridStep) {
+        painter.drawLine(x, 0, x, height);
+    }
+    //отрисовка горизонтальных линии
+    for (int y = m_gridStep; y < height; y += m_gridStep) {
+        painter.drawLine(0, y, width, y);
+    }
+}
+
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 {
     Q_UNUSED(event);
@@ -84,9 +102,7 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     //включение сглаживания для лучшего качества
     painter.setRenderHint(QPainter::Antialiasing);
 
-    //настройка кисти
-    painter.setBrush(QColor(45, 45, 45));
-    painter.drawRect(canvas()->rect()); //отрисовка в границах холста
+    paintGrid(painter);
 
     //если нет сцены или инструментов для рисования, отрисовка прекращается
     if (!m_scene || !m_drawingTools) return;
@@ -116,3 +132,6 @@ void ViewportPanelWidget::update() { canvas()->update(); }
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
+void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; update(); } }
+
+int ViewportPanelWidget::getGridStep() const { return m_gridStep; }

@@ -62,6 +62,10 @@ void MainWindow::createPanelWindows()
     m_propertiesPanel = new PropertiesPanelWidget("Свойства", this);
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
 
+    //установка оформления из файлов тем
+    m_viewportPanel->setProperty("class", "ViewportPanel");
+    m_sceneObjectsPanel->setProperty("class", "SceneObjectsPanel");
+
     //передача сцены и отрисовщиков в панель просмотра
     m_viewportPanel->setScene(m_scene);
     m_viewportPanel->setDrawingTools(&m_drawingTools);
