@@ -37,6 +37,9 @@ private slots:
     //слоты создания новых объектов
     void createNewSegment(const PointPrimitive& start, const PointPrimitive& end);
 
+    //слот вызова окна настроек
+    void openSettingsDialog();
+
 signals:
     //сигнал, который сообщает, что сцена изменилась
     //SceneObjectsPanelWidget слушает этот сигнал, чтобы обновить свой список
@@ -57,6 +60,11 @@ private:
     void createConnections(); //метод создания взаимодействий
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
+
+    void updateApplicationIcons(); //метод обновления всех иконок
+    void createActions(); //метод для создания QAction
+    void createMenus(); //метод для создания меню
+
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
     Scene* m_scene; //указатель на объект сцены
@@ -73,4 +81,7 @@ private:
     ToolbarPanelWidget* m_toolbarPanel;
     PropertiesPanelWidget* m_propertiesPanel;
     SceneObjectsPanelWidget* m_sceneObjectsPanel;
+
+    //окно настроек
+    QAction* m_settingsAction;
 };

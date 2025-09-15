@@ -1,4 +1,5 @@
 #include "ToolbarPanelWidget.h"
+#include "ThemeManager.h"
 
 #include <QToolButton>
 #include <QButtonGroup>
@@ -18,9 +19,6 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     //шаблон: текст описания, путь до иконки, горячая клавиша
     auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
 
-    //установка кнопки изначально активной
-    //createSegmentBtn->setChecked(true);
-
     //подключение сигналов от кнопок
     connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
@@ -35,8 +33,11 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     button->setToolTip(text); //текст для описания кнопки
     button->setCheckable(true); //"залипающее" поведение кнопки
 
+    // Получаем цвет из менеджера и применяем его к иконке
+    QColor iconColor = ThemeManager::instance().getIconColor();
+    button->setIcon(ThemeManager::colorizeSvgIcon(iconPath, iconColor));
+
     //установка иконки
-    button->setIcon(QIcon(iconPath));
     button->setIconSize(QSize(30, 30)); //размер иконки
 
     button->setToolButtonStyle(Qt::ToolButtonIconOnly); //показывается только иконка, без текста
@@ -50,4 +51,14 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     m_buttonGroup->addButton(button);
 
     return button;
+}
+
+// НОВЫЙ МЕТОД
+void ToolbarPanelWidget::updateIcons()
+{
+    QColor iconColor = ThemeManager::instance().getIconColor();
+    if (m_createSegmentBtn) {
+        m_createSegmentBtn->setIcon(ThemeManager::colorizeSvgIcon(":/icons/icons/segment.svg", iconColor));
+    }
+    // Здесь же обновлять иконки для других кнопок, когда они появятся
 }

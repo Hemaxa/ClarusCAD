@@ -8,8 +8,12 @@
 #include "ToolbarPanelWidget.h"
 #include "PropertiesPanelWidget.h"
 #include "SceneObjectsPanelWidget.h"
+#include "SettingsDialog.h"
+#include "ThemeManager.h"
 
 #include <QDockWidget>
+#include <QMenuBar>
+#include <QMenu>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
@@ -17,6 +21,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     setWindowTitle("ClarusCAD");
     setWindowState(Qt::WindowMaximized);
     setDockNestingEnabled(true);
+
+    //применение сохраненной темы при запуске
+    ThemeManager::instance().reloadCurrentTheme();
 
     //создание экземпляра сцены
     m_scene = new Scene();
@@ -26,6 +33,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     createDrawingTools();
     createPanelWindows();
     createConnections();
+    createActions();
+    createMenus();
+
+    m_propertiesPanel->showPropertiesFor(nullptr);
 }
 
 MainWindow::~MainWindow()
@@ -115,6 +126,52 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
         emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
         emit objectSelected(primitive); //посылается сигнал, о выбранном объекте
     }
+}
+
+// НОВЫЙ МЕТОД
+void MainWindow::createActions()
+{
+    m_settingsAction = new QAction("Настройки...", this);
+    m_settingsAction->setShortcut(QKeySequence::Preferences);
+    connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
+}
+
+// НОВЫЙ МЕТОД
+void MainWindow::createMenus()
+{
+    QMenu* fileMenu = menuBar()->addMenu("Файл");
+    fileMenu->addAction(m_settingsAction);
+}
+
+// НОВЫЙ СЛОТ
+void MainWindow::openSettingsDialog()
+{
+    SettingsDialog dialog(this);
+
+    // Передаем в диалог ТЕКУЩИЕ настройки приложения
+    dialog.setCurrentTheme(ThemeManager::instance().currentThemeName());
+    // Примечание: здесь также нужно будет передать текущий шаг сетки, когда вы его реализуете
+    // dialog.setGridStep(m_viewportPanel->getGridStep());
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // Если пользователь нажал "OK", получаем НОВЫЕ значения из диалога
+        QString selectedTheme = dialog.selectedThemeName();
+        ThemeManager::instance().applyTheme(selectedTheme);
+
+        // Также получаем и применяем новый шаг сетки
+        // int newGridStep = dialog.gridStep();
+        // m_viewportPanel->setGridStep(newGridStep);
+
+        // ВАЖНО: После применения темы обновить все UI элементы
+        updateApplicationIcons();
+    }
+}
+
+// НОВЫЙ МЕТОД
+void MainWindow::updateApplicationIcons()
+{
+    // Отправляем команду на обновление всем панелям, где есть иконки
+    m_toolbarPanel->updateIcons();
 }
 
 void MainWindow::showEvent(QShowEvent* event)

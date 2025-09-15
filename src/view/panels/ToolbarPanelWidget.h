@@ -18,6 +18,9 @@ public:
     //конструктор
     explicit ToolbarPanelWidget(const QString& title, QWidget* parent = nullptr);
 
+    //метод обновления иконок
+    void updateIcons();
+
 signals:
     //сигналы нажатия соответствующих кнопок
     void segmentToolActivated();
@@ -28,4 +31,6 @@ private:
 
     //группа для кнопок на панели инструментов
     QButtonGroup* m_buttonGroup;
+
+    QToolButton* m_createSegmentBtn;
 };

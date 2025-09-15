@@ -1,0 +1,53 @@
+/*
+    Светлая тема для ClarusCAD
+    @iconColor: #202020;
+*/
+
+QMainWindow, QDialog {
+    background-color: #f0f0f0;
+    color: #000000;
+}
+
+QDockWidget {
+}
+
+QDockWidget::title {
+    background-color: #d0d0d0;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+QWidget {
+    border: none;
+    font-size: 13px;
+}
+
+QToolButton {
+    background-color: transparent;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+QToolButton:hover, QToolButton:checked {
+    background-color: #e0e0e0;
+    border: 1px solid #a0a0a0;
+}
+
+QPushButton {
+    background-color: #e0e0e0;
+    border: 1px solid #a0a0a0;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #d0d0d0;
+}
+
+QLineEdit {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    padding: 4px;
+    border-radius: 4px;
+}
