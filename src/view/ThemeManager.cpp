@@ -77,7 +77,7 @@ QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
     file.close();
 
     svgData.replace("currentColor", color.name(QColor::HexRgb));
-    svgData.replace("#000000", color.name(QColor::HexRgb));
+    svgData.replace("#676767", color.name(QColor::HexRgb));
     svgData.replace("black", color.name(QColor::HexRgb));
 
     QByteArray svgBytes = svgData.toUtf8();

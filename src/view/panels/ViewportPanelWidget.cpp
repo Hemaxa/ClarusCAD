@@ -134,15 +134,7 @@ void ViewportPanelWidget::paintGrid(QPainter& painter)
     double visualGridStep = m_gridStep * m_zoomFactor;
 
     //корректировка шага, чтобы он оставался в комфортных пределах
-    double dynamicGridStep = m_gridStep;
-    while (visualGridStep < 50) {
-        dynamicGridStep *= 2;
-        visualGridStep *= 2;
-    }
-    while (visualGridStep > 100) {
-        dynamicGridStep /= 2;
-        visualGridStep /= 2;
-    }
+    const double dynamicGridStep = calculateDynamicGridStep();
 
     double startX = std::floor(topLeft.x() / dynamicGridStep) * dynamicGridStep;
     double startY = std::floor(bottomRight.y() / dynamicGridStep) * dynamicGridStep;
@@ -252,6 +244,38 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     }
 }
 
+double ViewportPanelWidget::calculateDynamicGridStep() const
+{
+    double visualGridStep = m_gridStep * m_zoomFactor;
+    double dynamicGridStep = m_gridStep;
+
+    // Корректировка шага, чтобы он оставался в комфортных пределах
+    while (visualGridStep < 50) {
+        dynamicGridStep *= 2;
+        visualGridStep *= 2;
+    }
+    while (visualGridStep > 100) {
+        dynamicGridStep /= 2;
+        visualGridStep /= 2;
+    }
+    return dynamicGridStep;
+}
+
+QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
+{
+    // Если привязка выключена, просто возвращаем исходную позицию
+    if (!m_isGridSnapEnabled) { // <-- Добавьте эту проверку
+        return worldPos;
+    }
+    double dynamicGridStep = getDynamicGridStep();
+    if (dynamicGridStep == 0.0) {
+        return worldPos;
+    }
+    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep;
+    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep;
+    return QPointF(snappedX, snappedY);
+}
+
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 {
     double screenX = (worldPos.x() + m_panOffset.x()) * m_zoomFactor;
@@ -272,6 +296,9 @@ void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; update(); } }
+void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
 
+double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 QWidget* ViewportPanelWidget::getCanvas() const { return canvas(); }
+double ViewportPanelWidget::getZoomFactor() const { return m_zoomFactor; }

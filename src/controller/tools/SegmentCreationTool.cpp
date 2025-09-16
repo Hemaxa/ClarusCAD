@@ -1,4 +1,5 @@
 #include "SegmentCreationTool.h"
+#include "ViewportPanelWidget.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -8,46 +9,32 @@ SegmentCreationTool::SegmentCreationTool(QObject* parent) : BaseCreationTool(par
 
 void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport)
 {
-    //если нажата ЛКМ
     if (event->button() == Qt::LeftButton) {
-        //если состояние покоя (первый клик)
+        QPointF snappedPos = viewport->snapToGrid(event->position()); // <-- Привязываем позицию
+
         if (m_currentState == State::Idle) {
-            //координаты первой точки сохраняются в примитив
-            m_firstPoint.setX(event->position().x());
-            m_firstPoint.setY(event->position().y());
-
-            //позиция мыши сохраняется для отрисовки
+            m_firstPoint.setX(snappedPos.x()); // <-- Используем привязанную позицию
+            m_firstPoint.setY(snappedPos.y());
             m_currentMousePos = m_firstPoint;
-
-            //состояние изменяется в "Ожидание второй точки"
             m_currentState = State::WaitingForSecondPoint;
         }
-        //иначе (второй клик)
         else if (m_currentState == State::WaitingForSecondPoint) {
-            //координаты второй точки сохраняются в новый примитив
-            PointPrimitive secondPoint(event->position().x(), event->position().y());
-
-            //посылается сигнал о готовности передачи
+            PointPrimitive secondPoint(snappedPos.x(), snappedPos.y()); // <-- Используем привязанную позицию
             emit segmentDataReady(m_firstPoint, secondPoint);
-
-            //состояние изменяется в "Покой"
             m_currentState = State::Idle;
         }
     }
-    //если нажата ПКМ
     else if (event->button() == Qt::RightButton) {
-        //отмена операции и переход в состояние "Покой"
         m_currentState = State::Idle;
     }
 }
 
 void SegmentCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport)
 {
-    //если запущен процесс создания отрезка
     if (m_currentState == State::WaitingForSecondPoint) {
-        //координаты мыши обновляются
-        m_currentMousePos.setX(event->position().x());
-        m_currentMousePos.setY(event->position().y());
+        QPointF snappedPos = viewport->snapToGrid(event->position()); // <-- Привязываем позицию
+        m_currentMousePos.setX(snappedPos.x()); // <-- Используем привязанную позицию
+        m_currentMousePos.setY(snappedPos.y());
     }
 }
 

@@ -9,6 +9,9 @@
 #include "ToolbarPanelWidget.h"
 #include "PropertiesPanelWidget.h"
 #include "SceneObjectsPanelWidget.h"
+#include "SceneSettingsPanelWidget.h"
+#include "ConsolePanelWidget.h"
+#include "CommandParser.h"
 #include "SettingsDialog.h"
 #include "ThemeManager.h"
 
@@ -17,6 +20,7 @@
 #include <QMenu>
 #include <QKeyEvent>
 #include <QCursor>
+#include <QApplication>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
@@ -30,6 +34,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
 
     //создание экземпляра сцены
     m_scene = new Scene();
+
+    m_commandParser = new CommandParser(this);
 
     //вызов всех методов создания
     createTools();
@@ -65,6 +71,8 @@ void MainWindow::createPanelWindows()
     m_toolbarPanel = new ToolbarPanelWidget("Инструменты", this);
     m_propertiesPanel = new PropertiesPanelWidget("Свойства", this);
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
+    m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
+    m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
 
     //установка оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
@@ -78,14 +86,22 @@ void MainWindow::createPanelWindows()
     //левая колонка
     addDockWidget(Qt::LeftDockWidgetArea, m_toolbarPanel);
     addDockWidget(Qt::LeftDockWidgetArea, m_propertiesPanel);
+    addDockWidget(Qt::LeftDockWidgetArea, m_consolePanel);
     splitDockWidget(m_toolbarPanel, m_propertiesPanel, Qt::Vertical);
+    splitDockWidget(m_propertiesPanel, m_consolePanel, Qt::Vertical);
 
     //правая колонка
     addDockWidget(Qt::RightDockWidgetArea, m_sceneObjectsPanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_sceneSettingsPanel);
+    splitDockWidget(m_sceneObjectsPanel, m_sceneSettingsPanel, Qt::Vertical);
 
-    //встраивание рабочей области между левой и правой колонками
+    //верхняя строка
     splitDockWidget(m_toolbarPanel, m_viewportPanel, Qt::Horizontal);
     splitDockWidget(m_viewportPanel, m_sceneObjectsPanel, Qt::Horizontal);
+
+    //нижняя строка
+    splitDockWidget(m_consolePanel, m_propertiesPanel, Qt::Horizontal);
+    splitDockWidget(m_propertiesPanel, m_sceneSettingsPanel, Qt::Horizontal);
 }
 
 void MainWindow::createConnections()
@@ -94,22 +110,30 @@ void MainWindow::createConnections()
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::createNewSegment);
     connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::createNewSegment);
 
-    //2) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
+    //2) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления объекта
+    connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
+
+    //3) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
-    //3) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов обновляется
+    //4) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов обновляется
     connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 
-    //4) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
+    //5) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
     //QOverload используется, т.к. showPropertiesFor перегружен
     connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor));
 
-    //5) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
+    //6) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
     connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
 
-    //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (5 пункт)
+    //7) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (5 пункт)
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
+
+    // Соединяем сигнал от новой панели со слотом во Viewport
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled); // <-- Добавьте эту строку
+
+    connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand); // <-- Добавить
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -127,6 +151,7 @@ void MainWindow::updateApplicationIcons()
 {
     //отправка команды на обновление всем панелям, где есть иконки
     m_toolbarPanel->updateIcons();
+    m_sceneSettingsPanel->updateIcons();
 }
 
 void MainWindow::createActions()
@@ -148,6 +173,8 @@ void MainWindow::activateDeleteTool()
 
     m_currentTool = m_deleteTool; //обновляется указатель на текущий инструмент
     m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
+
+    QApplication::setOverrideCursor(Qt::CrossCursor);
 }
 
 void MainWindow::activateSegmentCreationTool()
@@ -164,6 +191,26 @@ void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimit
 {
     auto* segment = new SegmentPrimitive(start, end);
     addPrimitiveToScene(segment); //метод добавления примитива в сцену
+}
+
+void MainWindow::deletePrimitive(BasePrimitive* primitive)
+{
+    // Если нам не передали объект для удаления, ничего не делаем
+    if (!primitive) {
+        return;
+    }
+
+    // Удаляем объект из сцены
+    m_scene->removePrimitive(primitive);
+
+    // Если удаленный объект был тем, что мы выбрали в списке,
+    // то "забываем" о нем.
+    if (m_selectedPrimitive == primitive) {
+        m_selectedPrimitive = nullptr;
+    }
+
+    emit sceneChanged(m_scene);
+    m_viewportPanel->update();
 }
 
 void MainWindow::openSettingsDialog()
@@ -211,13 +258,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     //2) Delete / Backspace
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedPrimitive) {
-        m_scene->removePrimitive(m_selectedPrimitive);
-        m_selectedPrimitive = nullptr;
-
-        deactivateCurrentTool(); // Сбрасываем любой активный инструмент
-        m_viewportPanel->update(); // Обновляем вид
-        emit sceneChanged(m_scene); // Обновляем список объектов
-        return; // Событие обработано, выходим
+        deletePrimitive(m_selectedPrimitive);
+        return;
     }
 
     //3) Cmd + / Cmd -
@@ -241,6 +283,25 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     QMainWindow::keyPressEvent(event);
 }
 
+void MainWindow::processConsoleCommand(const QString& commandStr)
+{
+    ParsedCommand command = m_commandParser->parse(commandStr);
+
+    if (!command.isValid) {
+        // Здесь можно будет выводить ошибку в консоль
+        qDebug("Неверный синтаксис команды.");
+        return;
+    }
+
+    if (command.name == "segment" && command.args.size() == 4) {
+        PointPrimitive start(command.args[0], command.args[1]);
+        PointPrimitive end(command.args[2], command.args[3]);
+        createNewSegment(start, end);
+    } else {
+        qDebug("Неизвестная команда или неверное количество аргументов.");
+    }
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -248,17 +309,27 @@ void MainWindow::showEvent(QShowEvent* event)
     if (!m_isInitialResizeDone) {
         m_isInitialResizeDone = true;
 
-        //определение размеров по ширине (процент от ширины экрана)
-        const double leftColumnPercentage = 0.20;
-        const double rightColumnPercentage = 0.20;
+        //определение размеров по ширине верхних и нижних колонок (процент от ширины экрана)
+        //верхние колонки
+        const double leftTopColumnPercentage = 0.20;
+        const double rightTopColumnPercentage = 0.20;
+
+        //нижние колонки
+        const double leftDownColumnPercentage = 0.25;
+        const double rightDownColumnPercentage = 0.25;
 
         //определение размеров колонок
         int totalWidth = width();
-        int leftWidth = static_cast<int>(totalWidth * leftColumnPercentage);
-        int rightWidth = static_cast<int>(totalWidth * rightColumnPercentage);
-        int middleWidth = totalWidth - leftWidth - rightWidth;
+        int leftTopWidth = static_cast<int>(totalWidth * leftTopColumnPercentage);
+        int rightTopWidth = static_cast<int>(totalWidth * rightTopColumnPercentage);
+        int middleTopWidth = totalWidth - leftTopWidth - rightTopWidth;
 
-        resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftWidth, middleWidth, rightWidth}, Qt::Horizontal);
+        int leftDownWidth = static_cast<int>(totalWidth * leftDownColumnPercentage);
+        int rightDownWidth = static_cast<int>(totalWidth * rightDownColumnPercentage);
+        int middleDownWidth = totalWidth - leftDownWidth - rightDownWidth;
+
+        resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftTopWidth, middleTopWidth, rightTopWidth}, Qt::Horizontal);
+        resizeDocks({m_consolePanel, m_propertiesPanel, m_sceneSettingsPanel}, {leftDownWidth, middleDownWidth,rightDownWidth}, Qt::Horizontal);
 
         //определение размеров по высоте (процент от высоты экрана)
         const double toolbarHeightPercentage = 0.70;

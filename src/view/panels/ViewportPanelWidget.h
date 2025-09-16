@@ -27,15 +27,20 @@ public:
     void setGridStep(int step); //метод установки шага сетки
 
     int getGridStep() const; //геттер для шага сетки
+    double getDynamicGridStep() const; //геттер для масштабируемого шага сетки
     QWidget* getCanvas() const; //геттер для холста
+    double getZoomFactor() const; //геттер для коэффициента масштабирования
+
     void update(); //метод перерисовки сцены
 
     //методы для трансформации координат
     QPointF worldToScreen(const QPointF& worldPos) const;
     QPointF screenToWorld(const QPointF& screenPos) const;
+    QPointF snapToGrid(const QPointF& worldPos) const;
 
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //метод применения масштабирования
+    void setGridSnapEnabled(bool enabled);
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
@@ -46,10 +51,12 @@ private:
     QPointF m_panOffset{0.0, 0.0}; //смещение вида (панорамирование), хранит данные о сдвиге сцены
     double m_zoomFactor = 1.0; //коэффициент масштабирования (1.0 = 100%)
     bool m_isPanning = false; //флаг активации перемещения по сцене
+    bool m_isGridSnapEnabled = true;
     QPoint m_lastPanPos; //последняя позиция курсора во время панорамирования для расчета смещения
 
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
+    double calculateDynamicGridStep() const;
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
 };

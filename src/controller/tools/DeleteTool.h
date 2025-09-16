@@ -14,4 +14,7 @@ public:
     void onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
 
     void reset() override;
+
+signals:
+    void primitiveHit(BasePrimitive* primitive);
 };

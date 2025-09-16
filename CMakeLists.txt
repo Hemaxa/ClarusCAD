@@ -65,6 +65,9 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
 
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
+    src/view/panels/SceneSettingsPanelWidget.h src/view/panels/SceneSettingsPanelWidget.cpp
+    src/controller/CommandParser.h src/controller/CommandParser.cpp
+    src/view/panels/ConsolePanelWidget.h src/view/panels/ConsolePanelWidget.cpp
 )
 
 target_sources(ClarusCAD PRIVATE ${RESOURCES})

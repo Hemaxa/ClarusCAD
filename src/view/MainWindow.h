@@ -17,10 +17,14 @@ class BaseDrawingTool;
 class DeleteTool;
 class SegmentCreationTool;
 class PointPrimitive;
+
 class ViewportPanelWidget;
 class ToolbarPanelWidget;
 class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
+class SceneSettingsPanelWidget;
+class ConsolePanelWidget;
+class CommandParser;
 
 //QMainWindow - базовый шаблон Qt для создания главного окна
 class MainWindow : public QMainWindow
@@ -40,11 +44,16 @@ private slots:
     //слоты создания новых объектов
     void createNewSegment(const PointPrimitive& start, const PointPrimitive& end);
 
+    //слот удаления объекта
+    void deletePrimitive(BasePrimitive* primitive);
+
     //слот вызова окна настроек
     void openSettingsDialog();
 
     //слот отключения выбранного инструмента
     void deactivateCurrentTool();
+
+    void processConsoleCommand(const QString& command);
 
 signals:
     //сигнал, который сообщает, что сцена изменилась
@@ -85,6 +94,8 @@ private:
 
     BasePrimitive* m_selectedPrimitive = nullptr;
 
+    CommandParser* m_commandParser;
+
     //инструменты
     DeleteTool* m_deleteTool;
     SegmentCreationTool* m_segmentCreationTool;
@@ -94,6 +105,8 @@ private:
     ToolbarPanelWidget* m_toolbarPanel;
     PropertiesPanelWidget* m_propertiesPanel;
     SceneObjectsPanelWidget* m_sceneObjectsPanel;
+    SceneSettingsPanelWidget* m_sceneSettingsPanel;
+    ConsolePanelWidget* m_consolePanel;
 
     //окно настроек
     QAction* m_settingsAction;
