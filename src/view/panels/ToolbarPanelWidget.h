@@ -36,5 +36,6 @@ private:
     //группа для кнопок на панели инструментов
     QButtonGroup* m_buttonGroup;
 
+    //указатели на соответствующие кнопки
     QToolButton* m_createSegmentBtn;
 };

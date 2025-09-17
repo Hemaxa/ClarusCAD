@@ -5,67 +5,59 @@
 #include <QFormLayout>
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
+#include <QGroupBox>
+#include <QLabel>
 
 SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
 {
+    //настройки окна
     setWindowTitle("Настройки приложения");
+    setMinimumWidth(400);
 
-    // Создание виджетов
+    //создание элементов интерфейса
     m_themeComboBox = new QComboBox();
     m_gridStepSpinBox = new QSpinBox();
 
-    // Настройка виджетов
+    //настройка элементов интерфейса
     populateThemeComboBox();
-    m_gridStepSpinBox->setRange(10, 200); // Диапазон шага сетки
+    m_gridStepSpinBox->setRange(10, 200);
     m_gridStepSpinBox->setSingleStep(10);
-    m_gridStepSpinBox->setSuffix(" px");  // Добавляем единицы измерения
+    m_gridStepSpinBox->setSuffix(" px");
 
-    // Компоновка
+    m_themeComboBox->setFixedHeight(30);
+    m_gridStepSpinBox->setFixedHeight(30);
+
+    //расположение элементов интерфейса
+    auto* appearanceGroup = new QGroupBox("Оформление");
     auto* formLayout = new QFormLayout();
+    formLayout->setSpacing(10);
     formLayout->addRow("Тема оформления:", m_themeComboBox);
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
+    appearanceGroup->setLayout(formLayout);
 
-    // Стандартные кнопки OK и Отмена
+    //кнопки "OK" и "Отмена"
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+    //сборка всего диалогового окна вместе
     auto* mainLayout = new QVBoxLayout(this);
-    mainLayout->addLayout(formLayout);
+    mainLayout->setContentsMargins(15, 15, 15, 15);
+    mainLayout->setSpacing(15);
+    mainLayout->addWidget(appearanceGroup);
     mainLayout->addWidget(buttonBox);
-
-    setMinimumWidth(300);
 }
 
 void SettingsDialog::populateThemeComboBox()
 {
-    // Добавляем темы. Второй аргумент (userData) - это системное имя файла темы.
+    //добавление тем
     m_themeComboBox->addItem("Тема ClarusCAD", "ClarusCAD");
     m_themeComboBox->addItem("Темная тема", "Dark");
     m_themeComboBox->addItem("Светлая тема", "Light");
 }
 
-QString SettingsDialog::selectedThemeName() const
-{
-    // Возвращаем системное имя темы из данных элемента
-    return m_themeComboBox->currentData().toString();
-}
+void SettingsDialog::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }
+void SettingsDialog::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
 
-int SettingsDialog::gridStep() const
-{
-    return m_gridStepSpinBox->value();
-}
-
-void SettingsDialog::setCurrentTheme(const QString& themeName)
-{
-    // Находим в списке тему с нужным системным именем
-    int index = m_themeComboBox->findData(themeName);
-    if (index != -1) {
-        m_themeComboBox->setCurrentIndex(index);
-    }
-}
-
-void SettingsDialog::setGridStep(int step)
-{
-    m_gridStepSpinBox->setValue(step);
-}
+QString SettingsDialog::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
+int SettingsDialog::getGridStep() const { return m_gridStepSpinBox->value(); }

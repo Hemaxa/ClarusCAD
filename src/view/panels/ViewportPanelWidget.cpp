@@ -33,8 +33,8 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         switch (event->type()) {
         //событие перерисовки
         case QEvent::Paint:
-            paintCanvas(static_cast<QPaintEvent*>(event));
-            return true;
+            paintCanvas(static_cast<QPaintEvent*>(event)); //вызов метода перерисовки
+            return true; //событие обработано
 
         //событие нажатия клавиши мыши
         case QEvent::MouseButtonPress: {
@@ -48,11 +48,11 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             }
             //если есть активный инструмент (создание объекта)
             else if (m_activeTool) {
-                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                QPointF worldPos = screenToWorld(mouseEvent->pos()); //преобразование экранных координат в мировые
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
-                m_activeTool->onMousePress(&transformedEvent, m_scene, this);
+                m_activeTool->onMousePress(&transformedEvent, m_scene, this); //передача обработанных координат в активный инструмент
             }
-            update();
+            update(); //перерисовка сцены
             return true;
         }
 
@@ -64,7 +64,7 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 QPoint delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
                 m_lastPanPos = mouseEvent->pos(); //обновляется последняя позиция
                 m_panOffset += QPointF(delta.x() / m_zoomFactor, -delta.y() / m_zoomFactor); //добавление смещения к общему смещению вида, скорректировав на зум
-                update(); //прерисовка
+                update();
             }
             //если есть активный инструмент
             else if (m_activeTool) {
@@ -76,14 +76,15 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             return true;
         }
 
-        //событие отпускания мыши
+        //событие отпускания клавиши мыши
         case QEvent::MouseButtonRelease: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            //если нажата ЛКМ (перемещение по сцене)
             if (mouseEvent->button() == Qt::LeftButton && m_isPanning) {
-                m_isPanning = false;
-                canvas()->setCursor(Qt::ArrowCursor);
+                m_isPanning = false; //выключение флага перемещения
+                canvas()->setCursor(Qt::ArrowCursor); //установка курсора стрелки
             }
-
+            //если есть активный инструмент
             if (m_activeTool) {
                 QPointF worldPos = screenToWorld(mouseEvent->pos());
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
@@ -100,20 +101,57 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
     return BasePanelWidget::eventFilter(obj, event);
 }
 
-void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
+double ViewportPanelWidget::calculateDynamicGridStep() const
 {
-    // Вместо центра экрана используем переданную позицию курсора (anchorPoint)
-    QPointF worldPosBeforeZoom = screenToWorld(anchorPoint);
+    //вычисление шага
+    double visualGridStep = m_gridStep * m_zoomFactor;
+    double dynamicGridStep = m_gridStep;
 
-    m_zoomFactor *= factor;
-    // Более строгие и понятные границы для зума
-    m_zoomFactor = std::max(0.05, std::min(m_zoomFactor, 50.0));
+    //корректировка шага
+    while (visualGridStep < 50) {
+        dynamicGridStep *= 2;
+        visualGridStep *= 2;
+    }
+    while (visualGridStep > 100) {
+        dynamicGridStep /= 2;
+        visualGridStep /= 2;
+    }
+    return dynamicGridStep;
+}
 
-    QPointF worldPosAfterZoom = screenToWorld(anchorPoint);
+void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
+{
+    Q_UNUSED(event);
+    QPainter painter(canvas());
+    painter.setRenderHint(QPainter::Antialiasing);
 
-    m_panOffset += worldPosBeforeZoom - worldPosAfterZoom;
+    //фон сцены
+    painter.fillRect(canvas()->rect(), QColor(45, 45, 45));
 
-    update();
+    //отрисовка сетки и гизмо
+    paintGrid(painter);
+    paintGizmo(painter);
+
+    //если нет сцены или отрисовщиков, то графика не отрисовывается
+    if (!m_scene || !m_drawingTools) return;
+    painter.setTransform(QTransform()
+        .translate(0, canvas()->height()) //сдвиг системы координат
+        .scale(1, -1) //инвертация осей
+        .scale(m_zoomFactor, m_zoomFactor) //масштабирование
+        .translate(m_panOffset.x(), m_panOffset.y())); //сдвиг системы координат
+    //цикл по примтивам для перерисовки
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        PrimitiveType type = primitive->getType();
+        auto it = m_drawingTools->find(type);
+        if (it != m_drawingTools->end()) {
+            const auto& drawer = it->second;
+            drawer->draw(painter, primitive.get());
+        }
+    }
+    //отрисовка поверх сцены
+    if (m_activeTool) {
+        m_activeTool->onPaint(painter);
+    }
 }
 
 void ViewportPanelWidget::paintGrid(QPainter& painter)
@@ -124,6 +162,7 @@ void ViewportPanelWidget::paintGrid(QPainter& painter)
 
     painter.setPen(gridPen);
 
+    //вычисление параметров окна просмотра
     const int width = canvas()->width();
     const int height = canvas()->height();
 
@@ -217,67 +256,29 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     painter.restore(); //восстановление состояния QPainter
 }
 
-void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
+void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
 {
-    Q_UNUSED(event);
-    QPainter painter(canvas());
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(canvas()->rect(), QColor(45, 45, 45));
-    paintGrid(painter);
-    paintGizmo(painter);
-    if (!m_scene || !m_drawingTools) return;
-    painter.setTransform(QTransform()
-                             .translate(0, canvas()->height())
-                             .scale(1, -1)
-                             .scale(m_zoomFactor, m_zoomFactor)
-                             .translate(m_panOffset.x(), m_panOffset.y()));
-    for (const auto& primitive : m_scene->getPrimitives()) {
-        PrimitiveType type = primitive->getType();
-        auto it = m_drawingTools->find(type);
-        if (it != m_drawingTools->end()) {
-            const auto& drawer = it->second;
-            drawer->draw(painter, primitive.get());
-        }
-    }
-    if (m_activeTool) {
-        m_activeTool->onPaint(painter);
-    }
-}
+    //вместо центра экрана используется переданная позиция курсора
+    QPointF worldPosBeforeZoom = screenToWorld(anchorPoint);
 
-double ViewportPanelWidget::calculateDynamicGridStep() const
-{
-    double visualGridStep = m_gridStep * m_zoomFactor;
-    double dynamicGridStep = m_gridStep;
+    //получение нового коэффициента масштабирования
+    m_zoomFactor *= factor;
 
-    // Корректировка шага, чтобы он оставался в комфортных пределах
-    while (visualGridStep < 50) {
-        dynamicGridStep *= 2;
-        visualGridStep *= 2;
-    }
-    while (visualGridStep > 100) {
-        dynamicGridStep /= 2;
-        visualGridStep /= 2;
-    }
-    return dynamicGridStep;
-}
+    //определение границ зума
+    m_zoomFactor = std::max(0.05, std::min(m_zoomFactor, 50.0));
 
-QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
-{
-    // Если привязка выключена, просто возвращаем исходную позицию
-    if (!m_isGridSnapEnabled) { // <-- Добавьте эту проверку
-        return worldPos;
-    }
-    double dynamicGridStep = getDynamicGridStep();
-    if (dynamicGridStep == 0.0) {
-        return worldPos;
-    }
-    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep;
-    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep;
-    return QPointF(snappedX, snappedY);
+    //новая позиция центра экрана
+    QPointF worldPosAfterZoom = screenToWorld(anchorPoint);
+
+    //отработка смещения
+    m_panOffset += worldPosBeforeZoom - worldPosAfterZoom;
+
+    update();
 }
 
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 {
+    //вычисление и возврат полученных координат
     double screenX = (worldPos.x() + m_panOffset.x()) * m_zoomFactor;
     double screenY = (worldPos.y() + m_panOffset.y()) * m_zoomFactor;
     return QPointF(screenX, canvas()->height() - screenY);
@@ -285,20 +286,39 @@ QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 
 QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
 {
+    //вычисление и возврат полученных координат
     double invertedY = canvas()->height() - screenPos.y();
     double worldX = (screenPos.x() / m_zoomFactor) - m_panOffset.x();
     double worldY = (invertedY / m_zoomFactor) - m_panOffset.y();
     return QPointF(worldX, worldY);
 }
 
-void ViewportPanelWidget::update() { canvas()->update(); }
+
+QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
+{
+    //если привязка выключена, возвращается исходную позицию
+    if (!m_isGridSnapEnabled) {
+        return worldPos;
+    }
+    double dynamicGridStep = getDynamicGridStep();
+    if (dynamicGridStep == 0.0) {
+        return worldPos;
+    }
+    //округление координат по шагу сетки для привязки
+    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep;
+    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep;
+    return QPointF(snappedX, snappedY);
+}
+
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; update(); } }
 void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
 
-double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
-QWidget* ViewportPanelWidget::getCanvas() const { return canvas(); }
+double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }
 double ViewportPanelWidget::getZoomFactor() const { return m_zoomFactor; }
+QWidget* ViewportPanelWidget::getCanvas() const { return canvas(); }
+
+void ViewportPanelWidget::update() { canvas()->update(); }

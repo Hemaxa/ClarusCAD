@@ -1,9 +1,10 @@
 #include "ThemeManager.h"
+
 #include <QApplication>
 #include <QFile>
 #include <QTextStream>
 #include <QRegularExpression>
-#include <QDebug> // Для отладки
+#include <QDebug>
 
 ThemeManager& ThemeManager::instance()
 {
@@ -11,8 +12,7 @@ ThemeManager& ThemeManager::instance()
     return manager;
 }
 
-ThemeManager::ThemeManager(QObject *parent)
-    : QObject(parent), m_settings("MyCompany", "ClarusCAD")
+ThemeManager::ThemeManager(QObject *parent) : QObject(parent), m_settings("MyCompany", "ClarusCAD")
 {
     loadSettings();
 }
@@ -57,14 +57,11 @@ void ThemeManager::loadThemeFromFile(const QString& themeName)
     if (match.hasMatch()) {
         m_iconColor = QColor(match.captured(1).trimmed());
     } else {
-        m_iconColor = Qt::black; // Fallback color
+        m_iconColor = Qt::black;
     }
 
     qApp->setStyleSheet(styleSheet);
 }
-
-QColor ThemeManager::getIconColor() const { return m_iconColor; }
-QString ThemeManager::currentThemeName() const { return m_currentThemeName; }
 
 QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
 {
@@ -77,9 +74,10 @@ QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
     file.close();
 
     svgData.replace("currentColor", color.name(QColor::HexRgb));
-    svgData.replace("#676767", color.name(QColor::HexRgb));
-    svgData.replace("black", color.name(QColor::HexRgb));
 
     QByteArray svgBytes = svgData.toUtf8();
     return QIcon(QPixmap::fromImage(QImage::fromData(svgBytes)));
 }
+
+QColor ThemeManager::getIconColor() const { return m_iconColor; }
+QString ThemeManager::getThemeName() const { return m_currentThemeName; }

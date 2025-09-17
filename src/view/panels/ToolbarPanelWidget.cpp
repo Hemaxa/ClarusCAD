@@ -17,7 +17,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
 
     //создание и добавление кнопок в группу
     //шаблон: текст описания, путь до иконки, горячая клавиша
-    auto* deleteBtn = createToolButton("Удалить [Del]", ":/icons/icons/delete.svg", Qt::Key_Delete);
+    auto* deleteBtn = createToolButton("Удалить [X]", ":/icons/icons/delete.svg", Qt::Key_X);
     auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
 
     //подключение сигналов от кнопок
@@ -35,7 +35,7 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     button->setToolTip(text); //текст для описания кнопки
     button->setCheckable(true); //"залипающее" поведение кнопки
 
-    // Получаем цвет из менеджера и применяем его к иконке
+    //получение цвета из менеджера и применение его к иконке
     QColor iconColor = ThemeManager::instance().getIconColor();
     button->setIcon(ThemeManager::colorizeSvgIcon(iconPath, iconColor));
 
@@ -43,7 +43,7 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     button->setIconSize(QSize(30, 30)); //размер иконки
 
     button->setToolButtonStyle(Qt::ToolButtonIconOnly); //показывается только иконка, без текста
-    button->setAutoRaise(true);
+    button->setAutoRaise(true); //автонастройка размера кнопки
 
     //установка горячей клавиши
     button->setShortcut(shortcut);
@@ -52,12 +52,15 @@ QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QSt
     qobject_cast<QVBoxLayout*>(canvas()->layout())->addWidget(button);
     m_buttonGroup->addButton(button);
 
+    //возвращает указатель на кнопку
     return button;
 }
 
 void ToolbarPanelWidget::updateIcons()
 {
+    //получение цвета иконок из файла темы
     QColor iconColor = ThemeManager::instance().getIconColor();
+    //перекрашивание существующих кнопок
     if (m_createSegmentBtn) {
         m_createSegmentBtn->setIcon(ThemeManager::colorizeSvgIcon(":/icons/icons/segment.svg", iconColor));
     }

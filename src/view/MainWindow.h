@@ -12,11 +12,12 @@
 //предварительные объявления всех классов
 class Scene;
 class BasePrimitive;
+class PointPrimitive;
 class BaseCreationTool;
 class BaseDrawingTool;
 class DeleteTool;
 class SegmentCreationTool;
-class PointPrimitive;
+class CommandParser;
 
 class ViewportPanelWidget;
 class ToolbarPanelWidget;
@@ -24,7 +25,6 @@ class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
 class SceneSettingsPanelWidget;
 class ConsolePanelWidget;
-class CommandParser;
 
 //QMainWindow - базовый шаблон Qt для создания главного окна
 class MainWindow : public QMainWindow
@@ -36,6 +36,7 @@ public:
     MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
+//то, что принимается и обрабатывается
 private slots:
     //слоты активации инструмента
     void activateDeleteTool();
@@ -53,8 +54,10 @@ private slots:
     //слот отключения выбранного инструмента
     void deactivateCurrentTool();
 
+    //слот обработки команды из консоли
     void processConsoleCommand(const QString& command);
 
+//то, что посылается
 signals:
     //сигнал, который сообщает, что сцена изменилась
     //SceneObjectsPanelWidget слушает этот сигнал, чтобы обновить свой список
@@ -77,12 +80,12 @@ private:
     void createDrawingTools(); //метод создание отрисовщиков
     void createPanelWindows(); //метод создания интерфейсных панелей
     void createConnections(); //метод создания взаимодействий
+    void createMenus(); //метод для создания меню
+    void createActions(); //метод для создания QAction
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
 
     void updateApplicationIcons(); //метод обновления всех иконок
-    void createActions(); //метод для создания QAction
-    void createMenus(); //метод для создания меню
 
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
@@ -92,9 +95,9 @@ private:
 
     bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
 
-    BasePrimitive* m_selectedPrimitive = nullptr;
+    BasePrimitive* m_selectedPrimitive = nullptr; //указатель на выбранный объект
 
-    CommandParser* m_commandParser;
+    CommandParser* m_commandParser; //обработчик консольных команд
 
     //инструменты
     DeleteTool* m_deleteTool;

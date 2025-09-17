@@ -35,6 +35,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     //создание экземпляра сцены
     m_scene = new Scene();
 
+    //создание парсера команд
     m_commandParser = new CommandParser(this);
 
     //вызов всех методов создания
@@ -45,6 +46,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     createActions();
     createMenus();
 
+    //пустой виджет панели параметров объекта
     m_propertiesPanel->showPropertiesFor(nullptr);
 }
 
@@ -69,7 +71,7 @@ void MainWindow::createPanelWindows()
     //создание интерфейсных панелей
     m_viewportPanel = new ViewportPanelWidget("Рабочая область", this);
     m_toolbarPanel = new ToolbarPanelWidget("Инструменты", this);
-    m_propertiesPanel = new PropertiesPanelWidget("Свойства", this);
+    m_propertiesPanel = new PropertiesPanelWidget("Свойства объекта", this);
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
     m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
@@ -106,34 +108,34 @@ void MainWindow::createPanelWindows()
 
 void MainWindow::createConnections()
 {
-    //1) инструмент и панель свойств сообщают данные -> в главном окне вызывается слот создания соответствующего объекта
+    //1) инструмент и/или панель свойств сообщают данные -> в главном окне вызывается слот создания соответствующего объекта
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::createNewSegment);
     connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::createNewSegment);
 
-    //2) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления объекта
+    //2) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
 
     //3) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
-    //4) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов обновляется
+    //4) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
     connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 
-    //5) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
-    //QOverload используется, т.к. showPropertiesFor перегружен
-    connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor));
-
-    //6) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
-    connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
-
-    //7) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (5 пункт)
+    //5) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (7 пункт)
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
 
-    // Соединяем сигнал от новой панели со слотом во Viewport
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled); // <-- Добавьте эту строку
+    //6) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
+    connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor)); //QOverload используется, т.к. showPropertiesFor перегружен
 
-    connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand); // <-- Добавить
+    //7) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
+    connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
+
+    //8) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
+
+    //9) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
+    connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand);
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -156,13 +158,16 @@ void MainWindow::updateApplicationIcons()
 
 void MainWindow::createActions()
 {
-    m_settingsAction = new QAction("Настройки...", this);
+    //создание окон и параметров
+    m_settingsAction = new QAction("Настройки", this);
     m_settingsAction->setShortcut(QKeySequence::Preferences);
+    m_settingsAction->setMenuRole(QAction::PreferencesRole);
     connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
 }
 
 void MainWindow::createMenus()
 {
+    //создание меню и добавление в них параметров
     QMenu* fileMenu = menuBar()->addMenu("Файл");
     fileMenu->addAction(m_settingsAction);
 }
@@ -174,7 +179,7 @@ void MainWindow::activateDeleteTool()
     m_currentTool = m_deleteTool; //обновляется указатель на текущий инструмент
     m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
-    QApplication::setOverrideCursor(Qt::CrossCursor);
+    QApplication::setOverrideCursor(Qt::CrossCursor); //изменение курсора
 }
 
 void MainWindow::activateSegmentCreationTool()
@@ -195,20 +200,20 @@ void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimit
 
 void MainWindow::deletePrimitive(BasePrimitive* primitive)
 {
-    // Если нам не передали объект для удаления, ничего не делаем
+    //если не переан объект для удаления, ничего не удаляется
     if (!primitive) {
         return;
     }
 
-    // Удаляем объект из сцены
+    //удаляется объект из сцены
     m_scene->removePrimitive(primitive);
 
-    // Если удаленный объект был тем, что мы выбрали в списке,
-    // то "забываем" о нем.
+    //если удаленный объект был тем, который выбран в списке, то информация о нем забывается
     if (m_selectedPrimitive == primitive) {
         m_selectedPrimitive = nullptr;
     }
 
+    //обновление окна просмотра
     emit sceneChanged(m_scene);
     m_viewportPanel->update();
 }
@@ -218,16 +223,16 @@ void MainWindow::openSettingsDialog()
     SettingsDialog dialog(this);
 
     //передаются текущие настройки приложения
-    dialog.setCurrentTheme(ThemeManager::instance().currentThemeName());
+    dialog.setCurrentTheme(ThemeManager::instance().getThemeName());
     dialog.setGridStep(m_viewportPanel->getGridStep());
 
-    //если нажата клавиша "ок", используются новые значения из диалога
+    //если нажата клавиша "ОК", используются новые значения из диалога
     if (dialog.exec() == QDialog::Accepted) {
-        QString selectedTheme = dialog.selectedThemeName();
+        QString selectedTheme = dialog.getCurrentTheme();
         ThemeManager::instance().applyTheme(selectedTheme);
 
         //применяется новый шаг сетки
-        int newGridStep = dialog.gridStep();
+        int newGridStep = dialog.getGridStep();
         m_viewportPanel->setGridStep(newGridStep);
 
         //обновляются UI элементы
@@ -285,19 +290,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
 void MainWindow::processConsoleCommand(const QString& commandStr)
 {
+    //перенос команды в переменную
     ParsedCommand command = m_commandParser->parse(commandStr);
 
+    //обработка некорректного синтаксиса команды
     if (!command.isValid) {
-        // Здесь можно будет выводить ошибку в консоль
         qDebug("Неверный синтаксис команды.");
         return;
     }
 
+    //обработка существующих команд
     if (command.name == "segment" && command.args.size() == 4) {
         PointPrimitive start(command.args[0], command.args[1]);
         PointPrimitive end(command.args[2], command.args[3]);
         createNewSegment(start, end);
-    } else {
+    }
+
+    //обработка неизвестной команды
+    else {
         qDebug("Неизвестная команда или неверное количество аргументов.");
     }
 }
@@ -318,7 +328,7 @@ void MainWindow::showEvent(QShowEvent* event)
         const double leftDownColumnPercentage = 0.25;
         const double rightDownColumnPercentage = 0.25;
 
-        //определение размеров колонок
+        //расчет
         int totalWidth = width();
         int leftTopWidth = static_cast<int>(totalWidth * leftTopColumnPercentage);
         int rightTopWidth = static_cast<int>(totalWidth * rightTopColumnPercentage);
@@ -328,6 +338,7 @@ void MainWindow::showEvent(QShowEvent* event)
         int rightDownWidth = static_cast<int>(totalWidth * rightDownColumnPercentage);
         int middleDownWidth = totalWidth - leftDownWidth - rightDownWidth;
 
+        //применение размеров
         resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftTopWidth, middleTopWidth, rightTopWidth}, Qt::Horizontal);
         resizeDocks({m_consolePanel, m_propertiesPanel, m_sceneSettingsPanel}, {leftDownWidth, middleDownWidth,rightDownWidth}, Qt::Horizontal);
 
@@ -335,10 +346,12 @@ void MainWindow::showEvent(QShowEvent* event)
         const double toolbarHeightPercentage = 0.70;
         const double propertiesHeightPercentage = 0.30;
 
+        //расчет
         int totalHeight = height();
         int toolbarHeight = static_cast<int>(totalHeight * toolbarHeightPercentage);
         int propertiesHeight = static_cast<int>(totalHeight * propertiesHeightPercentage);
 
+        //применение размеров
         resizeDocks({m_toolbarPanel, m_propertiesPanel}, {toolbarHeight, propertiesHeight}, Qt::Vertical);
     }
 }

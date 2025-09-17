@@ -24,6 +24,8 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
 
     #controller
     ${SRC_DIR}/controller/BaseCreationTool.h
+    ${SRC_DIR}/controller/CommandParser.h
+    ${SRC_DIR}/controller/CommandParser.cpp
 
     ${SRC_DIR}/controller/tools/DeleteTool.h
     ${SRC_DIR}/controller/tools/DeleteTool.cpp
@@ -54,10 +56,15 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.h
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.cpp
 
+
+    ${SRC_DIR}/view/panels/ConsolePanelWidget.h
+    ${SRC_DIR}/view/panels/ConsolePanelWidget.cpp
     ${SRC_DIR}/view/panels/PropertiesPanelWidget.h
     ${SRC_DIR}/view/panels/PropertiesPanelWidget.cpp
     ${SRC_DIR}/view/panels/SceneObjectsPanelWidget.h
     ${SRC_DIR}/view/panels/SceneObjectsPanelWidget.cpp
+    ${SRC_DIR}/view/panels/SceneSettingsPanelWidget.h
+    ${SRC_DIR}/view/panels/SceneSettingsPanelWidget.cpp
     ${SRC_DIR}/view/panels/ToolbarPanelWidget.h
     ${SRC_DIR}/view/panels/ToolbarPanelWidget.cpp
     ${SRC_DIR}/view/panels/ViewportPanelWidget.h
@@ -65,9 +72,6 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
 
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
-    src/view/panels/SceneSettingsPanelWidget.h src/view/panels/SceneSettingsPanelWidget.cpp
-    src/controller/CommandParser.h src/controller/CommandParser.cpp
-    src/view/panels/ConsolePanelWidget.h src/view/panels/ConsolePanelWidget.cpp
 )
 
 target_sources(ClarusCAD PRIVATE ${RESOURCES})

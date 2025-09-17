@@ -28,8 +28,8 @@ public:
 
     int getGridStep() const; //геттер для шага сетки
     double getDynamicGridStep() const; //геттер для масштабируемого шага сетки
-    QWidget* getCanvas() const; //геттер для холста
     double getZoomFactor() const; //геттер для коэффициента масштабирования
+    QWidget* getCanvas() const; //геттер для холста
 
     void update(); //метод перерисовки сцены
 
@@ -39,24 +39,26 @@ public:
     QPointF snapToGrid(const QPointF& worldPos) const;
 
 public slots:
-    void applyZoom(double factor, const QPoint& anchorPoint); //метод применения масштабирования
-    void setGridSnapEnabled(bool enabled);
+    void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
+    void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
     BaseCreationTool* m_activeTool = nullptr; //указатель на выбранный инструмент
     const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* m_drawingTools = nullptr; //указатель на мапу отрисовщиков
 
-    int m_gridStep = 50; //шаг сетки по умолчанию
+    //параметры панели по умолчанию
+    int m_gridStep = 50; //шаг сетки
     QPointF m_panOffset{0.0, 0.0}; //смещение вида (панорамирование), хранит данные о сдвиге сцены
     double m_zoomFactor = 1.0; //коэффициент масштабирования (1.0 = 100%)
-    bool m_isPanning = false; //флаг активации перемещения по сцене
-    bool m_isGridSnapEnabled = true;
     QPoint m_lastPanPos; //последняя позиция курсора во время панорамирования для расчета смещения
 
+    bool m_isPanning = false; //флаг активации перемещения по сцене (зажатие ЛКМ)
+    bool m_isGridSnapEnabled = true; //флаг активации привязка к сетке
+
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
+    double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
-    double calculateDynamicGridStep() const;
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
 };
