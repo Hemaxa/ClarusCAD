@@ -1,68 +1,62 @@
 #include "ToolbarPanelWidget.h"
 #include "ThemeManager.h"
+#include "AnimationManager.h"
 
 #include <QToolButton>
 #include <QButtonGroup>
-#include <QVBoxLayout>
-#include <QIcon>
+#include <QGridLayout>
+#include <QSpacerItem>
 
 ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
     //вертикальный шаблон компоновки, объекты прижимаются к верху
-    auto* layout = new QVBoxLayout(canvas());
-    layout->setAlignment(Qt::AlignTop);
+    auto* layout = new QGridLayout(canvas());
+
+    layout->setContentsMargins(10, 10, 10, 10);
 
     m_buttonGroup = new QButtonGroup(this); //создание группы кнопок (this - указатель на родителя для автоматического контроля памяти)
     m_buttonGroup->setExclusive(true); //возможность выбора только одной кнопки
 
     //создание и добавление кнопок в группу
     //шаблон: текст описания, путь до иконки, горячая клавиша
-    auto* deleteBtn = createToolButton("Удалить [X]", ":/icons/icons/delete.svg", Qt::Key_X);
-    auto* createSegmentBtn = createToolButton("Отрезок [S]", ":/icons/icons/segment.svg", Qt::Key_S);
+    m_deleteBtn = new AnimationManager(":/icons/icons/delete.svg", "Удалить [X]", Qt::Key_X);
+    m_createSegmentBtn = new AnimationManager(":/icons/icons/segment.svg", "Отрезок [S]", Qt::Key_S);
+
+    // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
+    // 1. Выравниваем кнопки по левому краю ячейки, а не по центру
+    layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
+    layout->addWidget(m_createSegmentBtn, 1, 0, Qt::AlignLeft);
+
+    // 2. Указываем, что вторая колонка (с индексом 1) должна растягиваться,
+    // тем самым прижимая первую колонку (с кнопками) влево.
+    layout->setColumnStretch(1, 1);
+
+    // 3. Указываем, что третья строка (с индексом 2) должна растягиваться,
+    // прижимая первые две строки (с кнопками) вверх.
+    layout->setRowStretch(2, 1);
+
+    // 2. Добавляем кнопки в группу, чтобы работало эксклюзивное выделение
+    m_buttonGroup->addButton(m_deleteBtn);
+    m_buttonGroup->addButton(m_createSegmentBtn);
 
     //подключение сигналов от кнопок
-    connect(deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
-    connect(createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
+    connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
+    connect(m_createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
     //минимальная ширина окна
     setMinimumWidth(200);
 }
 
-QToolButton* ToolbarPanelWidget::createToolButton(const QString& text, const QString& iconPath, const QKeySequence& shortcut)
-{
-    //создание кнопки
-    auto* button = new QToolButton();
-    button->setToolTip(text); //текст для описания кнопки
-    button->setCheckable(true); //"залипающее" поведение кнопки
-
-    //получение цвета из менеджера и применение его к иконке
-    QColor iconColor = ThemeManager::instance().getIconColor();
-    button->setIcon(ThemeManager::colorizeSvgIcon(iconPath, iconColor));
-
-    //установка иконки
-    button->setIconSize(QSize(30, 30)); //размер иконки
-
-    button->setToolButtonStyle(Qt::ToolButtonIconOnly); //показывается только иконка, без текста
-    button->setAutoRaise(true); //автонастройка размера кнопки
-
-    //установка горячей клавиши
-    button->setShortcut(shortcut);
-
-    //добавление кнопки на панель и в группу
-    qobject_cast<QVBoxLayout*>(canvas()->layout())->addWidget(button);
-    m_buttonGroup->addButton(button);
-
-    //возвращает указатель на кнопку
-    return button;
-}
-
 void ToolbarPanelWidget::updateIcons()
 {
-    //получение цвета иконок из файла темы
     QColor iconColor = ThemeManager::instance().getIconColor();
-    //перекрашивание существующих кнопок
+
+    if (m_deleteBtn) {
+        // Безопасно обновляем цвет через новый метод
+        static_cast<AnimationManager*>(m_deleteBtn)->updateIconColor(iconColor);
+    }
     if (m_createSegmentBtn) {
-        m_createSegmentBtn->setIcon(ThemeManager::colorizeSvgIcon(":/icons/icons/segment.svg", iconColor));
+        static_cast<AnimationManager*>(m_createSegmentBtn)->updateIconColor(iconColor);
     }
 }
 

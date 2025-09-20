@@ -1,4 +1,4 @@
-#include "SettingsDialog.h"
+#include "SettingsWindow.h"
 
 #include <QComboBox>
 #include <QSpinBox>
@@ -8,7 +8,7 @@
 #include <QGroupBox>
 #include <QLabel>
 
-SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
+SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
     //настройки окна
     setWindowTitle("Настройки приложения");
@@ -48,7 +48,7 @@ SettingsDialog::SettingsDialog(QWidget* parent) : QDialog(parent)
     mainLayout->addWidget(buttonBox);
 }
 
-void SettingsDialog::populateThemeComboBox()
+void SettingsWindow::populateThemeComboBox()
 {
     //добавление тем
     m_themeComboBox->addItem("Тема ClarusCAD", "ClarusCAD");
@@ -56,8 +56,8 @@ void SettingsDialog::populateThemeComboBox()
     m_themeComboBox->addItem("Светлая тема", "Light");
 }
 
-void SettingsDialog::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }
-void SettingsDialog::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
+void SettingsWindow::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }
+void SettingsWindow::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
 
-QString SettingsDialog::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
-int SettingsDialog::getGridStep() const { return m_gridStepSpinBox->value(); }
+QString SettingsWindow::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
+int SettingsWindow::getGridStep() const { return m_gridStepSpinBox->value(); }

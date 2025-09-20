@@ -1,4 +1,4 @@
-//SettingsDialog - класс окна настроек приложения
+//SettingsWindow - класс окна настроек приложения
 
 #pragma once
 
@@ -7,13 +7,13 @@
 class QComboBox;
 class QSpinBox;
 
-class SettingsDialog : public QDialog
+class SettingsWindow : public QDialog
 {
     Q_OBJECT
 
 public:
     //конструктор
-    explicit SettingsDialog(QWidget* parent = nullptr);
+    explicit SettingsWindow(QWidget* parent = nullptr);
 
     //методы получения выбранных значений
     QString getCurrentTheme() const;

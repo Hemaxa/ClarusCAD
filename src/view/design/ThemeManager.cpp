@@ -33,7 +33,7 @@ void ThemeManager::applyTheme(const QString& themeName)
     saveSettings();
 }
 
-void ThemeManager::reloadCurrentTheme()
+void ThemeManager::reloadTheme()
 {
     loadThemeFromFile(m_currentThemeName);
 }
@@ -52,15 +52,35 @@ void ThemeManager::loadThemeFromFile(const QString& themeName)
     QString styleSheet = file.readAll();
     file.close();
 
-    QRegularExpression regex("/\\*\\s*@iconColor:\\s*([#\\w\\(\\),\\s]+);\\s*\\*/");
-    QRegularExpressionMatch match = regex.match(styleSheet);
-    if (match.hasMatch()) {
-        m_iconColor = QColor(match.captured(1).trimmed());
-    } else {
-        m_iconColor = Qt::black;
-    }
+    //парсинг цветов
+    parseThemeColors(styleSheet);
+
+    //устанавливание цвета иконок из переменной
+    m_iconColor = getColor("iconColor");
 
     qApp->setStyleSheet(styleSheet);
+}
+
+void ThemeManager::parseThemeColors(const QString& styleSheet)
+{
+    m_themeColors.clear();
+    // Новое, более надежное регулярное выражение.
+    // Оно ищет строку вида "@имя: значение;"
+    QRegularExpression regex("@(\\w+):\\s*([^;]+);");
+
+    auto it = regex.globalMatch(styleSheet);
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        QString key = match.captured(1);
+
+        // Получаем значение и очищаем его от возможных вложенных комментариев
+        QString value = match.captured(2).trimmed();
+        value = value.section("/*", 0, 0).trimmed(); // Убираем все, что после "/*"
+
+        if (!value.isEmpty()) {
+            m_themeColors.insert(key, QColor(value));
+        }
+    }
 }
 
 QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
@@ -80,4 +100,5 @@ QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
 }
 
 QColor ThemeManager::getIconColor() const { return m_iconColor; }
+QColor ThemeManager::getColor(const QString& key) const { return m_themeColors.value(key, Qt::black); }
 QString ThemeManager::getThemeName() const { return m_currentThemeName; }

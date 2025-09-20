@@ -6,6 +6,7 @@
 #include <QColor>
 #include <QSettings>
 #include <QIcon>
+#include <QMap>
 
 class ThemeManager : public QObject
 {
@@ -19,13 +20,14 @@ public:
     void applyTheme(const QString& themeName);
 
     //метод загрузки последней темы
-    void reloadCurrentTheme();
+    void reloadTheme();
 
     //метод перекрашивания иконок
     static QIcon colorizeSvgIcon(const QString& path, const QColor& color);
 
-    //геттеры цвета иконок и текущей темы
+    //геттеры цвета иконок, цвета из мапы цветов и текущей темы
     QColor getIconColor() const;
+    QColor getColor(const QString& key) const;
     QString getThemeName() const;
 
 private:
@@ -41,8 +43,12 @@ private:
     void saveSettings();
     void loadSettings();
 
+    //метод получения цветов из файла темы
+    void parseThemeColors(const QString& styleSheet);
+
     //поля класса
     QSettings m_settings;
     QString m_currentThemeName;
     QColor m_iconColor;
+    QMap<QString, QColor> m_themeColors;
 };

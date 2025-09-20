@@ -30,12 +30,10 @@ signals:
     void segmentToolActivated();
 
 private:
-    //метод создания и настройки кнопок
-    QToolButton* createToolButton(const QString& text, const QString& iconPath, const QKeySequence& shortcut);
-
     //группа для кнопок на панели инструментов
     QButtonGroup* m_buttonGroup;
 
     //указатели на соответствующие кнопки
+    QToolButton* m_deleteBtn;
     QToolButton* m_createSegmentBtn;
 };

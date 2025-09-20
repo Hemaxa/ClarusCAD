@@ -1,90 +1,103 @@
 /*
     Фирменная тема для ClarusCAD
-    @iconColor: #e0e0e0;
+    @iconColor: #00ff7f; /* Ярко-зеленый для иконок */
+    @backgroundColor: #1e1e1e;
+    @textColor: #e0e0e0;
+    @panelBackgroundColor: #2a2a2a;
+    @borderColor: #3c3c3c;
+    @accentColor: #00ff7f; /* Ярко-зеленый акцент */
+    @hoverColor: #2a2a2a;
+    @selectionColor: #00ff7f;
 */
 
-/* --- Общий стиль --- */
+/* --- Общие стили для окон и диалогов --- */
+QMainWindow, QDialog {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+/* --- Заголовки панелей --- */
+QDockWidget::title {
+    background-color: #2a2a2a;
+    padding: 5px;
+    border-radius: 4px;
+    border-bottom: 1px solid #00ff7f;
+}
+
 QWidget {
-    background-color: #2b2b2b;
-    color: #f0f0f0;
     border: none;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 13px;
 }
 
-QMainWindow, QDialog, QDockWidget {
-    background-color: #2b2b2b;
-}
-
-QDockWidget::title {
-    background-color: #3c3c3c;
-    text-align: center;
-    padding: 5px;
-    border-radius: 4px;
-}
-
-/* --- Панель инструментов --- */
+/* --- Кнопки на панели инструментов --- */
 QToolButton {
     background-color: transparent;
-    border: 1px solid #454545;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
     padding: 5px;
-    margin: 1px;
-    border-radius: 4px;
 }
 
-QToolButton:hover {
-    background-color: #4a4a4a;
+QToolButton:hover, QToolButton:checked {
+    background-color: #2a2a2a;
+    border: 1px solid #00ff7f;
 }
 
-QToolButton:checked {
-    background-color: #00ff7f; /* Ярко-зеленый акцент */
-    border: 1px solid #00b359;
-}
-
-/* --- Список объектов --- */
-QListWidget {
-    background-color: #3c3c3c;
-    border-radius: 4px;
-}
-
-QListWidget::item:hover {
-    background-color: #4a4a4a;
-}
-
-QListWidget::item:selected {
-    background-color: #00ff7f; /* Акцентный цвет */
-    color: #1e1e1e; /* Темный текст на светлом фоне */
-}
-
-/* --- Поля ввода и кнопки --- */
-QLineEdit {
-    background-color: #3c3f41;
-    border: 1px solid #555555;
-    padding: 4px;
-    border-radius: 4px;
-}
-
+/* --- Обычные кнопки --- */
 QPushButton {
-    background-color: #008080; /* Бирюзовый */
-    border: 1px solid #005f5f;
+    background-color: #2a2a2a;
+    border: 1px solid #00ff7f;
+    color: #00ff7f;
     padding: 5px 10px;
     border-radius: 4px;
 }
 
 QPushButton:hover {
-    background-color: #009999;
+    background-color: #00ff7f;
+    color: #1e1e1e;
 }
 
+/* --- Поля ввода --- */
+QLineEdit {
+    background-color: #2a2a2a;
+    border: 1px solid #3c3c3c;
+    padding: 4px;
+    border-radius: 4px;
+}
 
-/* --- Разделители панелей --- */
-QSplitter::handle {
+/* --- Список объектов --- */
+QListWidget {
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid #3c3c3c;
+}
+
+QListWidget::item:hover {
     background-color: #3c3c3c;
 }
 
-QSplitter::handle:hover {
+QListWidget::item:selected {
     background-color: #00ff7f;
+    color: #1e1e1e;
 }
 
-QSplitter::handle:pressed {
-    background-color: #00b359;
+/* --- Стили для окна настроек --- */
+QGroupBox {
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    margin-top: 1ex;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 3px;
+}
+QComboBox, QSpinBox {
+    background-color: #2a2a2a;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    padding: 4px;
+}
+QComboBox::drop-down {
+    border: none;
 }

@@ -5,7 +5,7 @@
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"
 
-class QLineEdit; //поля ввода
+class QLineEdit;
 class SegmentPrimitive;
 
 //наслдедуется от базового класса BasePropertiesWidget

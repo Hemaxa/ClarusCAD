@@ -12,7 +12,7 @@
 #include "SceneSettingsPanelWidget.h"
 #include "ConsolePanelWidget.h"
 #include "CommandParser.h"
-#include "SettingsDialog.h"
+#include "SettingsWindow.h"
 #include "ThemeManager.h"
 
 #include <QDockWidget>
@@ -30,7 +30,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     setDockNestingEnabled(true);
 
     //применение сохраненной темы при запуске
-    ThemeManager::instance().reloadCurrentTheme();
+    ThemeManager::instance().reloadTheme();
 
     //создание экземпляра сцены
     m_scene = new Scene();
@@ -220,7 +220,7 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
 
 void MainWindow::openSettingsDialog()
 {
-    SettingsDialog dialog(this);
+    SettingsWindow dialog(this);
 
     //передаются текущие настройки приложения
     dialog.setCurrentTheme(ThemeManager::instance().getThemeName());

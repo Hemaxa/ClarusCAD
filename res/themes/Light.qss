@@ -1,13 +1,22 @@
 /*
     Светлая тема для ClarusCAD
     @iconColor: #202020;
+    @backgroundColor: #f0f0f0;
+    @textColor: #202020;
+    @panelBackgroundColor: #d0d0d0;
+    @borderColor: #c0c0c0;
+    @accentColor: #0078d7;
+    @hoverColor: #e0e0e0;
+    @selectionColor: #0078d7;
 */
 
+/* --- Общие стили окна и диалогов --- */
 QMainWindow, QDialog {
     background-color: #f0f0f0;
-    color: #000000;
+    color: #202020;
 }
 
+/* --- Заголовки панелей --- */
 QDockWidget::title {
     background-color: #d0d0d0;
     padding: 5px;
@@ -19,6 +28,7 @@ QWidget {
     font-size: 13px;
 }
 
+/* --- Кнопки на панели инструментов --- */
 QToolButton {
     background-color: transparent;
     border: 1px solid #c0c0c0;
@@ -31,6 +41,7 @@ QToolButton:hover, QToolButton:checked {
     border: 1px solid #a0a0a0;
 }
 
+/* --- Обычные кнопки --- */
 QPushButton {
     background-color: #e0e0e0;
     border: 1px solid #a0a0a0;
@@ -42,6 +53,7 @@ QPushButton:hover {
     background-color: #d0d0d0;
 }
 
+/* --- Поля ввода --- */
 QLineEdit {
     background-color: #ffffff;
     border: 1px solid #c0c0c0;
@@ -51,7 +63,7 @@ QLineEdit {
 
 /* --- Список объектов --- */
 QListWidget {
-    background-color: #ffffff; /* Белый фон для списка */
+    background-color: #ffffff;
     border: 1px solid #c0c0c0;
     border-radius: 4px;
 }
@@ -61,6 +73,6 @@ QListWidget::item:hover {
 }
 
 QListWidget::item:selected {
-    background-color: #0078d7; /* Синий акцент */
+    background-color: #0078d7;
     color: #ffffff;
 }

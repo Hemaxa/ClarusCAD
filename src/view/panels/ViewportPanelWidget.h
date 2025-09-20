@@ -10,6 +10,7 @@
 class Scene;
 class BaseCreationTool;
 class BaseDrawingTool;
+class ThemeManager;
 
 //наслдедуется от базового класса BasePanelWidget
 class ViewportPanelWidget : public BasePanelWidget
@@ -61,4 +62,6 @@ private:
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
+
+    ThemeManager* m_themeManager = nullptr;
 };

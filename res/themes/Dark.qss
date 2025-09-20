@@ -1,13 +1,22 @@
 /*
     Темная тема для ClarusCAD
-    @iconColor: #d0d0d0;
+    @iconColor: #d0d0d0; /* Светло-серый для иконок */
+    @backgroundColor: #2b2b2b;
+    @textColor: #f0f0f0;
+    @panelBackgroundColor: #3c3f41;
+    @borderColor: #454545;
+    @accentColor: #0078d7; /* Синий акцент */
+    @hoverColor: #555555;
+    @selectionColor: #0078d7;
 */
 
+/* --- Общие стили для окон и диалогов --- */
 QMainWindow, QDialog {
     background-color: #2b2b2b;
     color: #f0f0f0;
 }
 
+/* --- Заголовки панелей --- */
 QDockWidget::title {
     background-color: #3c3f41;
     padding: 5px;
@@ -19,6 +28,7 @@ QWidget {
     font-size: 13px;
 }
 
+/* --- Кнопки на панели инструментов --- */
 QToolButton {
     background-color: transparent;
     border: 1px solid #454545;
@@ -31,6 +41,7 @@ QToolButton:hover, QToolButton:checked {
     border: 1px solid #777777;
 }
 
+/* --- Обычные кнопки --- */
 QPushButton {
     background-color: #555555;
     border: 1px solid #777777;
@@ -42,6 +53,7 @@ QPushButton:hover {
     background-color: #6a6a6a;
 }
 
+/* --- Поля ввода --- */
 QLineEdit {
     background-color: #3c3f41;
     border: 1px solid #555555;
@@ -60,6 +72,28 @@ QListWidget::item:hover {
 }
 
 QListWidget::item:selected {
-    background-color: #0078d7; /* Синий акцент */
+    background-color: #0078d7;
     color: #ffffff;
+}
+
+/* --- Стили для окна настроек --- */
+QGroupBox {
+    border: 1px solid #454545;
+    border-radius: 4px;
+    margin-top: 1ex;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 3px;
+}
+QComboBox, QSpinBox {
+    background-color: #3c3f41;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    padding: 4px;
+}
+QComboBox::drop-down {
+    border: none;
 }

@@ -1,6 +1,8 @@
 <RCC>
     <qresource prefix="/icons">
         <file>icons/segment.svg</file>
+        <file>icons/grid-snap.svg</file>
+        <file>icons/delete.svg</file>
     </qresource>
     <qresource prefix="/themes">
         <file>themes/ClarusCAD.qss</file>

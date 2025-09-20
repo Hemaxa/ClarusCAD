@@ -23,9 +23,6 @@ signals:
     void gridSnapToggled(bool enabled);
 
 private:
-    //метод создания и настройки кнопок
-    QToolButton* createToolButton(const QString& text, const QString& iconPath, const QKeySequence& shortcut);
-
     //указатели на соответствующие кнопки
     QToolButton* m_gridSnapBtn;
 };
