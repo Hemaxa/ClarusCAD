@@ -21,6 +21,7 @@
 #include <QKeyEvent>
 #include <QCursor>
 #include <QApplication>
+#include <QToolButton>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
@@ -109,8 +110,8 @@ void MainWindow::createPanelWindows()
 void MainWindow::createConnections()
 {
     //1) инструмент и/или панель свойств сообщают данные -> в главном окне вызывается слот создания соответствующего объекта
-    connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::createNewSegment);
-    connect(m_propertiesPanel, &PropertiesPanelWidget::createSegmentRequested, this, &MainWindow::createNewSegment);
+    connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::segmentPropertiesApplied, this, &MainWindow::applySegmentChanges);
 
     //2) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
@@ -180,6 +181,7 @@ void MainWindow::activateDeleteTool()
     m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
     QApplication::setOverrideCursor(Qt::CrossCursor); //изменение курсора
+    m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
 }
 
 void MainWindow::activateSegmentCreationTool()
@@ -190,12 +192,25 @@ void MainWindow::activateSegmentCreationTool()
     m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
     emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
+    m_toolbarPanel->getCreateSegmentButton()->setChecked(true); //установка кнопки в активное положение
 }
 
-void MainWindow::createNewSegment(const PointPrimitive& start, const PointPrimitive& end)
+void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color)
 {
-    auto* segment = new SegmentPrimitive(start, end);
-    addPrimitiveToScene(segment); //метод добавления примитива в сцену
+    if (segment) {
+        // РЕЖИМ РЕДАКТИРОВАНИЯ: обновляем существующий объект
+        segment->setStart(start);
+        segment->setEnd(end);
+        segment->setColor(color);
+
+        m_viewportPanel->update();
+        emit sceneChanged(m_scene); // Обновляем список, но не меняем выбор
+    } else {
+        // РЕЖИМ СОЗДАНИЯ: создаем новый объект
+        auto* newSegment = new SegmentPrimitive(start, end);
+        newSegment->setColor(color);
+        addPrimitiveToScene(newSegment); // Этот метод добавит объект и сделает его выбранным
+    }
 }
 
 void MainWindow::deletePrimitive(BasePrimitive* primitive)
@@ -299,15 +314,14 @@ void MainWindow::processConsoleCommand(const QString& commandStr)
         return;
     }
 
-    //обработка существующих команд
     if (command.name == "segment" && command.args.size() == 4) {
         PointPrimitive start(command.args[0], command.args[1]);
         PointPrimitive end(command.args[2], command.args[3]);
-        createNewSegment(start, end);
-    }
 
-    //обработка неизвестной команды
-    else {
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+        // Вызываем новый универсальный метод с nullptr, чтобы создать объект
+        applySegmentChanges(nullptr, start, end, command.color);
+    } else {
         qDebug("Неизвестная команда или неверное количество аргументов.");
     }
 }

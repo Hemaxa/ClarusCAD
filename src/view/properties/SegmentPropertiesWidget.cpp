@@ -8,47 +8,47 @@
 
 SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
-    //формовый шаблон компоновки (автоматически создает два столбца, для меток и полей ввода)
-    auto* layout = new QFormLayout(this);
+    auto* validator = new QDoubleValidator(this);
 
-    //создание полей ввода
+    // 1. Создаем уникальные для отрезка поля
     m_startXEdit = new QLineEdit("0.0");
     m_startYEdit = new QLineEdit("0.0");
     m_endXEdit = new QLineEdit("0.0");
     m_endYEdit = new QLineEdit("0.0");
 
-    //прикрепление валидатора к полям ввода
-    auto* validator = new QDoubleValidator(this);
     m_startXEdit->setValidator(validator);
     m_startYEdit->setValidator(validator);
     m_endXEdit->setValidator(validator);
     m_endYEdit->setValidator(validator);
 
-    //создание меток
-    layout->addRow("Начало X:", m_startXEdit);
-    layout->addRow("Начало Y:", m_startYEdit);
-    layout->addRow("Конец X:", m_endXEdit);
-    layout->addRow("Конец Y:", m_endYEdit);
+    // 2. Добавляем их в компоновку, унаследованную от базового класса
+    m_layout->addRow("Начало X:", m_startXEdit);
+    m_layout->addRow("Начало Y:", m_startYEdit);
+    m_layout->addRow("Конец X:", m_endXEdit);
+    m_layout->addRow("Конец Y:", m_endYEdit);
+    m_layout->addRow("Цвет:", m_colorButton);    // <-- Добавляем кнопку цвета из базового класса
+    m_layout->addWidget(m_applyButton);         // <-- Добавляем кнопку "Применить" из базового класса
 
-    //создание кнопки
-    auto* createButton = new QPushButton("Создать отрезок", this);
-    layout->addWidget(createButton);
-    connect(createButton, &QPushButton::clicked, this, &SegmentPropertiesWidget::onCreateButtonClicked);
+    // 3. Подключаемся к кнопке из базового класса
+    connect(m_applyButton, &QPushButton::clicked, this, &SegmentPropertiesWidget::onApplyButtonClicked);
 }
 
 void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
 {
-    //указатель, переданный из PropertiesPanelWidget преобразуется в указатель, используемый в SegmentCreationPrimitive
+    // 1. Вызываем базовую реализацию, чтобы настроить кнопки и цвета
+    BasePropertiesWidget::setPrimitive(primitive);
+
+    // 2. Выполняем свою специфическую логику
     m_currentSegment = dynamic_cast<SegmentPrimitive*>(primitive);
-    //если такой указатель есть, значит существует такой объект, значит надо показать его параметры
+
     if (m_currentSegment) {
+        // Заполняем поля, если редактируем существующий объект
         m_startXEdit->setText(QString::number(m_currentSegment->getStart().getX()));
         m_startYEdit->setText(QString::number(m_currentSegment->getStart().getY()));
         m_endXEdit->setText(QString::number(m_currentSegment->getEnd().getX()));
         m_endYEdit->setText(QString::number(m_currentSegment->getEnd().getY()));
-    }
-    //если такого указателя нет, значит создается новый объект, значит надо показать пустые параметры
-    else {
+    } else {
+        // Сбрасываем поля, если создаем новый
         m_startXEdit->setText("0.0");
         m_startYEdit->setText("0.0");
         m_endXEdit->setText("0.0");
@@ -56,12 +56,11 @@ void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
     }
 }
 
-void SegmentPropertiesWidget::onCreateButtonClicked()
+void SegmentPropertiesWidget::onApplyButtonClicked()
 {
-    //считывается значение полей
     PointPrimitive start(m_startXEdit->text().toDouble(), m_startYEdit->text().toDouble());
     PointPrimitive end(m_endXEdit->text().toDouble(), m_endYEdit->text().toDouble());
 
-    //отправка сигнала
-    emit createSegmentRequested(start, end);
+    // Отправляем сигнал, используя m_selectedColor из базового класса
+    emit propertiesApplied(m_currentSegment, start, end, m_selectedColor);
 }

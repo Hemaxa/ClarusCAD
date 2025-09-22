@@ -24,6 +24,10 @@ public:
     //метод снятия выделения с инструментов
     void clearSelection();
 
+    //геттры для указателей на кнопки
+    QToolButton* getDeleteButton() const;
+    QToolButton* getCreateSegmentButton() const;
+
 signals:
     //сигналы нажатия соответствующих кнопок
     void deleteToolActivated();

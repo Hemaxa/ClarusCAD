@@ -1,4 +1,4 @@
-// src/view/design/AnimationManager.h
+//AnimationManager - класс, отвечающий за анимации в приложении
 
 #pragma once
 

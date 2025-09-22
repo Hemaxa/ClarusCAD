@@ -2,7 +2,7 @@
 
 #include <QApplication>
 #include <QFile>
-#include <QTextStream>
+//#include <QTextStream>
 #include <QRegularExpression>
 #include <QDebug>
 
@@ -64,8 +64,8 @@ void ThemeManager::loadThemeFromFile(const QString& themeName)
 void ThemeManager::parseThemeColors(const QString& styleSheet)
 {
     m_themeColors.clear();
-    // Новое, более надежное регулярное выражение.
-    // Оно ищет строку вида "@имя: значение;"
+
+    //парсинг переменных цветов из .qss файла
     QRegularExpression regex("@(\\w+):\\s*([^;]+);");
 
     auto it = regex.globalMatch(styleSheet);
@@ -73,9 +73,9 @@ void ThemeManager::parseThemeColors(const QString& styleSheet)
         QRegularExpressionMatch match = it.next();
         QString key = match.captured(1);
 
-        // Получаем значение и очищаем его от возможных вложенных комментариев
+        //получение значения и очистка от возможных комментариев
         QString value = match.captured(2).trimmed();
-        value = value.section("/*", 0, 0).trimmed(); // Убираем все, что после "/*"
+        value = value.section("/*", 0, 0).trimmed(); //убирает все, что после "/*"
 
         if (!value.isEmpty()) {
             m_themeColors.insert(key, QColor(value));
@@ -93,6 +93,7 @@ QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
     QString svgData = QTextStream(&file).readAll();
     file.close();
 
+    //параметр, отвечающий за цвет в .svg файле
     svgData.replace("currentColor", color.name(QColor::HexRgb));
 
     QByteArray svgBytes = svgData.toUtf8();

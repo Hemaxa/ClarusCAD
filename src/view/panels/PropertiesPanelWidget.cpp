@@ -23,7 +23,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     layout->addWidget(m_stack); //добавление содержимого панели в canvas
 
     //сигнал от инструмента "Отрезок" пересылается (пробрасывается) в MainWindow
-    connect(m_segmentProperties, &SegmentPropertiesWidget::createSegmentRequested, this, &PropertiesPanelWidget::createSegmentRequested);
+    connect(m_segmentProperties, &SegmentPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::segmentPropertiesApplied);
 
     //минимальная высота окна
     setMinimumHeight(200);

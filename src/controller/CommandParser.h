@@ -1,15 +1,19 @@
+//CommandParser - парсер для командной строки
+
 #pragma once
 
 #include <QObject>
 #include <QString>
 #include <QList>
+#include <QColor>
 
-// Структура для хранения разобранной команды
+//структура для хранения разобранной команды
 struct ParsedCommand
 {
-    bool isValid = false;
-    QString name;
-    QList<double> args;
+    bool isValid = false; //флаг удачной обработки команды
+    QString name; //имя команды
+    QList<double> args; //список числовых аргументов команды
+    QColor color; //заданный цвет объекта
 };
 
 class CommandParser : public QObject
@@ -17,8 +21,9 @@ class CommandParser : public QObject
     Q_OBJECT
 
 public:
+    //конструктор
     explicit CommandParser(QObject* parent = nullptr);
 
-    // Главный метод, который разбирает строку
+    //главный метод парсинга строки
     ParsedCommand parse(const QString& commandString) const;
 };

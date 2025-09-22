@@ -21,12 +21,12 @@ public:
     void setPrimitive(BasePrimitive* primitive) override;
 
 signals:
-    //сигнал, который отправляется при нажатии кнопки "Создать" в PropertiesPanelWidget
-    void createSegmentRequested(const PointPrimitive& start, const PointPrimitive& end);
+    //сигнал, для создания или обновления примитива "Отрезок"
+    void propertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 
 private slots:
     //слот для обработки нажатия кнопки "Создать"
-    void onCreateButtonClicked();
+    void onApplyButtonClicked();
 
 private:
     //указатель на текущий редактируемый объект "Отрезок"

@@ -29,6 +29,17 @@ QWidget {
     font-size: 13px;
 }
 
+/* --- Информационная панель во вьюпорте --- */
+QLabel#InfoLabel {
+    background-color: rgba(42, 42, 42, 0.9);
+    color: #e0e0e0;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #3c3c3c;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+}
+
 /* --- Кнопки на панели инструментов --- */
 QToolButton {
     background-color: transparent;

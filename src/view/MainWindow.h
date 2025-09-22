@@ -13,6 +13,7 @@
 class Scene;
 class BasePrimitive;
 class PointPrimitive;
+class SegmentPrimitive;
 class BaseCreationTool;
 class BaseDrawingTool;
 class DeleteTool;
@@ -42,8 +43,8 @@ private slots:
     void activateDeleteTool();
     void activateSegmentCreationTool();
 
-    //слоты создания новых объектов
-    void createNewSegment(const PointPrimitive& start, const PointPrimitive& end);
+    //слоты создания или обновления объектов
+    void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 
     //слот удаления объекта
     void deletePrimitive(BasePrimitive* primitive);

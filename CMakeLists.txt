@@ -46,6 +46,7 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/view/BasePanelWidget.h
     ${SRC_DIR}/view/BaseDrawingTool.h
     ${SRC_DIR}/view/BasePropertiesWidget.h
+    ${SRC_DIR}/view/BasePropertiesWidget.cpp
     ${SRC_DIR}/view/MainWindow.h
     ${SRC_DIR}/view/MainWindow.cpp
     ${SRC_DIR}/view/SettingsWindow.h

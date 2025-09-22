@@ -9,21 +9,26 @@ SegmentCreationTool::SegmentCreationTool(QObject* parent) : BaseCreationTool(par
 
 void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport)
 {
+    //создание нового примитива
     if (event->button() == Qt::LeftButton) {
-        QPointF snappedPos = viewport->snapToGrid(event->position()); // <-- Привязываем позицию
+        //определение координат, в зависимости от активации опции "Привязка к сетке"
+        QPointF snappedPos = viewport->snapToGrid(event->position());
 
+        //первый клик
         if (m_currentState == State::Idle) {
-            m_firstPoint.setX(snappedPos.x()); // <-- Используем привязанную позицию
+            m_firstPoint.setX(snappedPos.x());
             m_firstPoint.setY(snappedPos.y());
             m_currentMousePos = m_firstPoint;
             m_currentState = State::WaitingForSecondPoint;
         }
+        //второй клик
         else if (m_currentState == State::WaitingForSecondPoint) {
-            PointPrimitive secondPoint(snappedPos.x(), snappedPos.y()); // <-- Используем привязанную позицию
-            emit segmentDataReady(m_firstPoint, secondPoint);
+            PointPrimitive secondPoint(snappedPos.x(), snappedPos.y());
+            emit segmentDataReady(nullptr, m_firstPoint, secondPoint, Qt::white);
             m_currentState = State::Idle;
         }
     }
+    //отмена создания
     else if (event->button() == Qt::RightButton) {
         m_currentState = State::Idle;
     }
@@ -31,9 +36,10 @@ void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
 
 void SegmentCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport)
 {
+    //приклеивание к сетке, если включена опция "Привязка к сетке"
     if (m_currentState == State::WaitingForSecondPoint) {
-        QPointF snappedPos = viewport->snapToGrid(event->position()); // <-- Привязываем позицию
-        m_currentMousePos.setX(snappedPos.x()); // <-- Используем привязанную позицию
+        QPointF snappedPos = viewport->snapToGrid(event->position());
+        m_currentMousePos.setX(snappedPos.x());
         m_currentMousePos.setY(snappedPos.y());
     }
 }
@@ -56,7 +62,7 @@ void SegmentCreationTool::onPaint(QPainter& painter)
 {
     //если запущен процесс создания отрезка
     if (m_currentState == State::WaitingForSecondPoint) {
-        //рисуется вспомогательная линия
+        //рисуется вспомогательная пунктирная линия
         painter.setPen(QPen(QColor(0, 160, 64, 150), 1.5, Qt::DashLine));
         painter.drawLine(QPointF(m_firstPoint.getX(), m_firstPoint.getY()), QPointF(m_currentMousePos.getX(), m_currentMousePos.getY()));
     }

@@ -1,9 +1,13 @@
-//SegmentCreationTool - инструмент создания отрезка
+//SegmentCreationTool - инструмент создания объекта "Отрезок"
 
 #pragma once
 
 #include "BaseCreationTool.h"
 #include "PointPrimitive.h"
+
+#include <QColor>
+
+class SegmentPrimitive;
 
 //наслдедуется от базового класса BaseCreationTool
 class SegmentCreationTool : public BaseCreationTool
@@ -27,7 +31,7 @@ public:
 
 signals:
     //сигнал, сообщающий об окончании ввода параметров и передающий координаты
-    void segmentDataReady(const PointPrimitive& start, const PointPrimitive& end);
+    void segmentDataReady(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 
 private:
     //состояние ввода

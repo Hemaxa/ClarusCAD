@@ -6,6 +6,8 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QEvent>
+#include <QLabel>
+#include <QGridLayout>
 
 ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
@@ -23,6 +25,20 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
 
     //начальная позиция камеры
     m_panOffset = QPointF(50.0, 50.0);
+
+    //создание info-панели
+    m_infoLabel = new QLabel(canvas());
+    m_infoLabel->setObjectName("InfoLabel");
+    m_infoLabel->setFixedSize(100, 60); //размеры панели
+    m_infoLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    auto* layout = new QGridLayout(canvas());
+    layout->setContentsMargins(15, 15, 15, 15);
+    layout->addWidget(m_infoLabel, 1, 1, Qt::AlignBottom | Qt::AlignRight);
+    layout->setRowStretch(0, 1);
+    layout->setColumnStretch(0, 1);
+
+    updateInfoLabel();
 }
 
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
@@ -59,6 +75,11 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         //событие перемещения мыши
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+
+            //обновление координа в info-панели
+            m_currentMouseWorldPos = screenToWorld(mouseEvent->pos());
+            updateInfoLabel();
+
             //если активен режим панорамирования
             if (m_isPanning) {
                 QPoint delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
@@ -108,11 +129,11 @@ double ViewportPanelWidget::calculateDynamicGridStep() const
     double dynamicGridStep = m_gridStep;
 
     //корректировка шага
-    while (visualGridStep < 50) {
+    while (visualGridStep < 15) {
         dynamicGridStep *= 2;
         visualGridStep *= 2;
     }
-    while (visualGridStep > 100) {
+    while (visualGridStep > 150) {
         dynamicGridStep /= 2;
         visualGridStep /= 2;
     }
@@ -240,8 +261,8 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     painter.drawPolygon(arrowHeadY);
 
     //точка в начале координат
-    painter.setPen(Qt::black);
-    painter.setBrush(Qt::black);
+    painter.setPen(Qt::white);
+    painter.setBrush(Qt::white);
     painter.drawEllipse(origin, 3, 3);
 
     //подписи осей
@@ -251,6 +272,15 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     painter.drawText(origin - QPoint(4, gizmoSize + 8), "Y");
 
     painter.restore(); //восстановление состояния QPainter
+}
+
+void ViewportPanelWidget::updateInfoLabel()
+{
+    QString infoText = QString("X: %1\nY: %2\nGrid: x%3")
+        .arg(m_currentMouseWorldPos.x(), 0, 'f', 2)
+        .arg(m_currentMouseWorldPos.y(), 0, 'f', 2)
+        .arg(m_gridMultiplier, 0, 'f', 2);
+    m_infoLabel->setText(infoText);
 }
 
 void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
@@ -269,6 +299,12 @@ void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
 
     //отработка смещения
     m_panOffset += worldPosBeforeZoom - worldPosAfterZoom;
+
+    //обработка зум-фактора для info-панели
+    if (m_gridStep > 0) {
+        m_gridMultiplier = calculateDynamicGridStep() / m_gridStep;
+    }
+    updateInfoLabel();
 
     update();
 }
@@ -297,20 +333,21 @@ QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
     if (!m_isGridSnapEnabled) {
         return worldPos;
     }
-    double dynamicGridStep = getDynamicGridStep();
-    if (dynamicGridStep == 0.0) {
+
+    if (m_gridStep <= 0) {
         return worldPos;
     }
+
     //округление координат по шагу сетки для привязки
-    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep;
-    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep;
+    double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep;
+    double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep;
     return QPointF(snappedX, snappedY);
 }
 
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
-void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; update(); } }
+void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; if (m_gridStep > 0) { m_gridMultiplier = calculateDynamicGridStep() / m_gridStep; } updateInfoLabel(); update(); } }
 void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }

@@ -5,9 +5,12 @@
 #include "BasePanelWidget.h"
 #include "PointPrimitive.h"
 
+#include <QColor>
+
 class QStackedWidget;
 class SegmentPropertiesWidget;
 class BasePrimitive;
+class SegmentPrimitive;
 
 //наслдедуется от базового класса BasePanelWidget
 class PropertiesPanelWidget : public BasePanelWidget
@@ -27,8 +30,8 @@ public slots:
     void showPropertiesFor(PrimitiveType type);
 
 signals:
-    //сигналы, информирующие MainWindow о создании объекта
-    void createSegmentRequested(const PointPrimitive& start, const PointPrimitive& end);
+    //сигналы, информирующие MainWindow о создании или изменении объекта
+    void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого

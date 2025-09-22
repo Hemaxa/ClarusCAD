@@ -11,6 +11,7 @@ class Scene;
 class BaseCreationTool;
 class BaseDrawingTool;
 class ThemeManager;
+class QLabel;
 
 //наслдедуется от базового класса BasePanelWidget
 class ViewportPanelWidget : public BasePanelWidget
@@ -45,8 +46,10 @@ public slots:
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
+    QLabel* m_infoLabel; //указатель на info-панель
     BaseCreationTool* m_activeTool = nullptr; //указатель на выбранный инструмент
     const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* m_drawingTools = nullptr; //указатель на мапу отрисовщиков
+    ThemeManager* m_themeManager = nullptr; //указатель на менеджер тем
 
     //параметры панели по умолчанию
     int m_gridStep = 50; //шаг сетки
@@ -57,11 +60,13 @@ private:
     bool m_isPanning = false; //флаг активации перемещения по сцене (зажатие ЛКМ)
     bool m_isGridSnapEnabled = true; //флаг активации привязка к сетке
 
+    QPointF m_currentMouseWorldPos; //текущая позиция мыши в мировых координатах
+    double m_gridMultiplier = 1.0; //текущий множитель сетки
+
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
     double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
-
-    ThemeManager* m_themeManager = nullptr;
+    void updateInfoLabel(); //метод обновления содержимого info-панели
 };

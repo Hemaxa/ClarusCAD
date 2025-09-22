@@ -12,8 +12,8 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
     if (!segment) return;
 
 
-    //устанавливается перо для рисования
-    painter.setPen(Qt::white);
+    //устанавливается перо для рисования необходимого цвета
+    painter.setPen(segment->getColor());
 
     //реализация алгоритма Брезенхема
     //1) получение координат и приведение их к целым числам

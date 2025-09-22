@@ -22,8 +22,8 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     //настройка элементов интерфейса
     //настройка шага сетки
     populateThemeComboBox();
-    m_gridStepSpinBox->setRange(10, 200);
-    m_gridStepSpinBox->setSingleStep(10);
+    m_gridStepSpinBox->setRange(10, 100);
+    m_gridStepSpinBox->setSingleStep(5);
     m_gridStepSpinBox->setSuffix(" px");
 
     //настройка списка тем

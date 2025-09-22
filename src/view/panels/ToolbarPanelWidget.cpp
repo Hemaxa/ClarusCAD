@@ -70,3 +70,6 @@ void ToolbarPanelWidget::clearSelection()
         m_buttonGroup->setExclusive(true);
     }
 }
+
+QToolButton* ToolbarPanelWidget::getDeleteButton() const { return m_deleteBtn; }
+QToolButton* ToolbarPanelWidget::getCreateSegmentButton() const { return m_createSegmentBtn; }
