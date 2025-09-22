@@ -11,26 +11,28 @@
 SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
     //настройки окна
-    setWindowTitle("Настройки приложения");
+    setWindowTitle("Настройки");
     setMinimumWidth(400);
+    setMinimumHeight(400);
 
     //создание элементов интерфейса
     m_themeComboBox = new QComboBox();
     m_gridStepSpinBox = new QSpinBox();
 
     //настройка элементов интерфейса
+    //настройка шага сетки
     populateThemeComboBox();
     m_gridStepSpinBox->setRange(10, 200);
     m_gridStepSpinBox->setSingleStep(10);
     m_gridStepSpinBox->setSuffix(" px");
 
+    //настройка списка тем
     m_themeComboBox->setFixedHeight(30);
-    m_gridStepSpinBox->setFixedHeight(30);
 
     //расположение элементов интерфейса
     auto* appearanceGroup = new QGroupBox("Оформление");
     auto* formLayout = new QFormLayout();
-    formLayout->setSpacing(10);
+    formLayout->setSpacing(15);
     formLayout->addRow("Тема оформления:", m_themeComboBox);
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
     appearanceGroup->setLayout(formLayout);
@@ -51,9 +53,10 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 void SettingsWindow::populateThemeComboBox()
 {
     //добавление тем
-    m_themeComboBox->addItem("Тема ClarusCAD", "ClarusCAD");
-    m_themeComboBox->addItem("Темная тема", "Dark");
-    m_themeComboBox->addItem("Светлая тема", "Light");
+    m_themeComboBox->addItem("ClarusCAD", "ClarusCAD");
+    m_themeComboBox->addItem("Hello Kitty", "HelloKitty");
+    m_themeComboBox->addItem("Темная", "Dark");
+    m_themeComboBox->addItem("Светлая", "Light");
 }
 
 void SettingsWindow::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }

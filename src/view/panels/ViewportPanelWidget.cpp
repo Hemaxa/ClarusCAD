@@ -125,9 +125,6 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     QPainter painter(canvas());
     painter.setRenderHint(QPainter::Antialiasing);
 
-    //фон сцены
-    painter.fillRect(canvas()->rect(), QColor(45, 45, 45));
-
     //отрисовка сетки и гизмо
     paintGrid(painter);
     paintGizmo(painter);

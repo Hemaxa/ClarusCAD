@@ -49,7 +49,7 @@ private slots:
     void deletePrimitive(BasePrimitive* primitive);
 
     //слот вызова окна настроек
-    void openSettingsDialog();
+    void openSettingsWindow();
 
     //слот отключения выбранного инструмента
     void deactivateCurrentTool();

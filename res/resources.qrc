@@ -8,5 +8,6 @@
         <file>themes/ClarusCAD.qss</file>
         <file>themes/Dark.qss</file>
         <file>themes/Light.qss</file>
+        <file>themes/HelloKitty.qss</file>
     </qresource>
 </RCC>

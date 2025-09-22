@@ -162,7 +162,7 @@ void MainWindow::createActions()
     m_settingsAction = new QAction("Настройки", this);
     m_settingsAction->setShortcut(QKeySequence::Preferences);
     m_settingsAction->setMenuRole(QAction::PreferencesRole);
-    connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
+    connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsWindow);
 }
 
 void MainWindow::createMenus()
@@ -218,7 +218,7 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
     m_viewportPanel->update();
 }
 
-void MainWindow::openSettingsDialog()
+void MainWindow::openSettingsWindow()
 {
     SettingsWindow dialog(this);
 
