@@ -23,6 +23,13 @@ public:
     //установка указателя на примитив, свойтва которого необходимо отображать
     virtual void setPrimitive(BasePrimitive* primitive);
 
+
+    void updateColor(const QColor& color);
+
+signals:
+    //сигнал, информирующий о выборе цвета для примитва
+    void colorChanged(const QColor& color);
+
 protected slots:
     //слот нажатия на кнопку изменения цвета
     void onColorButtonClicked();

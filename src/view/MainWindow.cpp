@@ -113,29 +113,32 @@ void MainWindow::createConnections()
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
     connect(m_propertiesPanel, &PropertiesPanelWidget::segmentPropertiesApplied, this, &MainWindow::applySegmentChanges);
 
-    //2) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
+    //2) панель свойств сообщает об изменении цвета для нового объекта
+    connect(m_propertiesPanel, &PropertiesPanelWidget::colorChanged, this, &MainWindow::onColorChanged);
+
+    //3) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
 
-    //3) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
+    //4) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
-    //4) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
+    //5) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
     connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 
-    //5) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (7 пункт)
+    //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (7 пункт)
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
 
-    //6) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
+    //7) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
     connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor)); //QOverload используется, т.к. showPropertiesFor перегружен
 
-    //7) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
+    //8) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
     connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
 
-    //8) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
+    //9) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
 
-    //9) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
+    //10) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
     connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand);
 }
 
@@ -181,6 +184,9 @@ void MainWindow::activateDeleteTool()
     m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
     QApplication::setOverrideCursor(Qt::CrossCursor); //изменение курсора
+
+    m_propertiesPanel->showPropertiesFor(m_segmentCreationTool->getColor()); //обновляение цвета в панели свойств
+
     m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
 }
 
@@ -193,6 +199,14 @@ void MainWindow::activateSegmentCreationTool()
 
     emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
     m_toolbarPanel->getCreateSegmentButton()->setChecked(true); //установка кнопки в активное положение
+}
+
+void MainWindow::onColorChanged(const QColor& color)
+{
+    // Если какой-либо инструмент сейчас активен, передаем ему новый цвет
+    if (m_currentTool) {
+        m_currentTool->setColor(color);
+    }
 }
 
 void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color)

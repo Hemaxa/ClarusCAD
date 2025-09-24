@@ -26,6 +26,12 @@ public:
     //переопределение метода очистки инструмента
     void reset() override;
 
+    //переопределение метода для установки цвета
+    void setColor(const QColor& color) override;
+
+    //переопределение метода для получения установленного цвета
+    QColor getColor() const override;
+
     //переопределение вспомогательного метода для дополнительной геометрии
     void onPaint(QPainter& painter) override;
 
@@ -43,4 +49,5 @@ private:
     State m_currentState; //текущее состояние ввода
     PointPrimitive m_firstPoint; //переменная хранения координат первой точки
     PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
+    QColor m_currentColor = Qt::white; //переменная хранения цвета
 };

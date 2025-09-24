@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QObject>
+#include <QColor>
 
 class QMouseEvent;
 class QKeyEvent;
@@ -27,6 +28,12 @@ public:
 
     //виртуальный метод очистки инструмента
     virtual void reset() {}
+
+    //виртуальный метод для установки цвета
+    virtual void setColor(const QColor& color) { Q_UNUSED(color); }
+
+    //виртуальный метод для получения установленного цвета
+    virtual QColor getColor() const { return Qt::white; }
 
     //виртуальный вспомогательный метод для дополнительной геометрии
     virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }

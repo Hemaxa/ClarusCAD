@@ -25,18 +25,22 @@ void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
 
     //режим редактирования
     if (m_currentPrimitive) {
-        // РЕЖИМ РЕДАКТИРОВАНИЯ
         m_selectedColor = m_currentPrimitive->getColor();
         m_applyButton->setText("Обновить");
     }
     //режим создания
     else
     {
-        m_selectedColor = Qt::white;
         m_applyButton->setText("Создать");
     }
 
     //обновление цвета кружка-кнопки
+    m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
+}
+
+void BasePropertiesWidget::updateColor(const QColor& color)
+{
+    m_selectedColor = color;
     m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
 }
 
@@ -46,5 +50,6 @@ void BasePropertiesWidget::onColorButtonClicked()
     if (color.isValid()) {
         m_selectedColor = color;
         m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
+        emit colorChanged(m_selectedColor);
     }
 }

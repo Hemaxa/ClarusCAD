@@ -29,7 +29,13 @@ public slots:
     //слот, показывающий пустые параметры при создании нового объекта (при активации инструмента создания объекта)
     void showPropertiesFor(PrimitiveType type);
 
+    //слот, показывающий пусты параметры с сохраненным цветом при создании нового объекта
+    void showPropertiesFor(const QColor& color);
+
 signals:
+    //сигнал, информирующий MainWindow о смене цвета в режиме создания объекта
+    void colorChanged(const QColor& color);
+
     //сигналы, информирующие MainWindow о создании или изменении объекта
     void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 

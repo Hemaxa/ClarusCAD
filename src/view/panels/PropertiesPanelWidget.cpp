@@ -22,8 +22,9 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     layout->setContentsMargins(0, 0, 0, 0); //убирает отступы, чтобы занять всю допустимую область панели
     layout->addWidget(m_stack); //добавление содержимого панели в canvas
 
-    //сигнал от инструмента "Отрезок" пересылается (пробрасывается) в MainWindow
+    //сигналы от инструмента "Отрезок" пересылается (пробрасывается) в MainWindow
     connect(m_segmentProperties, &SegmentPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::segmentPropertiesApplied);
+    connect(m_segmentProperties, &SegmentPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
 
     //минимальная высота окна
     setMinimumHeight(200);
@@ -61,5 +62,13 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
     else {
         //для других типов объектов показывается пустрой виджет
         m_stack->setCurrentWidget(m_emptyWidget);
+    }
+}
+
+void PropertiesPanelWidget::showPropertiesFor(const QColor& color)
+{
+    auto* segmentWidget = qobject_cast<SegmentPropertiesWidget*>(m_stack->currentWidget());
+    if (segmentWidget) {
+        segmentWidget->updateColor(color);
     }
 }

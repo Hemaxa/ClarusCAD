@@ -43,6 +43,12 @@ private slots:
     void activateDeleteTool();
     void activateSegmentCreationTool();
 
+    //слот установки цвета для инструмента
+    void onColorChanged(const QColor& color);
+
+    //слот отключения выбранного инструмента
+    void deactivateCurrentTool();
+
     //слоты создания или обновления объектов
     void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
 
@@ -51,9 +57,6 @@ private slots:
 
     //слот вызова окна настроек
     void openSettingsWindow();
-
-    //слот отключения выбранного инструмента
-    void deactivateCurrentTool();
 
     //слот обработки команды из консоли
     void processConsoleCommand(const QString& command);
