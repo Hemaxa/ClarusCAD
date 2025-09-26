@@ -27,8 +27,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_segmentProperties, &SegmentPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
 
     //минимальная высота окна
-    setMinimumHeight(150);
-    setMinimumWidth(100);
+    setMinimumHeight(200);
 }
 
 void PropertiesPanelWidget::showPropertiesFor(BasePrimitive* primitive)

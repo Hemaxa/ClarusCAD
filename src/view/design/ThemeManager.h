@@ -22,8 +22,12 @@ public:
     //метод загрузки последней темы
     void reloadTheme();
 
-    //метод перекрашивания иконок
-    static QIcon colorizeSvgIcon(const QString& path, const QColor& color);
+    //перегруженный метод для перекрашивания svg-файлов
+    //1) для простых файлов с одним цветом (возвращает QIcon)
+    static QIcon colorizeSvg(const QString& path, const QColor& color);
+
+    //2) для сложных файлов с несколькими цветами (возвращает QPixmap)
+    static QPixmap colorizeSvg(const QString& path, const QMap<QString, QColor>& colorMap);
 
     //геттеры цвета иконок, цвета из мапы цветов и текущей темы
     QColor getIconColor() const;
@@ -45,6 +49,9 @@ private:
 
     //метод получения цветов из файла темы
     void parseThemeColors(const QString& styleSheet);
+
+    //метод замены svg
+    static QString readAndReplaceSvg(const QString& path, const QMap<QString, QColor>& colorMap);
 
     //поля класса
     QSettings m_settings;

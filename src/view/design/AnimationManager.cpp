@@ -6,29 +6,27 @@
 #include <QPainter>
 #include <QPaintEvent>
 
-AnimationManager::AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, QWidget* parent)
-    : QToolButton(parent), m_iconPath(iconPath)
+AnimationManager::AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, QWidget* parent) : QToolButton(parent), m_iconPath(iconPath)
 {
     setToolTip(toolTip);
     setCheckable(true);
     setShortcut(shortcut);
-    // Устанавливаем фиксированный размер для всего виджета, чтобы он не "прыгал" в компоновке
     setFixedSize(42, 42);
 
     // Получаем цвет, создаем иконку и сохраняем ее как QPixmap
     QColor iconColor = ThemeManager::instance().getIconColor();
     // Мы больше не используем setIcon(), так как будем рисовать сами
-    m_pixmap = ThemeManager::colorizeSvgIcon(iconPath, iconColor).pixmap(30, 30);
+    m_pixmap = ThemeManager::colorizeSvg(iconPath, iconColor).pixmap(30, 30);
 
     // Анимируем наше новое свойство "iconScale"
     m_animation = new QPropertyAnimation(this, "iconScale", this);
-    m_animation->setDuration(100); // Чуть быстрее для отзывчивости
+    m_animation->setDuration(100);
     m_animation->setEasingCurve(QEasingCurve::OutCubic);
 }
 
 void AnimationManager::updateIconColor(const QColor& color)
 {
-    m_pixmap = ThemeManager::colorizeSvgIcon(m_iconPath, color).pixmap(30, 30);
+    m_pixmap = ThemeManager::colorizeSvg(m_iconPath, color).pixmap(30, 30);
     update(); // Перерисовываем виджет с новой иконкой
 }
 

@@ -11,6 +11,7 @@ class BasePrimitive;
 class QPushButton;
 class QFormLayout;
 class QStackedWidget;
+class QLabel;
 
 class BasePropertiesWidget : public QWidget
 {
@@ -41,17 +42,23 @@ protected slots:
     void onColorButtonClicked();
 
 protected:
-    virtual void updateFieldsVisibility();
     virtual void updateFieldValues() = 0;
+    virtual void updatePrompt();
 
-    //общие поля для всех примитивов
     BasePrimitive* m_currentPrimitive = nullptr;
     CoordinateSystemType m_coordSystem;
     QColor m_selectedColor;
-    QPushButton* m_applyButton;
-    QPushButton* m_colorButton;
-    QStackedWidget* m_stack;
+
+    //виджеты для колонок
+    QLabel* m_leftColumn; //левая колонка
+    QWidget* m_centralColumn; //центральная колонка
+    QWidget* m_rightColumn; //правая колонка
+
+    QStackedWidget* m_paramsStack; //общий виджет для сменяемых параметров центральной колонки
     QWidget* m_cartesianWidgets;
     QWidget* m_polarWidgets;
-    QWidget* m_basePref;
+
+    //кнопки
+    QPushButton* m_colorButton;
+    QPushButton* m_applyButton;
 };

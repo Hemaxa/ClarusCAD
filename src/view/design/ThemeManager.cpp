@@ -2,8 +2,9 @@
 
 #include <QApplication>
 #include <QFile>
-//#include <QTextStream>
+#include <QTextStream>
 #include <QRegularExpression>
+#include <QPainter>
 #include <QDebug>
 
 ThemeManager& ThemeManager::instance()
@@ -61,6 +62,41 @@ void ThemeManager::loadThemeFromFile(const QString& themeName)
     qApp->setStyleSheet(styleSheet);
 }
 
+QIcon ThemeManager::colorizeSvg(const QString& path, const QColor& color)
+{
+    // Создаем карту с одним элементом для замены "currentColor"
+    QMap<QString, QColor> colorMap;
+    colorMap.insert("currentColor", color);
+
+    // Вызываем нашу общую функцию
+    QString svgData = readAndReplaceSvg(path, colorMap);
+    if (svgData.isEmpty()) {
+        return QIcon();
+    }
+
+    // Создаем QIcon из измененных данных
+    QByteArray svgBytes = svgData.toUtf8();
+    QPixmap pixmap;
+    pixmap.loadFromData(svgBytes, "SVG");
+    return QIcon(pixmap);
+}
+
+// Перегрузка #2: для подсказок с несколькими цветами
+QPixmap ThemeManager::colorizeSvg(const QString& path, const QMap<QString, QColor>& colorMap)
+{
+    // Вызываем нашу общую функцию
+    QString svgData = readAndReplaceSvg(path, colorMap);
+    if (svgData.isEmpty()) {
+        return QPixmap();
+    }
+
+    // Создаем QPixmap из измененных данных
+    QByteArray svgBytes = svgData.toUtf8();
+    QPixmap pixmap;
+    pixmap.loadFromData(svgBytes, "SVG");
+    return pixmap;
+}
+
 void ThemeManager::parseThemeColors(const QString& styleSheet)
 {
     m_themeColors.clear();
@@ -83,23 +119,25 @@ void ThemeManager::parseThemeColors(const QString& styleSheet)
     }
 }
 
-QIcon ThemeManager::colorizeSvgIcon(const QString& path, const QColor& color)
+QString ThemeManager::readAndReplaceSvg(const QString& path, const QMap<QString, QColor>& colorMap)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return QIcon();
+        qWarning() << "Could not open SVG file:" << path;
+        return QString(); // Возвращаем пустую строку в случае ошибки
     }
 
     QString svgData = QTextStream(&file).readAll();
     file.close();
 
-    //параметр, отвечающий за цвет в .svg файле
-    svgData.replace("currentColor", color.name(QColor::HexRgb));
+    // Проходим по всем парам "плейсхолдер-цвет" и заменяем их
+    for (auto it = colorMap.constBegin(); it != colorMap.constEnd(); ++it) {
+        svgData.replace(it.key(), it.value().name(QColor::HexRgb));
+    }
 
-    QByteArray svgBytes = svgData.toUtf8();
-    return QIcon(QPixmap::fromImage(QImage::fromData(svgBytes)));
+    return svgData;
 }
 
 QColor ThemeManager::getIconColor() const { return m_iconColor; }
-QColor ThemeManager::getColor(const QString& key) const { return m_themeColors.value(key, Qt::black); }
+QColor ThemeManager::getColor(const QString& key) const { return m_themeColors.value(key, Qt::white); }
 QString ThemeManager::getThemeName() const { return m_currentThemeName; }

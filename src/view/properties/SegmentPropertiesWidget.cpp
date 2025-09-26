@@ -1,5 +1,6 @@
 #include "SegmentPropertiesWidget.h"
 #include "SegmentPrimitive.h"
+#include "ThemeManager.h"
 
 #include <QFormLayout>
 #include <QStackedWidget>
@@ -9,16 +10,10 @@
 
 SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
-    //создание валидатора для проверки вводимых значений
     auto* validator = new QDoubleValidator(this);
 
-    //главный layout всей панели
-    auto* mainLayout = new QFormLayout(this);
-    mainLayout->setContentsMargins(10, 10, 10, 10);
-
-    //декартова система координат
+    //заполнение панели декартовых координат
     auto* cartesianLayout = static_cast<QFormLayout*>(m_cartesianWidgets->layout());
-    cartesianLayout->setContentsMargins(10,10,10,10);
     m_startXEdit = new QLineEdit("0.0");
     m_startYEdit = new QLineEdit("0.0");
     m_endXEdit = new QLineEdit("0.0");
@@ -27,14 +22,13 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     m_startYEdit->setValidator(validator);
     m_endXEdit->setValidator(validator);
     m_endYEdit->setValidator(validator);
-    cartesianLayout->addRow("Начало X:", m_startXEdit);
-    cartesianLayout->addRow("Начало Y:", m_startYEdit);
-    cartesianLayout->addRow("Конец X:", m_endXEdit);
-    cartesianLayout->addRow("Конец Y:", m_endYEdit);
+    cartesianLayout->addRow("Первая точка X:", m_startXEdit);
+    cartesianLayout->addRow("Первая точка Y:", m_startYEdit);
+    cartesianLayout->addRow("Вторая точка X:", m_endXEdit);
+    cartesianLayout->addRow("Вторая точка Y:", m_endYEdit);
 
-    //полярная система координат
+    //заполнение панели полярных координат
     auto* polarLayout = static_cast<QFormLayout*>(m_polarWidgets->layout());
-    polarLayout->setContentsMargins(10,10,10,10);
     m_startRadiusEdit = new QLineEdit("0.0");
     m_startAngleEdit = new QLineEdit("0.0");
     m_endRadiusEdit = new QLineEdit("0.0");
@@ -43,25 +37,16 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     m_startAngleEdit->setValidator(validator);
     m_endRadiusEdit->setValidator(validator);
     m_endAngleEdit->setValidator(validator);
-    polarLayout->addRow("Начало R:", m_startRadiusEdit);
-    polarLayout->addRow("Начало A:", m_startAngleEdit);
-    polarLayout->addRow("Конец R:", m_endRadiusEdit);
-    polarLayout->addRow("Конец A:", m_endAngleEdit);
+    polarLayout->addRow("Первая точка R:", m_startRadiusEdit);
+    polarLayout->addRow("Первая точка A:", m_startAngleEdit);
+    polarLayout->addRow("Вторая точка R:", m_endRadiusEdit);
+    polarLayout->addRow("Вторая точка A:", m_endAngleEdit);
 
-    mainLayout->addWidget(m_stack);
-
-    auto* basePref = new QWidget(this);
-    auto* basePrefLayout = new QFormLayout(basePref); // Создаем QFormLayout для basePref
-    basePref->setLayout(basePrefLayout); // Устанавливаем layout для basePref
-    basePref->setContentsMargins(0, 0, 0, 0);
-
-    basePrefLayout->addRow("Цвет:", m_colorButton); // Используем basePrefLayout
-    basePrefLayout->addRow("", m_applyButton); // Используем пустую метку для выравнивания кнопки по правой колонке
-
-    mainLayout->addWidget(basePref);
-
-    updateFieldsVisibility();
+    //подключение сигнала от кнопки
     connect(m_applyButton, &QPushButton::clicked, this, &SegmentPropertiesWidget::onApplyButtonClicked);
+
+    // 4. Устанавливаем начальные значения
+    setCoordinateSystem(CoordinateSystemType::Cartesian);
 }
 
 void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
@@ -102,6 +87,20 @@ void SegmentPropertiesWidget::updateFieldValues()
         m_endAngleEdit->setText("0.0");
     }
 }
+
+void SegmentPropertiesWidget::updatePrompt()
+{
+    ThemeManager& tm = ThemeManager::instance();
+
+    QMap<QString, QColor> colorMap;
+    colorMap.insert("currentColor", tm.getIconColor());
+    colorMap.insert("@textColor", tm.getColor("textColor"));
+
+    QPixmap themedPixmap = tm.colorizeSvg(":/promts/promts/segment-promt.svg", colorMap);
+
+    m_leftColumn->setPixmap(themedPixmap);
+}
+
 
 void SegmentPropertiesWidget::onApplyButtonClicked()
 {

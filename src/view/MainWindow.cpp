@@ -380,8 +380,8 @@ void MainWindow::showEvent(QShowEvent* event)
         resizeDocks({m_consolePanel, m_propertiesPanel, m_sceneSettingsPanel}, {leftDownWidth, middleDownWidth,rightDownWidth}, Qt::Horizontal);
 
         //определение размеров по высоте (процент от высоты экрана)
-        const double toolbarHeightPercentage = 0.70;
-        const double propertiesHeightPercentage = 0.30;
+        const double toolbarHeightPercentage = 0.75;
+        const double propertiesHeightPercentage = 0.25;
 
         //расчет
         int totalHeight = height();
