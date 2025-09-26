@@ -4,9 +4,12 @@
 
 #include <QObject>
 #include <QColor>
+#include <QPixmap>
 #include <QSettings>
 #include <QIcon>
 #include <QMap>
+
+class QSvgRenderer;
 
 class ThemeManager : public QObject
 {

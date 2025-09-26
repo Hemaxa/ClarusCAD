@@ -96,9 +96,14 @@ void SegmentPropertiesWidget::updatePrompt()
     colorMap.insert("currentColor", tm.getIconColor());
     colorMap.insert("@textColor", tm.getColor("textColor"));
 
-    QPixmap themedPixmap = tm.colorizeSvg(":/promts/promts/segment-promt.svg", colorMap);
+    QPixmap originalPixmap = tm.colorizeSvg(":/promts/promts/segment-promt.svg", colorMap);
+    if (originalPixmap.isNull()) {
+        return;
+    }
 
-    m_leftColumn->setPixmap(themedPixmap);
+    QPixmap scaledPixmap = originalPixmap.scaledToWidth(120, Qt::SmoothTransformation);
+
+    m_leftColumn->setPixmap(scaledPixmap);
 }
 
 

@@ -74,7 +74,6 @@ QIcon ThemeManager::colorizeSvg(const QString& path, const QColor& color)
         return QIcon();
     }
 
-    // Создаем QIcon из измененных данных
     QByteArray svgBytes = svgData.toUtf8();
     QPixmap pixmap;
     pixmap.loadFromData(svgBytes, "SVG");
@@ -90,7 +89,6 @@ QPixmap ThemeManager::colorizeSvg(const QString& path, const QMap<QString, QColo
         return QPixmap();
     }
 
-    // Создаем QPixmap из измененных данных
     QByteArray svgBytes = svgData.toUtf8();
     QPixmap pixmap;
     pixmap.loadFromData(svgBytes, "SVG");

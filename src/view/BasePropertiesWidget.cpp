@@ -22,13 +22,13 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     //1) левая колонка (подсказка)
     m_leftColumn = new QLabel();
     m_leftColumn->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
-    //m_leftColumn->setContentsMargins(10, 10, 10, 10);
+    m_leftColumn->setContentsMargins(10, 20, 10, 10);
 
     //2) правая колонка (общие параметры)
     m_rightColumn = new QWidget();
     auto* rightLayout = new QFormLayout(m_rightColumn);
-    // rightLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
-    // rightLayout->setContentsMargins(10, 10, 10, 10);
+    //rightLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+    //rightLayout->setContentsMargins(0, 0, 0, 10);
 
     //создание кнопки изменения цвета
     m_colorButton = new QPushButton();
