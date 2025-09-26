@@ -5,6 +5,8 @@
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"
 
+#include <QLabel>
+
 class QLineEdit;
 class SegmentPrimitive;
 
@@ -17,7 +19,7 @@ public:
     //конструктор
     explicit SegmentPropertiesWidget(QWidget* parent = nullptr);
 
-    //реализация виртуального метода из BasePropertiesWidget
+    //реализация виртуального метода установки типа примитива из BasePropertiesWidget
     void setPrimitive(BasePrimitive* primitive) override;
 
 signals:
@@ -29,12 +31,22 @@ private slots:
     void onApplyButtonClicked();
 
 private:
+    //реализация виртуального метода обновления полей ввода из BasePropertiesWidget
+    void updateFieldValues() override;
+
     //указатель на текущий редактируемый объект "Отрезок"
     SegmentPrimitive* m_currentSegment = nullptr;
 
-    //параметры объекта "Отрезок"
+    //поля объекта "Отрезок"
+    //декартова система координат
     QLineEdit* m_startXEdit;
     QLineEdit* m_startYEdit;
     QLineEdit* m_endXEdit;
     QLineEdit* m_endYEdit;
+
+    //полярная система координат
+    QLineEdit* m_startRadiusEdit;
+    QLineEdit* m_startAngleEdit;
+    QLineEdit* m_endRadiusEdit;
+    QLineEdit* m_endAngleEdit;
 };

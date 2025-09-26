@@ -138,7 +138,10 @@ void MainWindow::createConnections()
     //9) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
 
-    //10) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
+    //10) панель параметров сцены сообщает об изменении системы координат -> панель свойств меняет содержимое
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
+
+    //11) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
     connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand);
 }
 
@@ -185,7 +188,7 @@ void MainWindow::activateDeleteTool()
 
     QApplication::setOverrideCursor(Qt::CrossCursor); //изменение курсора
 
-    m_propertiesPanel->showPropertiesFor(m_segmentCreationTool->getColor()); //обновляение цвета в панели свойств
+    m_propertiesPanel->showPropertiesFor(nullptr);  //пустая панель свойств
 
     m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
 }
@@ -254,15 +257,21 @@ void MainWindow::openSettingsWindow()
     //передаются текущие настройки приложения
     dialog.setCurrentTheme(ThemeManager::instance().getThemeName());
     dialog.setGridStep(m_viewportPanel->getGridStep());
+    dialog.setAngleUnit(PointPrimitive::getAngleUnit());
 
     //если нажата клавиша "ОК", используются новые значения из диалога
     if (dialog.exec() == QDialog::Accepted) {
+        //применяется новая тема
         QString selectedTheme = dialog.getCurrentTheme();
         ThemeManager::instance().applyTheme(selectedTheme);
 
         //применяется новый шаг сетки
         int newGridStep = dialog.getGridStep();
         m_viewportPanel->setGridStep(newGridStep);
+
+        //применяются новые единицы измерения углов
+        AngleUnit newAngleUnit = dialog.getAngleUnit();
+        PointPrimitive::setAngleUnit(newAngleUnit);
 
         //обновляются UI элементы
         updateApplicationIcons();

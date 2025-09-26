@@ -22,7 +22,7 @@ AnimationManager::AnimationManager(const QString& iconPath, const QString& toolT
 
     // Анимируем наше новое свойство "iconScale"
     m_animation = new QPropertyAnimation(this, "iconScale", this);
-    m_animation->setDuration(120); // Чуть быстрее для отзывчивости
+    m_animation->setDuration(100); // Чуть быстрее для отзывчивости
     m_animation->setEasingCurve(QEasingCurve::OutCubic);
 }
 
@@ -50,7 +50,7 @@ qreal AnimationManager::iconScale() const
 void AnimationManager::enterEvent(QEnterEvent* event)
 {
     m_animation->stop();
-    m_animation->setEndValue(0.7);
+    m_animation->setEndValue(0.75);
     m_animation->start();
     QToolButton::enterEvent(event);
 }
@@ -59,7 +59,7 @@ void AnimationManager::enterEvent(QEnterEvent* event)
 void AnimationManager::leaveEvent(QEvent* event)
 {
     m_animation->stop();
-    m_animation->setEndValue(0.6);
+    m_animation->setEndValue(0.65);
     m_animation->start();
     QToolButton::leaveEvent(event);
 }

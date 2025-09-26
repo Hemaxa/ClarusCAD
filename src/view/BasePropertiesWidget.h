@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include "EnumManager.h"
+
 #include <QWidget>
 #include <QColor>
 
 class BasePrimitive;
 class QPushButton;
 class QFormLayout;
+class QStackedWidget;
 
 class BasePropertiesWidget : public QWidget
 {
@@ -23,7 +26,10 @@ public:
     //установка указателя на примитив, свойтва которого необходимо отображать
     virtual void setPrimitive(BasePrimitive* primitive);
 
+    //установка типа системы координат
+    virtual void setCoordinateSystem(CoordinateSystemType type);
 
+    //метод обновления цвета
     void updateColor(const QColor& color);
 
 signals:
@@ -35,10 +41,17 @@ protected slots:
     void onColorButtonClicked();
 
 protected:
+    virtual void updateFieldsVisibility();
+    virtual void updateFieldValues() = 0;
+
     //общие поля для всех примитивов
     BasePrimitive* m_currentPrimitive = nullptr;
+    CoordinateSystemType m_coordSystem;
     QColor m_selectedColor;
     QPushButton* m_applyButton;
     QPushButton* m_colorButton;
-    QFormLayout* m_layout;
+    QStackedWidget* m_stack;
+    QWidget* m_cartesianWidgets;
+    QWidget* m_polarWidgets;
+    QWidget* m_basePref;
 };

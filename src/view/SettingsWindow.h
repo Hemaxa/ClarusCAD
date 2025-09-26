@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "EnumManager.h"
+
 #include <QDialog>
 
 class QComboBox;
@@ -18,10 +20,12 @@ public:
     //методы получения выбранных значений
     QString getCurrentTheme() const;
     int getGridStep() const;
+    AngleUnit getAngleUnit() const;
 
     //методы  установки текущих значений при открытии
     void setCurrentTheme(const QString& themeName);
     void setGridStep(int step);
+    void setAngleUnit(AngleUnit unit);
 
 private:
     //метод заполнения списка тем
@@ -30,4 +34,5 @@ private:
     //элементы интерфейса
     QComboBox* m_themeComboBox;
     QSpinBox* m_gridStepSpinBox;
+    QComboBox* m_angleUnitComboBox;
 };

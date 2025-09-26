@@ -1,6 +1,20 @@
 #include "PointPrimitive.h"
 
+#include <cmath>
+
+AngleUnit PointPrimitive::s_angleUnit = AngleUnit::Degrees;
+
 PointPrimitive::PointPrimitive(double x, double y) : m_x(x), m_y(y) {}
+
+void PointPrimitive::setAngleUnit(AngleUnit unit)
+{
+    s_angleUnit = unit;
+}
+
+AngleUnit PointPrimitive::getAngleUnit()
+{
+    return s_angleUnit;
+}
 
 double PointPrimitive::getX() const
 {
@@ -17,4 +31,28 @@ double PointPrimitive::getY() const {
 
 void PointPrimitive::setY(double y) {
     m_y = y;
+}
+
+double PointPrimitive::getRadius() const
+{
+    return std::sqrt(m_x * m_x + m_y * m_y);
+}
+
+double PointPrimitive::getAngle() const
+{
+    double angleRad = std::atan2(m_y, m_x);
+    if (s_angleUnit == AngleUnit::Degrees) {
+        return angleRad * 180.0 / M_PI;
+    }
+    return angleRad;
+}
+
+void PointPrimitive::setPolar(double radius, double angle)
+{
+    double angleRad = angle;
+    if (s_angleUnit == AngleUnit::Degrees) {
+        angleRad = angle * M_PI / 180.0;
+    }
+    m_x = radius * std::cos(angleRad);
+    m_y = radius * std::sin(angleRad);
 }

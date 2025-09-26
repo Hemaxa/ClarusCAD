@@ -23,14 +23,14 @@ public:
 
 public slots:
     //перегрузка слота showPropertiesFor
-    //слот, определяющий параметры какого объекта необходимо показать (уже существующий объект)
+    //слот, определяющий параметры какого объекта необходимо показать
     void showPropertiesFor(BasePrimitive* primitive);
 
     //слот, показывающий пустые параметры при создании нового объекта (при активации инструмента создания объекта)
     void showPropertiesFor(PrimitiveType type);
 
-    //слот, показывающий пусты параметры с сохраненным цветом при создании нового объекта
-    void showPropertiesFor(const QColor& color);
+    //слот, определяющий какую систему координат использовать
+    void setCoordinateSystem(CoordinateSystemType type);
 
 signals:
     //сигнал, информирующий MainWindow о смене цвета в режиме создания объекта

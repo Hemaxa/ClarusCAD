@@ -1,15 +1,10 @@
 //BasePrimitive - базовый класс для всех хранилищ данных объектов
 
 #pragma once
-#include <QColor> //для хранения цвета объекта
 
-//enum class - строго типизированный способ определения перечисления в C++
-//используется для идентификации типов примитивов
-enum class PrimitiveType {
-    Generic,
-    Point,
-    Segment
-};
+#include "EnumManager.h"
+
+#include <QColor> //для хранения цвета объекта
 
 class BasePrimitive
 {

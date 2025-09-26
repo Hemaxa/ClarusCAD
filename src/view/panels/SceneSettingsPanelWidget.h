@@ -3,6 +3,7 @@
 #pragma once
 
 #include "BasePanelWidget.h"
+#include "EnumManager.h"
 
 class QToolButton;
 
@@ -21,8 +22,11 @@ public:
 signals:
     //сигналы нажатия соответствующих кнопок
     void gridSnapToggled(bool enabled);
+    void coordinateSystemChanged(CoordinateSystemType type);
 
 private:
     //указатели на соответствующие кнопки
     QToolButton* m_gridSnapBtn;
+    QToolButton* m_cartesianBtn;
+    QToolButton* m_polarBtn;
 };

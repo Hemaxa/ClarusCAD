@@ -27,7 +27,8 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_segmentProperties, &SegmentPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
 
     //минимальная высота окна
-    setMinimumHeight(200);
+    setMinimumHeight(150);
+    setMinimumWidth(100);
 }
 
 void PropertiesPanelWidget::showPropertiesFor(BasePrimitive* primitive)
@@ -65,10 +66,10 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
     }
 }
 
-void PropertiesPanelWidget::showPropertiesFor(const QColor& color)
+void PropertiesPanelWidget::setCoordinateSystem(CoordinateSystemType type)
 {
-    auto* segmentWidget = qobject_cast<SegmentPropertiesWidget*>(m_stack->currentWidget());
-    if (segmentWidget) {
-        segmentWidget->updateColor(color);
+    auto* currentWidget = qobject_cast<BasePropertiesWidget*>(m_stack->currentWidget());
+    if (currentWidget) {
+        currentWidget->setCoordinateSystem(type);
     }
 }

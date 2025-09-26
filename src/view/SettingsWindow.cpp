@@ -18,16 +18,22 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     //создание элементов интерфейса
     m_themeComboBox = new QComboBox();
     m_gridStepSpinBox = new QSpinBox();
+    m_angleUnitComboBox = new QComboBox();
 
     //настройка элементов интерфейса
+    //настройка списка тем
+    m_themeComboBox->setFixedHeight(30);
+
     //настройка шага сетки
     populateThemeComboBox();
     m_gridStepSpinBox->setRange(10, 100);
     m_gridStepSpinBox->setSingleStep(5);
     m_gridStepSpinBox->setSuffix(" px");
 
-    //настройка списка тем
-    m_themeComboBox->setFixedHeight(30);
+    //настройка единиц измерения углов
+    m_angleUnitComboBox->addItem("Градусы", static_cast<int>(AngleUnit::Degrees));
+    m_angleUnitComboBox->addItem("Радианы", static_cast<int>(AngleUnit::Radians));
+    m_angleUnitComboBox->setFixedHeight(30);
 
     //расположение элементов интерфейса
     auto* appearanceGroup = new QGroupBox("Оформление");
@@ -35,6 +41,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     formLayout->setSpacing(15);
     formLayout->addRow("Тема оформления:", m_themeComboBox);
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
+    formLayout->addRow("Единицы углов:", m_angleUnitComboBox);
     appearanceGroup->setLayout(formLayout);
 
     //кнопки "OK" и "Отмена"
@@ -61,6 +68,8 @@ void SettingsWindow::populateThemeComboBox()
 
 void SettingsWindow::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }
 void SettingsWindow::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
+void SettingsWindow::setAngleUnit(AngleUnit unit) { int index = m_angleUnitComboBox->findData(static_cast<int>(unit)); if (index != -1) { m_angleUnitComboBox->setCurrentIndex(index); } }
 
 QString SettingsWindow::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
 int SettingsWindow::getGridStep() const { return m_gridStepSpinBox->value(); }
+AngleUnit SettingsWindow::getAngleUnit() const { return static_cast<AngleUnit>(m_angleUnitComboBox->currentData().toInt()); }

@@ -34,6 +34,7 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
 
     #model
     ${SRC_DIR}/model/BasePrimitive.h
+    ${SRC_DIR}/model/EnumManager.h
     ${SRC_DIR}/model/Scene.h
     ${SRC_DIR}/model/Scene.cpp
 

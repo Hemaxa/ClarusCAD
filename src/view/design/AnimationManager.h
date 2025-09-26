@@ -28,7 +28,7 @@ protected:
 
 private:
     QPropertyAnimation* m_animation;
-    qreal m_iconScale = 0.6; // Текущий масштаб иконки
+    qreal m_iconScale = 0.65; // Текущий масштаб иконки
     QPixmap m_pixmap; // Храним оригинальную иконку для быстрой отрисовки
     QString m_iconPath;
 };
