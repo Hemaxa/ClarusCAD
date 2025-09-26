@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "BaseCreationTool.h"
 #include "BaseDrawingTool.h"
+#include "SegmentPrimitive.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -326,22 +327,66 @@ QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
     return QPointF(worldX, worldY);
 }
 
-
 QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
 {
-    //если привязка выключена, возвращается исходную позицию
-    if (!m_isGridSnapEnabled) {
-        return worldPos;
-    }
-
     if (m_gridStep <= 0) {
         return worldPos;
     }
 
-    //округление координат по шагу сетки для привязки
     double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep;
     double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep;
     return QPointF(snappedX, snappedY);
+}
+
+QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
+{
+    if (!m_scene) {
+        return worldPos;
+    }
+
+    double minDistance = 10.0 / m_zoomFactor; // Порог привязки (10 пикселей)
+    QPointF bestSnapPoint = worldPos;
+
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        if (primitive->getType() == PrimitiveType::Segment) {
+            auto* segment = static_cast<SegmentPrimitive*>(primitive.get());
+            QPointF startPoint(segment->getStart().getX(), segment->getStart().getY());
+            QPointF endPoint(segment->getEnd().getX(), segment->getEnd().getY());
+
+            // Проверяем расстояние до начальной точки
+            if (QLineF(worldPos, startPoint).length() < minDistance) {
+                minDistance = QLineF(worldPos, startPoint).length();
+                bestSnapPoint = startPoint;
+            }
+
+            // Проверяем расстояние до конечной точки
+            if (QLineF(worldPos, endPoint).length() < minDistance) {
+                minDistance = QLineF(worldPos, endPoint).length();
+                bestSnapPoint = endPoint;
+            }
+        }
+    }
+    return bestSnapPoint;
+}
+
+QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
+{
+    QPointF snappedPos = worldPos;
+
+    // Сначала пытаемся привязаться к примитивам, если включено
+    if (m_isPrimitiveSnapEnabled) {
+        snappedPos = snapToPrimitives(worldPos);
+        // Если не привязались к примитиву, но включена привязка к сетке, пробуем ее
+        if (snappedPos == worldPos && m_isGridSnapEnabled) {
+            snappedPos = snapToGrid(worldPos);
+        }
+    }
+    // Если привязка к примитивам выключена, но включена к сетке
+    else if (m_isGridSnapEnabled) {
+        snappedPos = snapToGrid(worldPos);
+    }
+
+    return snappedPos;
 }
 
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
@@ -349,6 +394,7 @@ void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool =
 void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; if (m_gridStep > 0) { m_gridMultiplier = calculateDynamicGridStep() / m_gridStep; } updateInfoLabel(); update(); } }
 void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
+void ViewportPanelWidget::setPrimitiveSnapEnabled(bool enabled) { m_isPrimitiveSnapEnabled = enabled; }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }

@@ -22,11 +22,13 @@ public:
 signals:
     //сигналы нажатия соответствующих кнопок
     void gridSnapToggled(bool enabled);
+    void primitiveSnapToggled(bool enabled);
     void coordinateSystemChanged(CoordinateSystemType type);
 
 private:
     //указатели на соответствующие кнопки
     QToolButton* m_gridSnapBtn;
+    QToolButton* m_primitiveSnapBtn;
     QToolButton* m_cartesianBtn;
     QToolButton* m_polarBtn;
 };

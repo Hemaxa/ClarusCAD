@@ -12,7 +12,7 @@ void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
     //создание нового примитива
     if (event->button() == Qt::LeftButton) {
         //определение координат, в зависимости от активации опции "Привязка к сетке"
-        QPointF snappedPos = viewport->snapToGrid(event->position());
+        QPointF snappedPos = viewport->getSnappedPoint(event->position());
 
         //первый клик
         if (m_currentState == State::Idle) {
@@ -38,7 +38,7 @@ void SegmentCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, Viewport
 {
     //приклеивание к сетке, если включена опция "Привязка к сетке"
     if (m_currentState == State::WaitingForSecondPoint) {
-        QPointF snappedPos = viewport->snapToGrid(event->position());
+        QPointF snappedPos = viewport->getSnappedPoint(event->position());
         m_currentMousePos.setX(snappedPos.x());
         m_currentMousePos.setY(snappedPos.y());
     }

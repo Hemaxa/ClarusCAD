@@ -22,6 +22,9 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     m_gridSnapBtn = new AnimationManager(":/icons/icons/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G);
     m_gridSnapBtn->setChecked(true);
 
+    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O);
+    m_primitiveSnapBtn->setChecked(true);
+
     m_cartesianBtn = new AnimationManager(":/icons/icons/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D);
     m_polarBtn = new AnimationManager(":/icons/icons/polar.svg", "Полярные координаты [P]", Qt::Key_P);
     m_cartesianBtn->setChecked(true);
@@ -30,14 +33,16 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     coordSystemGroup->addButton(m_polarBtn);
 
     layout->addWidget(m_gridSnapBtn, 0, 0, Qt::AlignLeft);
-    layout->addWidget(m_cartesianBtn, 1, 0, Qt::AlignLeft);
-    layout->addWidget(m_polarBtn, 2, 0, Qt::AlignLeft);
+    layout->addWidget(m_primitiveSnapBtn, 1, 0, Qt::AlignLeft);
+    layout->addWidget(m_cartesianBtn, 2, 0, Qt::AlignLeft);
+    layout->addWidget(m_polarBtn, 3, 0, Qt::AlignLeft);
 
     layout->setColumnStretch(1, 1);
-    layout->setRowStretch(3, 1);
+    layout->setRowStretch(4, 1);
 
     //подключение сигналов от кнопок
     connect(m_gridSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::gridSnapToggled);
+    connect(m_primitiveSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::primitiveSnapToggled);
     connect(m_cartesianBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Cartesian); });
     connect(m_polarBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Polar); });
 
@@ -50,6 +55,9 @@ void SceneSettingsPanelWidget::updateIcons()
     QColor iconColor = ThemeManager::instance().getIconColor();
     if (m_gridSnapBtn) {
         static_cast<AnimationManager*>(m_gridSnapBtn)->updateIconColor(iconColor);
+    }
+    if (m_primitiveSnapBtn) {
+        static_cast<AnimationManager*>(m_primitiveSnapBtn)->updateIconColor(iconColor);
     }
     if (m_cartesianBtn) {
         static_cast<AnimationManager*>(m_cartesianBtn)->updateIconColor(iconColor);

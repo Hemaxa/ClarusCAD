@@ -101,7 +101,7 @@ void SegmentPropertiesWidget::updatePrompt()
         return;
     }
 
-    QPixmap scaledPixmap = originalPixmap.scaledToWidth(120, Qt::SmoothTransformation);
+    QPixmap scaledPixmap = originalPixmap.scaledToWidth(130, Qt::SmoothTransformation);
 
     m_leftColumn->setPixmap(scaledPixmap);
 }
