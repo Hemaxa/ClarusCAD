@@ -105,12 +105,12 @@ target_include_directories(ClarusCAD PRIVATE
 )
 
 #подключение необходимых библиотек
-target_link_libraries(ClarusCAD PRIVATE
-    Qt::Core
-    Qt::Gui
-    Qt::Widgets
-    Qt::Svg
-)
+# target_link_libraries(ClarusCAD PRIVATE
+#     Qt::Core
+#     Qt::Gui
+#     Qt::Widgets
+#     Qt::Svg
+# )
 
 # ====================================================================
 # НАСТРОЙКИ ДЛЯ MACOS
@@ -203,7 +203,7 @@ if(WIN32)
     )
 
     #добавление файла ресурсов (resources.rc)
-    target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc)
+    target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
 
     #исполняемый файл помещается в /bin
     install(TARGETS ClarusCAD DESTINATION bin)
