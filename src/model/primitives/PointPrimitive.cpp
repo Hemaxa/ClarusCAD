@@ -1,5 +1,6 @@
 #include "PointPrimitive.h"
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 AngleUnit PointPrimitive::s_angleUnit = AngleUnit::Degrees;

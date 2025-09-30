@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ClarusCAD
+Comment=Легковесная 2D САПР-система
+Exec=ClarusCAD
+Icon=ClarusCAD
+Terminal=false
+Categories=Graphics;2DGraphics;CAD;

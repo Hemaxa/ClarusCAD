@@ -4,22 +4,27 @@ cmake_minimum_required(VERSION 3.19)
 #определение версии проекта
 project(ClarusCAD VERSION 1.0 LANGUAGES CXX)
 
+#определение версии C++
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 #определение используемых пакетов
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Gui Svg)
 
-qt_standard_project_setup()
+#включение Qt-автоматизаций
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
-#создание переменной для src и res директорий
+#создание переменных для src и res директорий
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 
-#добавление файла ресурсов
-qt_add_resources(RESOURCES
-    ${RES_DIR}/resources.qrc
-)
+#создание исполняемого файла
+add_executable(ClarusCAD)
 
 #обозначение исходных файлов
-qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
+target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/Main.cpp
 
     #controller
@@ -76,10 +81,10 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
 
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
-)
 
-#установка папки ресурсов приложения
-target_sources(ClarusCAD PRIVATE ${RESOURCES})
+    #resources
+    ${RES_DIR}/resources.qrc
+)
 
 #директории с заголовочными файлами
 target_include_directories(ClarusCAD PRIVATE
@@ -110,38 +115,46 @@ target_link_libraries(ClarusCAD PRIVATE
 include(GNUInstallDirs)
 
 install(TARGETS ClarusCAD
-    BUNDLE  DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION bin
+    BUNDLE DESTINATION .
 )
 
-qt_generate_deploy_app_script(
-    TARGET ClarusCAD
-    OUTPUT_SCRIPT deploy_script
-    NO_UNSUPPORTED_PLATFORM_ERROR
-)
-install(SCRIPT ${deploy_script})
+
 
 
 
 #CI/CD
+# --- Настройки CPack для создания пакетов ---
 set(CPACK_PACKAGE_NAME "ClarusCAD")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR "Sergey Yashin")
-set(CPACK_PACKAGE_CONTACT "test@gmail.com")
-set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Легковесная CAD система на Qt6.")
+set(CPACK_PACKAGE_CONTACT "your.email@example.com")
 
-#условная генерация пакетов для каждой ОС
 if(WIN32)
-    # Для Windows создаем установщик NSIS и ZIP-архив
-    set(CPACK_GENERATOR "NSIS;ZIP")
-elseif(APPLE)
-    # Для macOS создаем DMG-образ (DragNDrop) и TGZ-архив
-    set(CPACK_GENERATOR "DragNDrop;TGZ")
-else()
-    # Для Linux создаем TGZ и DEB архивы
-    set(CPACK_GENERATOR "TGZ;DEB")
+    set_target_properties(ClarusCAD PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_sources(ClarusCAD PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/packaging/resources.rc")
 endif()
 
-include(CPack)
+if(APPLE)
+    set_target_properties(ClarusCAD PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/Info.plist"
+    )
+    add_custom_command(TARGET ClarusCAD POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns"
+        "$<TARGET_BUNDLE_DIR:ClarusCAD>/Contents/Resources/icon.icns"
+    )
+endif()
+
+if(UNIX AND NOT APPLE)
+    install(
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/Info.desktop"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+    )
+    install(
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/icon.png"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
+        RENAME "ClarusCAD.png"
+    )
+endif()

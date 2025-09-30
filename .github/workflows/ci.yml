@@ -22,19 +22,62 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.0'
-        # cache: true
 
-    - name: Configure (CMake)
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    # --- Специфичные шаги для Linux ---
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libgl1-mesa-dev patchelf fakeroot libfuse2 libxcb-cursor0
 
-    - name: Build
+    - name: Download linuxdeployqt
+      if: runner.os == 'Linux'
+      run: |
+        wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+        chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+
+    # --- Специфичные шаги для Windows ---
+    - name: Install NSIS
+      if: runner.os == 'Windows'
+      uses: repolevedavaj/install-nsis@v1.0.1
+      with:
+        nsis-version: '3.09'
+
+    # --- Общие шаги сборки ---
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+    - name: Build Project
       run: cmake --build build --config Release --parallel
 
-    - name: Package (CPack)
-      run: cmake --build build --target package
+    # --- Шаги упаковки для каждой ОС ---
 
+    - name: Package for Linux (AppImage)
+      if: runner.os == 'Linux'
+      run: |
+        cmake --install build --prefix build/AppDir/usr
+        cp build/AppDir/usr/share/applications/*.desktop build/AppDir/
+        cp build/AppDir/usr/share/icons/hicolor/256x256/apps/*.png build/AppDir/
+        ./linuxdeployqt-continuous-x86_64.AppImage ./build/AppDir/usr/bin/ClarusCAD -appimage
+
+    - name: Package for Windows (NSIS)
+      if: runner.os == 'Windows'
+      run: |
+        ${{ env.QT_INSTALL_DIR }}\${{ env.QT_VERSION }}\msvc2019_64\bin\windeployqt.exe --no-compiler-runtime build/ClarusCAD.exe
+        cmake --build build --config Release --target package
+
+    - name: Package for macOS (DMG)
+      if: runner.os == 'macOS'
+      run: |
+        ${{ env.QT_INSTALL_DIR }}/${{ env.QT_VERSION }}/macos/bin/macdeployqt build/ClarusCAD.app -dmg
+
+    # --- Загрузка артефактов ---
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ClarusCAD-${{ matrix.os }}
-        path: build/ClarusCAD*
+        path: |
+          build/*.AppImage
+          build/*.exe
+          build/*.dmg
+        if-no-files-found: ignore

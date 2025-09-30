@@ -1,0 +1,3 @@
+#include <winresrc.h>
+
+IDI_ICON1 ICON "res/app-icon/icon.ico"
