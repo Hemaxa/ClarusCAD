@@ -104,14 +104,6 @@ target_include_directories(ClarusCAD PRIVATE
     ${SRC_DIR}/view/properties
 )
 
-#подключение необходимых библиотек
-# target_link_libraries(ClarusCAD PRIVATE
-#     Qt::Core
-#     Qt::Gui
-#     Qt::Widgets
-#     Qt::Svg
-# )
-
 # ====================================================================
 # НАСТРОЙКИ ДЛЯ MACOS
 # ====================================================================

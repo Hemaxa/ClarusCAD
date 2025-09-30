@@ -2,6 +2,7 @@
 Version=1.0
 Type=Application
 Name=ClarusCAD
+GenericName=Simple CAD system
 Comment=Simple CAD system
 Exec=ClarusCAD
 Icon=ClarusCAD
