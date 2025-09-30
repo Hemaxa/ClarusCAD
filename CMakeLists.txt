@@ -122,12 +122,26 @@ qt_generate_deploy_app_script(
 )
 install(SCRIPT ${deploy_script})
 
+
+
+#CI/CD
 set(CPACK_PACKAGE_NAME "ClarusCAD")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_VENDOR "YourCompanyName")
-set(CPACK_PACKAGE_CONTACT "your@email.com")
-set(CPACK_GENERATOR "ZIP;TGZ;NSIS;DragNDrop")
+set(CPACK_PACKAGE_VENDOR "Sergey Yashin")
+set(CPACK_PACKAGE_CONTACT "test@gmail.com")
 set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Легковесная CAD система на Qt6.")
+
+#условная генерация пакетов для каждой ОС
+if(WIN32)
+    # Для Windows создаем установщик NSIS и ZIP-архив
+    set(CPACK_GENERATOR "NSIS;ZIP")
+elseif(APPLE)
+    # Для macOS создаем DMG-образ (DragNDrop) и TGZ-архив
+    set(CPACK_GENERATOR "DragNDrop;TGZ")
+else()
+    # Для Linux создаем TGZ и DEB архивы
+    set(CPACK_GENERATOR "TGZ;DEB")
+endif()
 
 include(CPack)

@@ -22,10 +22,7 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.0'
-        cache: true
-
-    - name: Set up CMake
-      uses: jwlawson/actions-setup-cmake@v2
+        # cache: true
 
     - name: Configure (CMake)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -40,4 +37,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ClarusCAD-${{ matrix.os }}
-        path: build/*
+        path: build/ClarusCAD*
