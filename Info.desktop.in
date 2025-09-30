@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Name=ClarusCAD
-Comment=Легковесная 2D САПР-система
+Comment=Simple CAD system
 Exec=ClarusCAD
 Icon=ClarusCAD
 Terminal=false

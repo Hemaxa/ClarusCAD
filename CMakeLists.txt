@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #определение используемых пакетов
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Gui Svg)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Svg)
 
 #включение Qt-автоматизаций
 set(CMAKE_AUTOMOC ON)
@@ -155,23 +155,30 @@ if(APPLE)
         add_custom_target(package
             #запуск macdeployqt
             COMMAND ${MACDEPLOYQT_EXECUTABLE} "$<TARGET_BUNDLE_DIR:ClarusCAD>" -verbose=1
+
             #подпись приложения
             COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:ClarusCAD>"
+
             #создание временной директории
             COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/package/root/Applications"
+
             #перемещение .app во временную директорию
             COMMAND ${CMAKE_COMMAND} -E copy_directory "$<TARGET_BUNDLE_DIR:ClarusCAD>" "${CMAKE_BINARY_DIR}/package/root/Applications/ClarusCAD.app"
+
             #упаковка в .pkg
             COMMAND ${PKGBUILD_EXECUTABLE}
                 --root "${CMAKE_BINARY_DIR}/package/root"
-                --identifier "com.yourcompany.claruscad" # Рекомендуется изменить
+                --identifier "com.clarus.cad"
                 --version "${ClarusCAD_VERSION}"
                 --install-location "/" "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg"
+
             #настройка .pkg
             COMMAND ${PRODUCTBUILD_EXECUTABLE}
-                 --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS.pkg"
+                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS.pkg"
+
             #удаление временной директории
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/package"
+
             DEPENDS ClarusCAD
             VERBATIM
         )
