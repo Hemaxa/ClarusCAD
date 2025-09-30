@@ -124,7 +124,6 @@ install(TARGETS ClarusCAD
 
 
 #CI/CD
-# --- Настройки CPack для создания пакетов ---
 set(CPACK_PACKAGE_NAME "ClarusCAD")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR "Sergey Yashin")
@@ -132,13 +131,13 @@ set(CPACK_PACKAGE_CONTACT "your.email@example.com")
 
 if(WIN32)
     set_target_properties(ClarusCAD PROPERTIES WIN32_EXECUTABLE TRUE)
-    target_sources(ClarusCAD PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/packaging/resources.rc")
+    target_sources(ClarusCAD PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc")
 endif()
 
 if(APPLE)
     set_target_properties(ClarusCAD PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/Info.plist"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.plist.in"
     )
     add_custom_command(TARGET ClarusCAD POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
@@ -149,7 +148,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
     install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/Info.desktop"
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/packs/linux/Info.desktop.in"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
     )
     install(

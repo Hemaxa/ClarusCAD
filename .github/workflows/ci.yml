@@ -22,13 +22,12 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.0'
+        install-deps: 'true' # Позволяем экшену самому ставить зависимости Qt
 
     # --- Специфичные шаги для Linux ---
-    - name: Install Linux Dependencies
+    - name: Install Linux AppImage Dependencies
       if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libgl1-mesa-dev patchelf fakeroot libfuse2 libxcb-cursor0
+      run: sudo apt-get install -y libfuse2 # Устанавливаем только то, что нужно для linuxdeployqt
 
     - name: Download linuxdeployqt
       if: runner.os == 'Linux'
@@ -37,15 +36,13 @@ jobs:
         chmod a+x linuxdeployqt-continuous-x86_64.AppImage
 
     # --- Специфичные шаги для Windows ---
-    - name: Install NSIS
+    - name: Install NSIS via Chocolatey
       if: runner.os == 'Windows'
-      uses: repolevedavaj/install-nsis@v1.0.1
-      with:
-        nsis-version: '3.09'
+      run: choco install nsis
 
     # --- Общие шаги сборки ---
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build Project
       run: cmake --build build --config Release --parallel
@@ -55,21 +52,24 @@ jobs:
     - name: Package for Linux (AppImage)
       if: runner.os == 'Linux'
       run: |
+        mkdir -p build/AppDir # Создаем директорию для установки
         cmake --install build --prefix build/AppDir/usr
-        cp build/AppDir/usr/share/applications/*.desktop build/AppDir/
-        cp build/AppDir/usr/share/icons/hicolor/256x256/apps/*.png build/AppDir/
-        ./linuxdeployqt-continuous-x86_64.AppImage ./build/AppDir/usr/bin/ClarusCAD -appimage
+        # Запускаем linuxdeployqt из корневой папки, указывая путь к исполняемому файлу
+        ./linuxdeployqt-continuous-x86_64.AppImage build/AppDir/usr/bin/ClarusCAD -appimage
 
     - name: Package for Windows (NSIS)
       if: runner.os == 'Windows'
       run: |
-        ${{ env.QT_INSTALL_DIR }}\${{ env.QT_VERSION }}\msvc2019_64\bin\windeployqt.exe --no-compiler-runtime build/ClarusCAD.exe
+        # Сначала копируем все DLL от Qt
+        ${{ env.QT_INSTALL_DIR }}\msvc2019_64\bin\windeployqt.exe --no-compiler-runtime build/Release/ClarusCAD.exe
+        # Теперь запускаем CPack, который создаст установщик с этими DLL
         cmake --build build --config Release --target package
 
     - name: Package for macOS (DMG)
       if: runner.os == 'macOS'
       run: |
-        ${{ env.QT_INSTALL_DIR }}/${{ env.QT_VERSION }}/macos/bin/macdeployqt build/ClarusCAD.app -dmg
+        # Используем правильный путь к macdeployqt
+        ${{ env.QT_INSTALL_DIR }}/macos/bin/macdeployqt build/ClarusCAD.app -dmg
 
     # --- Загрузка артефактов ---
     - name: Upload Artifact
@@ -77,7 +77,7 @@ jobs:
       with:
         name: ClarusCAD-${{ matrix.os }}
         path: |
-          build/*.AppImage
-          build/*.exe
-          build/*.dmg
+          ClarusCAD*.AppImage
+          build/ClarusCAD*.exe
+          build/ClarusCAD*.dmg
         if-no-files-found: ignore
