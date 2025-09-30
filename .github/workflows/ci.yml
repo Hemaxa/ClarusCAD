@@ -1,0 +1,43 @@
+name: Build ClarusCAD
+
+on:
+  push:
+    branches: [ main, dev4 ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.0'
+        cache: true
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v2
+
+    - name: Configure (CMake)
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Package (CPack)
+      run: cmake --build build --target package
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ClarusCAD-${{ matrix.os }}
+        path: build/*
