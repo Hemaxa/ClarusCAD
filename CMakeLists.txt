@@ -78,6 +78,7 @@ qt_add_executable (ClarusCAD WIN32 MACOSX_BUNDLE
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
 )
 
+#установка папки ресурсов приложения
 target_sources(ClarusCAD PRIVATE ${RESOURCES})
 
 #директории с заголовочными файлами
@@ -120,3 +121,13 @@ qt_generate_deploy_app_script(
     NO_UNSUPPORTED_PLATFORM_ERROR
 )
 install(SCRIPT ${deploy_script})
+
+set(CPACK_PACKAGE_NAME "ClarusCAD")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VENDOR "YourCompanyName")
+set(CPACK_PACKAGE_CONTACT "your@email.com")
+set(CPACK_GENERATOR "ZIP;TGZ;NSIS;DragNDrop")
+set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Легковесная CAD система на Qt6.")
+
+include(CPack)

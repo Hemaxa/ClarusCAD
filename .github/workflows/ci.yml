@@ -5,7 +5,7 @@ on:
     branches: [ main, dev4 ]
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev4 ]
 
 jobs:
   build:
