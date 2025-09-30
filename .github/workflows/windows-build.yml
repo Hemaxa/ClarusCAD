@@ -27,20 +27,21 @@ jobs:
         with:
           nsis-version: '3.09'
 
+      - name: Add NSIS to PATH
+        run: echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+        shell: pwsh
+
       - name: Configure CMake
-        run: cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
+        run: cmake -B build -G "Visual Studio 17 2022" -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
 
       - name: Build and Install
         run: cmake --build build --config Release --target INSTALL
 
       - name: Deploy Qt Libraries
-        run: D:/a/ClarusCAD/Qt/6.5.0/msvc2019_64/bin/windeployqt.exe --no-compiler-runtime --no-opengl-sw --verbose 1 --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
+        run: ${{ env.Qt6_DIR }}\bin\windeployqt.exe --no-compiler-runtime --no-opengl-sw --verbose 1 --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
 
       - name: Package
-        shell: pwsh
-        run: |
-          $env:PATH += ";C:\Program Files (x86)\NSIS"
-          cmake --build build --config Release --target PACKAGE
+        run: cmake --build build --config Release --target PACKAGE
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
