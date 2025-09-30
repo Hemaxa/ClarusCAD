@@ -1,0 +1,35 @@
+name: Build ClarusCAD (macOS)
+
+on:
+  push:
+    branches: [ main, dev4 ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main, dev4 ]
+
+jobs:
+  build-macos-arm:
+    name: Build macOS
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.0'
+          arch: 'clang_64'
+
+      - name: Configure and Build
+        run: |
+          rm -rf build
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build --config Release --target package
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClarusCAD_macOS_package_ARM
+          path: build/ClarusCAD_v*_macOS.pkg
