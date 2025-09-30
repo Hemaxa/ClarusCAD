@@ -118,10 +118,10 @@ target_include_directories(ClarusCAD PRIVATE
 if(APPLE)
     #подключение необходимых библиотек
     target_link_libraries(ClarusCAD PRIVATE
-        Qt::Core
-        Qt::Widgets
-        Qt::Gui
-        Qt::Svg
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Gui
+        Qt6::Svg
         "-framework AppKit"
         "-framework Foundation"
         "-framework IOKit"
@@ -137,7 +137,7 @@ if(APPLE)
     #задание свойств конечного файла (Info.plist.in)
     set_target_properties(ClarusCAD PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.plist.in"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
     )
 
     #поиск необходимых утилит для сборки проекта
@@ -155,30 +155,23 @@ if(APPLE)
         add_custom_target(package
             #запуск macdeployqt
             COMMAND ${MACDEPLOYQT_EXECUTABLE} "$<TARGET_BUNDLE_DIR:ClarusCAD>" -verbose=1
-
             #подпись приложения
             COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:ClarusCAD>"
-
             #создание временной директории
             COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/package/root/Applications"
-
             #перемещение .app во временную директорию
             COMMAND ${CMAKE_COMMAND} -E copy_directory "$<TARGET_BUNDLE_DIR:ClarusCAD>" "${CMAKE_BINARY_DIR}/package/root/Applications/ClarusCAD.app"
-
             #упаковка в .pkg
             COMMAND ${PKGBUILD_EXECUTABLE}
                 --root "${CMAKE_BINARY_DIR}/package/root"
-                --identifier "com.imago.ref"
+                --identifier "com.yourcompany.claruscad" # Рекомендуется изменить
                 --version "${ClarusCAD_VERSION}"
                 --install-location "/" "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg"
-
             #настройка .pkg
             COMMAND ${PRODUCTBUILD_EXECUTABLE}
-                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS.pkg"
-
+                 --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS.pkg"
             #удаление временной директории
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/package"
-
             DEPENDS ClarusCAD
             VERBATIM
         )
@@ -221,7 +214,6 @@ if(WIN32)
     set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/ClarusCAD.exe" CACHE STRING "" FORCE)
     set(CPACK_NSIS_DISPLAY_NAME "ClarusCAD")
     set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${ClarusCAD_VERSION}")
-    # set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.md")
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\\\ClarusCAD.lnk'")
@@ -245,7 +237,7 @@ if(UNIX AND NOT APPLE)
 
     #регистрация приложения (Info.desktop.in)
     configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.desktop.in"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in"
         "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
         COPYONLY
     )
@@ -255,16 +247,15 @@ if(UNIX AND NOT APPLE)
 
     #копирование Info.desktop.in в /applications
     install(
-        FILES "${CMAKE_CURRENT_BINARY_DIR}/packs/Info.desktop"
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
         DESTINATION share/applications
         RENAME ClarusCAD.desktop
     )
 
     #копирование иконки приложения
     install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app_icon/icon.png"
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png"
         DESTINATION share/icons/hicolor/256x256/apps
         RENAME ClarusCAD.png
     )
 endif()
-
