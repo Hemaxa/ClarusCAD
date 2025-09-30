@@ -267,3 +267,4 @@ if(UNIX AND NOT APPLE)
         RENAME ClarusCAD.png
     )
 endif()
+
