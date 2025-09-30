@@ -2,9 +2,9 @@
 Version=1.0
 Type=Application
 Name=ClarusCAD
-GenericName=Simple CAD system
-Comment=Simple CAD system
+GenericName=CAD System
+Comment=A simple 2D Computer-Aided Design system
 Exec=ClarusCAD
 Icon=ClarusCAD
 Terminal=false
-Categories=Graphics;2DGraphics;CAD;
+Categories=Graphics;2DGraphics;X-CAD;

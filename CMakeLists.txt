@@ -189,6 +189,9 @@ if(WIN32)
         Qt6::Svg
     )
 
+    #определение компилятором математических констант
+    target_compile_definitions(ClarusCAD PRIVATE _USE_MATH_DEFINES)
+
     #задание свойств конечного файла
     set_target_properties(ClarusCAD PROPERTIES
         WIN32_EXECUTABLE TRUE
