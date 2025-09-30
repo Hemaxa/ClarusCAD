@@ -203,25 +203,25 @@ if(WIN32)
     )
 
     #добавление файла ресурсов (resources.rc)
-    target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+    target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc)
 
     #исполняемый файл помещается в /bin
     install(TARGETS ClarusCAD DESTINATION bin)
 
     #копирование иконки в /bin
-    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app_icon/icon.ico" DESTINATION bin)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
 
     #создание и настройка .exe
     set(CPACK_PACKAGE_NAME "ClarusCAD")
     set(CPACK_PACKAGE_VENDOR "Yashin Sergey")
     set(CPACK_PACKAGE_VERSION "${ClarusCAD_VERSION}")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "ClarusCAD")
-    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app_icon/icon.ico")
-    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app_icon/icon.ico")
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
     set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/ClarusCAD.exe" CACHE STRING "" FORCE)
     set(CPACK_NSIS_DISPLAY_NAME "ClarusCAD")
     set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${ClarusCAD_VERSION}")
-    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.md")
+    # set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.md")
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\\\ClarusCAD.lnk'")
@@ -245,7 +245,7 @@ if(UNIX AND NOT APPLE)
 
     #регистрация приложения (Info.desktop.in)
     configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in"
+        "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.desktop.in"
         "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
         COPYONLY
     )
@@ -255,7 +255,7 @@ if(UNIX AND NOT APPLE)
 
     #копирование Info.desktop.in в /applications
     install(
-        FILES "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/packs/Info.desktop"
         DESTINATION share/applications
         RENAME ClarusCAD.desktop
     )

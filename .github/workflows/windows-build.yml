@@ -1,4 +1,4 @@
-name: Build ClarusCAD (Windows)
+name: Build ClarusCAD (windows)
 
 on:
   push:
