@@ -31,7 +31,7 @@ private slots:
     void onApplyButtonClicked();
 
 private:
-    //реализация виртуального метода обновления полей ввода из BasePropertiesWidget
+    //реализация виртуального метода заполнения значениями полей ввода из BasePropertiesWidget
     void updateFieldValues() override;
 
     //реализация виртуального метода обновления подсказки из BasePropertiesWidget

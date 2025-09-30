@@ -9,26 +9,36 @@
 class AnimationManager : public QToolButton
 {
     Q_OBJECT
-    // Объявляем наше собственное свойство для анимации
-    Q_PROPERTY(qreal iconScale READ iconScale WRITE setIconScale)
+
+    //объявляется собственное свойство для анимации (будет вызывать метод iconScale)
+    Q_PROPERTY(qreal iconScale READ getIconScale WRITE setIconScale)
 
 public:
+    //конструктор
     explicit AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, QWidget* parent = nullptr);
 
-    // Геттер и сеттер для нашего нового свойства
+    //метод изменения цвета иконки
     void updateIconColor(const QColor& color);
+
+    //геттер и сеттер
     void setIconScale(qreal scale);
-    qreal iconScale() const;
+    qreal getIconScale() const;
 
 protected:
+    //переопределение методов работы с мышью
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
-    // Переопределяем метод отрисовки
+
+    //переопределение метода отрисовки
     void paintEvent(QPaintEvent* event) override;
 
 private:
-    QPropertyAnimation* m_animation;
-    qreal m_iconScale = 0.65; // Текущий масштаб иконки
-    QPixmap m_pixmap; // Храним оригинальную иконку для быстрой отрисовки
-    QString m_iconPath;
+    QPropertyAnimation* m_animation; //указатель на анимируемый объект
+
+    qreal m_currentIconScale; //текущий масштаб иконки, который меняется во время анимации
+    const qreal m_dfIconScale = 0.65; //обычный масштаб иконки
+    const qreal m_lgIconScale = 0.75; //увеличенный масштаб иконки
+
+    QPixmap m_pixmap; //поле хранения оригинальной иконки (для оптимизации)
+    QString m_iconPath; //путь к файлу иконки
 };

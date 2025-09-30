@@ -4,8 +4,6 @@
 
 #include "BasePanelWidget.h"
 
-#include <QKeySequence> //класс горячих клавиш Qt
-
 class QToolButton;
 class QButtonGroup;
 

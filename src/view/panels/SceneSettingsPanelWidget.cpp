@@ -2,10 +2,11 @@
 #include "ThemeManager.h"
 #include "AnimationManager.h"
 
-#include <QToolButton>
 #include <QButtonGroup>
+#include <QToolButton>
 #include <QGridLayout>
 #include <QSpacerItem>
+#include <QKeySequence>
 
 SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
@@ -13,7 +14,7 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     auto* layout = new QGridLayout(canvas());
     layout->setContentsMargins(10, 10, 10, 10);
 
-    //группа кнопок переключения систем координат
+    //группа для кнопок систем координат
     auto* coordSystemGroup = new QButtonGroup(this);
     coordSystemGroup->setExclusive(true);
 
@@ -29,15 +30,20 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     m_polarBtn = new AnimationManager(":/icons/icons/polar.svg", "Полярные координаты [P]", Qt::Key_P);
     m_cartesianBtn->setChecked(true);
 
+    //добавление кнопок систем координат в их группу
     coordSystemGroup->addButton(m_cartesianBtn);
     coordSystemGroup->addButton(m_polarBtn);
 
+    //добавление кнопок в шаблон
     layout->addWidget(m_gridSnapBtn, 0, 0, Qt::AlignLeft);
     layout->addWidget(m_primitiveSnapBtn, 1, 0, Qt::AlignLeft);
     layout->addWidget(m_cartesianBtn, 2, 0, Qt::AlignLeft);
     layout->addWidget(m_polarBtn, 3, 0, Qt::AlignLeft);
 
+    //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(1, 1);
+
+    //последняя путсая строка должна растягиваться, прижимая кнопки вверх
     layout->setRowStretch(4, 1);
 
     //подключение сигналов от кнопок
@@ -52,7 +58,10 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
 
 void SceneSettingsPanelWidget::updateIcons()
 {
+    //получение цвета иконок из менеджера тем
     QColor iconColor = ThemeManager::instance().getIconColor();
+
+    //вызов метода перекрашивания иконки из AnimationManager
     if (m_gridSnapBtn) {
         static_cast<AnimationManager*>(m_gridSnapBtn)->updateIconColor(iconColor);
     }

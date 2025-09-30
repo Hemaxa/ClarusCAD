@@ -7,6 +7,7 @@
         <file>icons/polar.svg</file>
         <file>icons/point.svg</file>
         <file>icons/rectangle.svg</file>
+        <file>icons/primitive-snap.svg</file>
     </qresource>
     <qresource prefix="/themes">
         <file>themes/ClarusCAD.qss</file>

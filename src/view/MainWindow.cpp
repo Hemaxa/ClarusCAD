@@ -142,7 +142,10 @@ void MainWindow::createConnections()
     //10) панель параметров сцены сообщает об изменении системы координат -> панель свойств меняет содержимое
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
 
-    //11) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
+    //11) панель параметров сцены сообщает об изменении системы координат -> окно просмотра меняет содержимое
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
+
+    //12) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
     connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand);
 }
 
@@ -207,7 +210,7 @@ void MainWindow::activateSegmentCreationTool()
 
 void MainWindow::onColorChanged(const QColor& color)
 {
-    // Если какой-либо инструмент сейчас активен, передаем ему новый цвет
+    //если какой-либо инструмент сейчас активен, ему передается новый цвет
     if (m_currentTool) {
         m_currentTool->setColor(color);
     }
@@ -215,19 +218,22 @@ void MainWindow::onColorChanged(const QColor& color)
 
 void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color)
 {
+    //режим редактирования
     if (segment) {
-        // РЕЖИМ РЕДАКТИРОВАНИЯ: обновляем существующий объект
+        //обновляется существующий объект
         segment->setStart(start);
         segment->setEnd(end);
         segment->setColor(color);
 
         m_viewportPanel->update();
-        emit sceneChanged(m_scene); // Обновляем список, но не меняем выбор
-    } else {
-        // РЕЖИМ СОЗДАНИЯ: создаем новый объект
+        emit sceneChanged(m_scene); //обновит список, но не изменит выбор
+    }
+    //режим создания
+    else {
+        //создается новый объект
         auto* newSegment = new SegmentPrimitive(start, end);
         newSegment->setColor(color);
-        addPrimitiveToScene(newSegment); // Этот метод добавит объект и сделает его выбранным
+        addPrimitiveToScene(newSegment); //добавит объект и сделает его выбранным
     }
 }
 
@@ -338,14 +344,13 @@ void MainWindow::processConsoleCommand(const QString& commandStr)
         return;
     }
 
+    //обработка разных команд
     if (command.name == "segment" && command.args.size() == 4) {
         PointPrimitive start(command.args[0], command.args[1]);
         PointPrimitive end(command.args[2], command.args[3]);
-
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
-        // Вызываем новый универсальный метод с nullptr, чтобы создать объект
         applySegmentChanges(nullptr, start, end, command.color);
-    } else {
+    }
+    else {
         qDebug("Неизвестная команда или неверное количество аргументов.");
     }
 }

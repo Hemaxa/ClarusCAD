@@ -10,6 +10,7 @@
 
 SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
+    //инициализация валидатора вводимых значений
     auto* validator = new QDoubleValidator(this);
 
     //заполнение панели декартовых координат
@@ -45,12 +46,13 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     //подключение сигнала от кнопки
     connect(m_applyButton, &QPushButton::clicked, this, &SegmentPropertiesWidget::onApplyButtonClicked);
 
-    // 4. Устанавливаем начальные значения
+    //установка системы координат по-умолчанию
     setCoordinateSystem(CoordinateSystemType::Cartesian);
 }
 
 void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
 {
+    //сохранение указателя на объект и обновление интерфейса
     BasePropertiesWidget::setPrimitive(primitive);
     m_currentSegment = dynamic_cast<SegmentPrimitive*>(primitive);
     updateFieldValues();
@@ -60,10 +62,12 @@ void SegmentPropertiesWidget::updateFieldValues()
 {
     bool isCartesian = (m_coordSystem == CoordinateSystemType::Cartesian);
 
+    //если существующий объект
     if (m_currentSegment) {
         const auto& startPoint = m_currentSegment->getStart();
         const auto& endPoint = m_currentSegment->getEnd();
 
+        //значения в зависимости от системы координат
         if (isCartesian) {
             m_startXEdit->setText(QString::number(startPoint.getX()));
             m_startYEdit->setText(QString::number(startPoint.getY()));
@@ -76,6 +80,7 @@ void SegmentPropertiesWidget::updateFieldValues()
             m_endAngleEdit->setText(QString::number(endPoint.getAngle()));
         }
     }
+    //если новый объект
     else {
         m_startXEdit->setText("0.0");
         m_startYEdit->setText("0.0");
@@ -94,13 +99,14 @@ void SegmentPropertiesWidget::updatePrompt()
 
     QMap<QString, QColor> colorMap;
     colorMap.insert("currentColor", tm.getIconColor());
-    colorMap.insert("@textColor", tm.getColor("textColor"));
+    //colorMap.insert("@textColor", tm.getColor("textColor"));
 
     QPixmap originalPixmap = tm.colorizeSvg(":/promts/promts/segment-promt.svg", colorMap);
     if (originalPixmap.isNull()) {
         return;
     }
 
+    //размер подсказки
     QPixmap scaledPixmap = originalPixmap.scaledToWidth(130, Qt::SmoothTransformation);
 
     m_leftColumn->setPixmap(scaledPixmap);
@@ -112,6 +118,7 @@ void SegmentPropertiesWidget::onApplyButtonClicked()
     PointPrimitive start, end;
     bool isCartesian = (m_coordSystem == CoordinateSystemType::Cartesian);
 
+    //считывание текста из полей ввода в зависимости от системы координат
     if (isCartesian) {
         start.setX(m_startXEdit->text().toDouble());
         start.setY(m_startYEdit->text().toDouble());
@@ -123,5 +130,6 @@ void SegmentPropertiesWidget::onApplyButtonClicked()
         end.setPolar(m_endRadiusEdit->text().toDouble(), m_endAngleEdit->text().toDouble());
     }
 
+    //отправка сигнала в PropertiesPanelWidget
     emit propertiesApplied(m_currentSegment, start, end, m_selectedColor);
 }

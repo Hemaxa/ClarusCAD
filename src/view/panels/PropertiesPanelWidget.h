@@ -41,6 +41,6 @@ signals:
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого
-    SegmentPropertiesWidget* m_segmentProperties; //виджет свойств объекта "Отрезок"
     QWidget* m_emptyWidget; //пустой виджет
+    SegmentPropertiesWidget* m_segmentProperties; //виджет свойств объекта "Отрезок"
 };

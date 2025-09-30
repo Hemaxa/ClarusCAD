@@ -6,6 +6,7 @@
 #include "EnumManager.h"
 
 class QToolButton;
+class QButtonGroup;
 
 //наслдедуется от базового класса BasePanelWidget
 class SceneSettingsPanelWidget : public BasePanelWidget

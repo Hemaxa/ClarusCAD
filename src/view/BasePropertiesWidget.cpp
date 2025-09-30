@@ -27,8 +27,8 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     //2) правая колонка (общие параметры)
     m_rightColumn = new QWidget();
     auto* rightLayout = new QFormLayout(m_rightColumn);
-    //rightLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
-    //rightLayout->setContentsMargins(0, 0, 0, 10);
+    rightLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+    rightLayout->setContentsMargins(0, 15, 10, 0);
 
     //создание кнопки изменения цвета
     m_colorButton = new QPushButton();
@@ -40,7 +40,7 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     //3) центральная колонка (сменяемые параметры)
     m_centralColumn = new QWidget();
     auto* centralLayout = new QVBoxLayout(m_centralColumn);
-    //centralLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+    centralLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     //создание и заполнение общей панели с параметрами внутри центральной колонки
@@ -59,11 +59,6 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     m_applyButton = new QPushButton();
     m_applyButton->setFixedSize(120, 30);
 
-    //добавление общей панели и кнопки в layout центральной колонки
-    // centralLayout->addWidget(m_paramsStack);
-    // centralLayout->addWidget(m_applyButton, 0, Qt::AlignHCenter);
-    // centralLayout->addStretch(1);
-
     //cборка всей сетки
     mainLayout->addWidget(m_leftColumn, 0, 0, Qt::AlignHCenter);
     mainLayout->addWidget(m_centralColumn, 0, 1, Qt::AlignHCenter);
@@ -75,8 +70,6 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     mainLayout->setColumnStretch(0, 1);
     mainLayout->setColumnStretch(1, 1);
     mainLayout->setColumnStretch(2, 1);
-
-    mainLayout->setRowStretch(0, 1);
 }
 
 void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
@@ -101,12 +94,15 @@ void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
 
 void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
 {
+    //получение типа системы координат
     m_coordSystem = type;
 
+    //декартова система координат
     if (m_coordSystem == CoordinateSystemType::Cartesian)
     {
         m_paramsStack->setCurrentWidget(m_cartesianWidgets);
     }
+    //полярная система координат
     else
     {
         m_paramsStack->setCurrentWidget(m_polarWidgets);
@@ -119,11 +115,13 @@ void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
 void BasePropertiesWidget::updateColor(const QColor& color)
 {
     m_selectedColor = color;
+    //обновление кружка цвета
     m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
 }
 
 void BasePropertiesWidget::onColorButtonClicked()
 {
+    //вызов диалога выбора цвета
     QColor color = QColorDialog::getColor(m_selectedColor, this, "Выберите цвет");
     if (color.isValid()) {
         m_selectedColor = color;

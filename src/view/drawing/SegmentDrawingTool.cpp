@@ -1,5 +1,6 @@
 #include "SegmentDrawingTool.h"
 #include "SegmentPrimitive.h"
+
 #include <QPainter>
 #include <QPen>
 
@@ -10,7 +11,6 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
 
     //если приведение не удалось или пришел nullptr, прекращается выполнение
     if (!segment) return;
-
 
     //устанавливается перо для рисования необходимого цвета
     painter.setPen(segment->getColor());

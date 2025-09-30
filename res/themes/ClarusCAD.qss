@@ -8,6 +8,7 @@
     @accentColor: #00ff7f;
     @hoverColor: #2a2a2a;
     @selectionColor: #00ff7f;
+    @axisScaleColor: #909090;
 */
 
 /* --- Общие стили для окон и диалогов --- */

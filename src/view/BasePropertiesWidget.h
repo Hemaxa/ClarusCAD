@@ -42,7 +42,10 @@ protected slots:
     void onColorButtonClicked();
 
 protected:
+    //метод обновления полей ввода
     virtual void updateFieldValues() = 0;
+
+    //метод обнолвения подсказки
     virtual void updatePrompt();
 
     BasePrimitive* m_currentPrimitive = nullptr;
@@ -55,8 +58,8 @@ protected:
     QWidget* m_rightColumn; //правая колонка
 
     QStackedWidget* m_paramsStack; //общий виджет для сменяемых параметров центральной колонки
-    QWidget* m_cartesianWidgets;
-    QWidget* m_polarWidgets;
+    QWidget* m_cartesianWidgets; //виджет декартовой системы координат
+    QWidget* m_polarWidgets; //виджет полярной системы координат
 
     //кнопки
     QPushButton* m_colorButton;

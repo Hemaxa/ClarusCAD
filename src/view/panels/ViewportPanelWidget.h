@@ -4,6 +4,7 @@
 
 #include "BasePanelWidget.h"
 #include "BasePrimitive.h"
+#include "EnumManager.h"
 
 #include <QPointF>
 
@@ -42,6 +43,7 @@ public:
 
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
+    void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
     void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
     void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам
 
@@ -64,11 +66,12 @@ private:
 
     QPointF m_currentMouseWorldPos; //текущая позиция мыши в мировых координатах
     double m_gridMultiplier = 1.0; //текущий множитель сетки
+    CoordinateSystemType m_coordSystemType = CoordinateSystemType::Cartesian; //текущая система координат
 
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
     double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки
-    QPointF snapToGrid(const QPointF& worldPos) const;
-    QPointF snapToPrimitives(const QPointF& worldPos) const;
+    QPointF snapToGrid(const QPointF& worldPos) const; //метод привязки к сетке
+    QPointF snapToPrimitives(const QPointF& worldPos) const; //метод привязки к примитивам
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо

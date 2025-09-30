@@ -3,6 +3,7 @@
 #include "BaseCreationTool.h"
 #include "BaseDrawingTool.h"
 #include "SegmentPrimitive.h"
+#include "ThemeManager.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -27,7 +28,7 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     //начальная позиция камеры
     m_panOffset = QPointF(50.0, 50.0);
 
-    //создание info-панели
+    //создание и настройка info-панели
     m_infoLabel = new QLabel(canvas());
     m_infoLabel->setObjectName("InfoLabel");
     m_infoLabel->setFixedSize(100, 60); //размеры панели
@@ -175,6 +176,7 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 
 void ViewportPanelWidget::paintGrid(QPainter& painter)
 {
+    //отрисовка сетки
     QPen gridPen(QColor(60, 60, 60), 1.0); //перо для обычной сетки
     QPen axisXPen(Qt::red, 1.5); //перо для оси X
     QPen axisYPen(Qt::green, 1.5); //перо для оси Y
@@ -227,6 +229,34 @@ void ViewportPanelWidget::paintGrid(QPainter& painter)
     painter.setPen(Qt::white);
     painter.setBrush(Qt::white);
     painter.drawEllipse(originPointScreen, 3, 3);
+
+    //отрисовка шкал
+    QColor scaleColor = ThemeManager::instance().getColor("axisScaleColor");
+    painter.setPen(scaleColor);
+    painter.setFont(QFont("Monaco", 9));
+
+    //шкала на оси X
+    for (double x = std::floor(topLeft.x() / dynamicGridStep) * dynamicGridStep; x <= bottomRight.x(); x += dynamicGridStep) {
+        if (std::abs(x) < 1e-9) continue; //пропуск нуля
+
+        QPointF tickPosScreen = worldToScreen(QPointF(x, 0.0));
+        //основные деления делаются длиннее (каждые 5 шагов сетки)
+        int tickLength = (std::fmod(std::round(x / dynamicGridStep), 5.0) == 0) ? 10 : 5;
+
+        painter.drawLine(tickPosScreen, tickPosScreen + QPointF(0, tickLength));
+        painter.drawText(QRectF(tickPosScreen.x() - 25, tickPosScreen.y() + 5, 50, 20), Qt::AlignCenter, QString::number(x));
+    }
+
+    //шкала на оси Y
+    for (double y = std::floor(bottomRight.y() / dynamicGridStep) * dynamicGridStep; y <= topLeft.y(); y += dynamicGridStep) {
+        if (std::abs(y) < 1e-9) continue; //пропуск нуля
+
+        QPointF tickPosScreen = worldToScreen(QPointF(0.0, y));
+        int tickLength = (std::fmod(std::round(y / dynamicGridStep), 5.0) == 0) ? 10 : 5;
+
+        painter.drawLine(tickPosScreen, tickPosScreen - QPointF(tickLength, 0));
+        painter.drawText(QRectF(tickPosScreen.x() - 60, tickPosScreen.y() - 10, 50, 20), Qt::AlignRight | Qt::AlignVCenter, QString::number(y));
+    }
 }
 
 void ViewportPanelWidget::paintGizmo(QPainter& painter)
@@ -277,10 +307,24 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
 
 void ViewportPanelWidget::updateInfoLabel()
 {
-    QString infoText = QString("X: %1\nY: %2\nGrid: x%3")
+    QString infoText;
+    //проверка текущей системы координат
+    //декартова система координат
+    if (m_coordSystemType == CoordinateSystemType::Cartesian) {
+        infoText = QString("X: %1\nY: %2\nGrid: x%3")
         .arg(m_currentMouseWorldPos.x(), 0, 'f', 2)
         .arg(m_currentMouseWorldPos.y(), 0, 'f', 2)
         .arg(m_gridMultiplier, 0, 'f', 2);
+    }
+    //полярная система координат
+    else {
+        //перевод координат
+        PointPrimitive p(m_currentMouseWorldPos.x(), m_currentMouseWorldPos.y());
+            infoText = QString("R: %1\nA: %2°\nGrid: x%3")
+            .arg(p.getRadius(), 0, 'f', 2)
+            .arg(p.getAngle(), 0, 'f', 2)
+            .arg(m_gridMultiplier, 0, 'f', 2);
+    }
     m_infoLabel->setText(infoText);
 }
 
@@ -305,8 +349,8 @@ void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
     if (m_gridStep > 0) {
         m_gridMultiplier = calculateDynamicGridStep() / m_gridStep;
     }
-    updateInfoLabel();
 
+    updateInfoLabel();
     update();
 }
 
@@ -333,6 +377,7 @@ QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
         return worldPos;
     }
 
+    //округление координат
     double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep;
     double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep;
     return QPointF(snappedX, snappedY);
@@ -344,7 +389,7 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
         return worldPos;
     }
 
-    double minDistance = 10.0 / m_zoomFactor; // Порог привязки (10 пикселей)
+    double minDistance = 10.0 / m_zoomFactor; //порог привязки (10 пикселей)
     QPointF bestSnapPoint = worldPos;
 
     for (const auto& primitive : m_scene->getPrimitives()) {
@@ -353,13 +398,13 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
             QPointF startPoint(segment->getStart().getX(), segment->getStart().getY());
             QPointF endPoint(segment->getEnd().getX(), segment->getEnd().getY());
 
-            // Проверяем расстояние до начальной точки
+            //проверка расстояния до начальной точки
             if (QLineF(worldPos, startPoint).length() < minDistance) {
                 minDistance = QLineF(worldPos, startPoint).length();
                 bestSnapPoint = startPoint;
             }
 
-            // Проверяем расстояние до конечной точки
+            //проверка расстояния до конечной точки
             if (QLineF(worldPos, endPoint).length() < minDistance) {
                 minDistance = QLineF(worldPos, endPoint).length();
                 bestSnapPoint = endPoint;
@@ -373,15 +418,15 @@ QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
 {
     QPointF snappedPos = worldPos;
 
-    // Сначала пытаемся привязаться к примитивам, если включено
+    //сначала идет привязка к примитивам, если включено
     if (m_isPrimitiveSnapEnabled) {
         snappedPos = snapToPrimitives(worldPos);
-        // Если не привязались к примитиву, но включена привязка к сетке, пробуем ее
+        //если не получилась привязка к примитиву и включена привязка к сетке, то пробуется она
         if (snappedPos == worldPos && m_isGridSnapEnabled) {
             snappedPos = snapToGrid(worldPos);
         }
     }
-    // Если привязка к примитивам выключена, но включена к сетке
+    //елси привязка к примитивам выключена, но включена к сетке
     else if (m_isGridSnapEnabled) {
         snappedPos = snapToGrid(worldPos);
     }
@@ -395,6 +440,7 @@ void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::uni
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; if (m_gridStep > 0) { m_gridMultiplier = calculateDynamicGridStep() / m_gridStep; } updateInfoLabel(); update(); } }
 void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
 void ViewportPanelWidget::setPrimitiveSnapEnabled(bool enabled) { m_isPrimitiveSnapEnabled = enabled; }
+void ViewportPanelWidget::setCoordinateSystem(CoordinateSystemType type) { m_coordSystemType = type; updateInfoLabel(); }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }

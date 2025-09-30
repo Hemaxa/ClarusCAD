@@ -57,8 +57,8 @@ private:
     static QString readAndReplaceSvg(const QString& path, const QMap<QString, QColor>& colorMap);
 
     //поля класса
-    QSettings m_settings;
-    QString m_currentThemeName;
-    QColor m_iconColor;
-    QMap<QString, QColor> m_themeColors;
+    QSettings m_settings; //сохранение настроек
+    QString m_currentThemeName; //имя текущей темы
+    QColor m_iconColor; //текущий цвет иконок
+    QMap<QString, QColor> m_themeColors; //все цвета из файла темы
 };

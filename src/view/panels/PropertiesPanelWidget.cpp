@@ -68,6 +68,7 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
 void PropertiesPanelWidget::setCoordinateSystem(CoordinateSystemType type)
 {
     auto* currentWidget = qobject_cast<BasePropertiesWidget*>(m_stack->currentWidget());
+    //передача команды о смене системы координат активному виджету свойств
     if (currentWidget) {
         currentWidget->setCoordinateSystem(type);
     }
