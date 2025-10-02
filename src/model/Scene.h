@@ -1,18 +1,29 @@
+//Scene - центральное хранилище всех объектов в приложении
+
 #pragma once
 
-#include "Point.h"
+#include "BasePrimitive.h"
 
 #include <vector>
+#include <memory>
 
 class Scene
 {
 
 public:
+    //конструктор
     Scene();
 
-    void addPoint(const Point& point);
-    const std::vector<Point>& getPoints() const;
+    //метод добавления примитива в сцену
+    void addPrimitive(std::unique_ptr<BasePrimitive> primitive);
+
+    //метод удаления примитива из сцены
+    void removePrimitive(BasePrimitive* primitive);
+
+    //метод получения доступа ко всем примитивам
+    const std::vector<std::unique_ptr<BasePrimitive>>& getPrimitives() const;
 
 private:
-    std::vector<Point> m_points;
+    //хранилище всех объектов
+    std::vector<std::unique_ptr<BasePrimitive>> m_primitives;
 };

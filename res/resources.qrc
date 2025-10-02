@@ -1,0 +1,21 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/segment.svg</file>
+        <file>icons/grid-snap.svg</file>
+        <file>icons/delete.svg</file>
+        <file>icons/cartesian.svg</file>
+        <file>icons/polar.svg</file>
+        <file>icons/point.svg</file>
+        <file>icons/rectangle.svg</file>
+        <file>icons/primitive-snap.svg</file>
+    </qresource>
+    <qresource prefix="/themes">
+        <file>themes/ClarusCAD.qss</file>
+        <file>themes/Dark.qss</file>
+        <file>themes/Light.qss</file>
+        <file>themes/HelloKitty.qss</file>
+    </qresource>
+    <qresource prefix="/promts">
+        <file>promts/segment-promt.svg</file>
+    </qresource>
+</RCC>

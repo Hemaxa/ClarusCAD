@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ClarusCAD
+GenericName=CAD System
+Comment=A simple 2D Computer-Aided Design system
+Exec=ClarusCAD
+Icon=ClarusCAD
+Terminal=false
+Categories=Graphics;2DGraphics;X-CAD;
