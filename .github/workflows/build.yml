@@ -37,12 +37,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Extract Version
+    - name: Extract Version (Cross-platform)
       id: get_version
       shell: bash
-      # ИСПРАВЛЕНИЕ: Универсальная и надежная команда sed для извлечения версии
       run: |
-        VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \([0-9.]*\)).*/\1/p' CMakeLists.txt)
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$RUNNER_OS" == "Windows" ]]; then
+          # Windows Git Bash or PowerShell
+          VERSION=$(awk '/project\(ClarusCAD VERSION/ {match($0, /VERSION ([0-9.]+)/, arr); print arr[1]}' CMakeLists.txt)
+        else
+          # Linux/macOS - use sed without -P flag
+          VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \([0-9\.]*\)).*/\1/p' CMakeLists.txt)
+        fi
+        if [ -z "$VERSION" ]; then
+          # Fallback method
+          VERSION=$(grep "project(ClarusCAD VERSION" CMakeLists.txt | sed 's/.*VERSION \([0-9\.]*\).*/\1/')
+        fi
+        echo "Extracted version: $VERSION"
+        if [ -z "$VERSION" ]; then
+          echo "Error: Could not extract version from CMakeLists.txt"
+          exit 1
+        fi
         echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
         echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
@@ -70,7 +84,7 @@ jobs:
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
       run: |
-        cmake -B build -G "Visual Studio 17 2022" -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
+        cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
 
     # Build Project
     - name: Build Project
@@ -80,31 +94,91 @@ jobs:
     - name: Package Linux (AppImage)
       if: matrix.package_type == 'appimage'
       run: |
-        wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" -O linuxdeployqt
-        chmod a+x linuxdeployqt
-        cmake --install build --prefix AppDir/usr
+        # Download linuxdeployqt
+        wget -qO linuxdeployqt.AppImage https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
+        chmod +x linuxdeployqt.AppImage
+
+        # Create AppDir structure
+        cmake --install build --prefix AppDir/usr --config Release
+
+        # Create desktop file if it doesn't exist
+        mkdir -p AppDir/usr/share/applications
+        if [ ! -f "AppDir/usr/share/applications/ClarusCAD.desktop" ]; then
+          cat > AppDir/usr/share/applications/ClarusCAD.desktop << EOF
+        [Desktop Entry]
+        Type=Application
+        Name=ClarusCAD
+        Exec=ClarusCAD
+        Icon=ClarusCAD
+        Comment=CAD Application
+        Categories=Graphics;Engineering;
+        EOF
+        fi
+
+        # Create icon directories and copy icon
+        mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+        if [ -f "res/app-icon/icon.png" ]; then
+          cp res/app-icon/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
+        elif [ -f "AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png" ]; then
+          # Icon already copied by install
+          echo "Icon already in place"
+        else
+          # Create a simple colored icon as fallback
+          sudo apt-get install -y imagemagick 2>/dev/null || true
+          if command -v convert >/dev/null 2>&1; then
+            convert -size 256x256 xc:blue AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
+          else
+            # Create empty file as last resort
+            touch AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
+          fi
+        fi
+
+        # Copy desktop file and icon to AppDir root
         cp AppDir/usr/share/applications/ClarusCAD.desktop AppDir/
         cp AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png AppDir/
-        ./linuxdeployqt ./AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes -qmake=${{ env.QT_ROOT_DIR }}/bin/qmake
-        mv ./*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage
+
+        # Build AppImage
+        ./linuxdeployqt.AppImage AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes
+
+        # Rename AppImage
+        mv ./*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage || echo "No AppImage found to rename"
 
     # Windows Packaging
     - name: Package Windows (NSIS)
       if: matrix.package_type == 'nsis'
-      shell: pwsh # ИСПРАВЛЕНИЕ: Используем PowerShell для корректной работы с путями Windows
+      shell: pwsh
       run: |
+        # Install and Deploy Qt
         cmake --build build --config Release --target INSTALL
-        & "${{ env.QT_ROOT_DIR }}\bin\windeployqt.exe" --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}\install\bin\ClarusCAD.exe"
-        cd build
+        & "$env:Qt6_DIR\bin\windeployqt.exe" --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}\install\bin\ClarusCAD.exe"
+
+        # Create NSIS installer using CPack
+        Push-Location build
         cpack -G NSIS -C Release
-        Move-Item -Path "ClarusCAD_v${{ env.APP_VERSION }}_windows.exe" -Destination ".."
+        Pop-Location
+
+        # Move installer to root with proper name
+        $installer = Get-ChildItem -Path "build" -Name "*.exe" | Select-Object -First 1
+        if ($installer) {
+          Move-Item "build\$installer" "ClarusCAD_v${{ env.APP_VERSION }}_windows.exe"
+          Write-Host "Created installer: ClarusCAD_v${{ env.APP_VERSION }}_windows.exe"
+        } else {
+          Write-Host "No installer found in build directory"
+          Get-ChildItem -Path "build" -Recurse -Name "*.exe"
+        }
 
     # macOS Packaging
     - name: Package macOS (PKG)
       if: matrix.package_type == 'pkg'
       run: |
         cmake --build build --config Release --target package
-        mv build/ClarusCAD_v${{ env.APP_VERSION }}_macOS_ARM.pkg ./
+        # Find and rename the pkg file
+        if [ -f "build/ClarusCAD_v"*"_macOS_ARM.pkg" ]; then
+          mv build/ClarusCAD_v*_macOS_ARM.pkg ClarusCAD_v${{ env.APP_VERSION }}_macOS.pkg
+        else
+          # Alternative search
+          find build -name "*.pkg" -exec mv {} ClarusCAD_v${{ env.APP_VERSION }}_macOS.pkg \; 2>/dev/null || echo "No PKG found"
+        fi
 
     # Upload Artifacts
     - name: Upload Artifact (Linux)
@@ -112,21 +186,21 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage
+        path: ClarusCAD_v*_linux.AppImage
 
     - name: Upload Artifact (Windows)
       if: matrix.package_type == 'nsis'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v${{ env.APP_VERSION }}_windows.exe
+        path: ClarusCAD_v*_windows.exe
 
     - name: Upload Artifact (macOS)
       if: matrix.package_type == 'pkg'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v${{ env.APP_VERSION }}_macOS_ARM.pkg
+        path: ClarusCAD_v*_macOS.pkg
 
   # Summary job to collect all artifacts
   release:
@@ -140,4 +214,4 @@ jobs:
         path: artifacts
 
     - name: Display structure of downloaded files
-      run: ls -la artifacts/
+      run: ls -la artifacts/*/

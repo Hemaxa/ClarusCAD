@@ -133,14 +133,16 @@ if(APPLE)
     )
 
     #поиск необходимых утилит для сборки проекта
-    find_program(MACDEPLOYQT_EXECUTABLE macdeployqt)
+    find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS ${Qt6_DIR}/../../../bin)
     find_program(PKGBUILD_EXECUTABLE pkgbuild)
     find_program(PRODUCTBUILD_EXECUTABLE productbuild)
 
     #копирование иконки в .app
-    add_custom_command(TARGET ClarusCAD POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns" "$<TARGET_BUNDLE_DIR:ClarusCAD>/Contents/Resources/icon.icns"
-    )
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns")
+        add_custom_command(TARGET ClarusCAD POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns" "$<TARGET_BUNDLE_DIR:ClarusCAD>/Contents/Resources/icon.icns"
+        )
+    endif()
 
     #создание и настройка .pkg
     if(PKGBUILD_EXECUTABLE AND PRODUCTBUILD_EXECUTABLE)
@@ -161,12 +163,12 @@ if(APPLE)
             COMMAND ${PKGBUILD_EXECUTABLE}
                 --root "${CMAKE_BINARY_DIR}/package/root"
                 --identifier "com.clarus.cad"
-                --version "${ClarusCAD_VERSION}"
+                --version "${PROJECT_VERSION}"
                 --install-location "/" "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg"
 
             #настройка .pkg
             COMMAND ${PRODUCTBUILD_EXECUTABLE}
-                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS_ARM.pkg"
+                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${PROJECT_VERSION}_macOS_ARM.pkg"
 
             #удаление временной директории
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/package"
@@ -253,26 +255,32 @@ if(UNIX AND NOT APPLE)
     )
 
     #регистрация приложения (Info.desktop.in)
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
-        COPYONLY
-    )
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in")
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
+            COPYONLY
+        )
+    endif()
 
     #исполняемый файл помещается в /bin
     install(TARGETS ClarusCAD DESTINATION bin)
 
     #копирование Info.desktop.in в /applications
-    install(
-        FILES "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
-        DESTINATION share/applications
-        RENAME ClarusCAD.desktop
-    )
+    if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop")
+        install(
+            FILES "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
+            DESTINATION share/applications
+            RENAME ClarusCAD.desktop
+        )
+    endif()
 
     #копирование иконки приложения
-    install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png"
-        DESTINATION share/icons/hicolor/256x256/apps
-        RENAME ClarusCAD.png
-    )
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png")
+        install(
+            FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png"
+            DESTINATION share/icons/hicolor/256x256/apps
+            RENAME ClarusCAD.png
+        )
+    endif()
 endif()
