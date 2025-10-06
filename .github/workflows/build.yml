@@ -40,9 +40,9 @@ jobs:
     - name: Extract Version
       id: get_version
       shell: bash
-      # ИСПРАВЛЕНИЕ: Возвращаемся к универсальной команде sed
+      # ИСПРАВЛЕНИЕ: Универсальная и надежная команда sed для извлечения версии
       run: |
-        VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \\([0-9\\.]*\\)).*/\\1/p' CMakeLists.txt)
+        VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \([0-9.]*\)).*/\1/p' CMakeLists.txt)
         echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
         echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
@@ -91,20 +91,20 @@ jobs:
     # Windows Packaging
     - name: Package Windows (NSIS)
       if: matrix.package_type == 'nsis'
-      shell: bash # Явно указываем bash для консистентности путей
+      shell: pwsh # ИСПРАВЛЕНИЕ: Используем PowerShell для корректной работы с путями Windows
       run: |
         cmake --build build --config Release --target INSTALL
-        ${{ env.QT_ROOT_DIR }}/bin/windeployqt.exe --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
+        & "${{ env.QT_ROOT_DIR }}\bin\windeployqt.exe" --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}\install\bin\ClarusCAD.exe"
         cd build
         cpack -G NSIS -C Release
-        mv *.exe ../ClarusCAD_v${{ env.APP_VERSION }}_windows.exe
+        Move-Item -Path "ClarusCAD_v${{ env.APP_VERSION }}_windows.exe" -Destination ".."
 
     # macOS Packaging
     - name: Package macOS (PKG)
       if: matrix.package_type == 'pkg'
       run: |
         cmake --build build --config Release --target package
-        mv build/ClarusCAD_v*macOS_ARM.pkg ./
+        mv build/ClarusCAD_v${{ env.APP_VERSION }}_macOS_ARM.pkg ./
 
     # Upload Artifacts
     - name: Upload Artifact (Linux)
@@ -112,21 +112,21 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*linux.AppImage
+        path: ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage
 
     - name: Upload Artifact (Windows)
       if: matrix.package_type == 'nsis'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*windows.exe
+        path: ClarusCAD_v${{ env.APP_VERSION }}_windows.exe
 
     - name: Upload Artifact (macOS)
       if: matrix.package_type == 'pkg'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*macOS_ARM.pkg
+        path: ClarusCAD_v${{ env.APP_VERSION }}_macOS_ARM.pkg
 
   # Summary job to collect all artifacts
   release:
