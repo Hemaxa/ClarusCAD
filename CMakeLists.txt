@@ -223,7 +223,7 @@ if(WIN32)
     set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${ClarusCAD_VERSION}_windows")
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
-    include(CPack)
+    include(CPack_NSIS)
 endif()
 
 # ====================================================================

@@ -22,27 +22,33 @@ jobs:
           version: '6.5.0'
           arch: 'win64_msvc2019_64'
 
-      - name: Setup NSIS
-        uses: repolevedavaj/install-nsis@v1.0.1
-        with:
-          nsis-version: '3.09'
+      # Установщик NSIS больше не нужен, Action сделает все сам
+      # - name: Setup NSIS ...
 
-      # ЯВНО УКАЗЫВАЕМ CMAKE, ГДЕ НАХОДИТСЯ NSIS
+      # Шаг конфигурации остается прежним, без CMAKE_PROGRAM_PATH
       - name: Configure CMake
-        run: cmake -B build -G "Visual Studio 17 2022" -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" -DCMAKE_PROGRAM_PATH="C:/Program Files (x86)/NSIS"
+        run: cmake -B build -G "Visual Studio 17 2022" -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
 
       - name: Build and Install
         run: cmake --build build --config Release --target INSTALL
 
       - name: Deploy Qt Libraries
-        run: ${{ env.Qt6_DIR }}\bin\windeployqt.exe --no-compiler-runtime --no-opengl-sw --verbose 1 --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
+        run: ${{ env.Qt6_DIR }}\bin\windeployqt.exe --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
 
-      # Теперь эта команда должна найти NSIS без проблем
-      - name: Package
-        run: cmake --build build --config Release --target PACKAGE
+      # НОВЫЙ ШАГ: Генерируем .nsi скрипт с помощью CPack
+      - name: Generate NSIS Script
+        run: cmake --build build --config Release --target PACKAGE_NSI
+
+      # НОВЫЙ ШАГ: Собираем установщик с помощью makensis-action
+      - name: Create NSIS Installer
+        uses: joncloud/makensis-action@v5.0
+        with:
+          script-file: build/CPack_NSIS_GENERATED.nsi
+          arguments: /DCPACK_PACKAGE_FILE_NAME="ClarusCAD_v${{ env.APP_VERSION }}_windows"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ClarusCAD_windows_package
-          path: build/ClarusCAD_v*_windows.exe
+          # Путь теперь ведет к файлу, созданному makensis-action
+          path: ClarusCAD_v*_windows.exe
