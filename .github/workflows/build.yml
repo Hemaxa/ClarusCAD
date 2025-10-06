@@ -40,9 +40,18 @@ jobs:
     - name: Extract Version
       id: get_version
       shell: bash
-      # ИСПРАВЛЕНИЕ: Используем sed вместо grep для универсальности
       run: |
-        VERSION=$(sed -n 's/project(ClarusCAD VERSION \\([0-9\\.]*\\).*)/\\1/p' CMakeLists.txt)
+        # Более надежный способ извлечения версии
+        VERSION=$(grep -oP 'project\\(ClarusCAD VERSION \\K[0-9]+\\.[0-9]+' CMakeLists.txt)
+        if [ -z "$VERSION" ]; then
+          echo "Version could not be extracted. Trying sed."
+          VERSION=$(sed -n 's/project(ClarusCAD VERSION \\([0-9\\.]*\\).*)/\\1/p' CMakeLists.txt)
+        fi
+        if [ -z "$VERSION" ]; then
+          echo "Version could not be extracted with sed either. Exiting."
+          exit 1
+        fi
+        echo "Extracted version: $VERSION"
         echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
         echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
 
@@ -69,7 +78,6 @@ jobs:
 
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
-      # ЯВНО УКАЗЫВАЕМ CMAKE, ГДЕ НАХОДИТСЯ NSIS
       run: |
         cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
 
@@ -84,41 +92,36 @@ jobs:
         # Download linuxdeployqt
         wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" -O linuxdeployqt
         chmod a+x linuxdeployqt
-
         # Create AppDir
         cmake --install build --prefix AppDir/usr
-
         # Build AppImage
         cp AppDir/usr/share/applications/ClarusCAD.desktop AppDir/
         cp AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png AppDir/
-
-        # ИСПРАВЛЕНИЕ: Явно указываем путь к qmake
         ./linuxdeployqt ./AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes -qmake=${{ env.QT_ROOT_DIR }}/bin/qmake
-
         # Rename AppImage
         mv ./*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage
 
     # Windows Packaging
     - name: Package Windows (NSIS)
       if: matrix.package_type == 'nsis'
+      shell: bash # Явно используем bash
       run: |
         # Install and Deploy Qt
         cmake --build build --config Release --target INSTALL
-        ${{ env.Qt6_DIR }}\\bin\\windeployqt.exe --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
-
+        # ИСПРАВЛЕНИЕ: Используем правильную переменную QT_ROOT_DIR
+        ${{ env.QT_ROOT_DIR }}/bin/windeployqt.exe --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}/install/bin/ClarusCAD.exe"
         # Create NSIS installer using CPack
         cd build
         cpack -G NSIS -C Release
-
         # Move installer to root with proper name
-        move *.exe ../ClarusCAD_v${{ env.APP_VERSION }}_windows.exe
+        mv *.exe ../ClarusCAD_v${{ env.APP_VERSION }}_windows.exe
 
     # macOS Packaging
     - name: Package macOS (PKG)
       if: matrix.package_type == 'pkg'
       run: |
         cmake --build build --config Release --target package
-        mv build/ClarusCAD_v*_macOS_ARM.pkg ./
+        mv build/ClarusCAD_v*macOS_ARM.pkg ./
 
     # Upload Artifacts
     - name: Upload Artifact (Linux)
@@ -126,21 +129,21 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_linux.AppImage
+        path: ClarusCAD_v*linux.AppImage
 
     - name: Upload Artifact (Windows)
       if: matrix.package_type == 'nsis'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_windows.exe
+        path: ClarusCAD_v*windows.exe
 
     - name: Upload Artifact (macOS)
       if: matrix.package_type == 'pkg'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_macOS_ARM.pkg
+        path: ClarusCAD_v*macOS_ARM.pkg
 
   # Summary job to collect all artifacts
   release:
