@@ -47,4 +47,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClarusCAD_windows_package
-          path: build/ClarusCAD*_windows.exe
+          path: build/ClarusCAD_v*_windows.exe

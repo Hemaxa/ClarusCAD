@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClarusCAD_macOS_package_ARM
-          path: build/ClarusCAD_v*_macOS.pkg
+          path: build/ClarusCAD_v*_macOS_ARM.pkg
