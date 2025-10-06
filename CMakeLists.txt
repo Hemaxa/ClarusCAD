@@ -166,7 +166,7 @@ if(APPLE)
 
             #настройка .pkg
             COMMAND ${PRODUCTBUILD_EXECUTABLE}
-                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS.pkg"
+                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${ClarusCAD_VERSION}_macOS_ARM.pkg"
 
             #удаление временной директории
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/package"
