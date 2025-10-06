@@ -23,6 +23,11 @@ jobs:
           version: '6.5.0'
           arch: 'win64_msvc2019_64'
 
+      - name: Setup NSIS
+        uses: repolevedavaj/install-nsis@v1.0.1
+        with:
+          nsis-version: '3.09'
+
       - name: Configure CMake
         run: >
           cmake -B build
@@ -34,19 +39,23 @@ jobs:
         run: cmake --build build --config Release --target INSTALL
 
       - name: Deploy Qt Libraries
-        run: |
-          "${{ steps.qt.outputs.qt_dir }}\bin\windeployqt.exe" `
-          --no-compiler-runtime --no-opengl-sw --verbose 1 `
-          "${{ github.workspace }}/install/bin/ClarusCAD.exe"
-
-      - name: Package
         shell: pwsh
         run: |
-          $env:Path = "C:\Program Files (x86)\NSIS;" + $env:Path
+          $qtDir = "${{ steps.qt.outputs.qt_dir }}"
+          $exePath = "${{ github.workspace }}\install\bin\ClarusCAD.exe"
+          & "$qtDir\bin\windeployqt.exe" `
+            --no-compiler-runtime `
+            --no-opengl-sw `
+            --verbose 1 `
+            "$exePath"
+
+      - name: Package Installer
+        shell: pwsh
+        run: |
           cmake --build build --config Release --target PACKAGE
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ClarusCAD_windows_package
+          name: ClarusCAD_Windows_Installer
           path: build/ClarusCAD_v*_windows.exe
