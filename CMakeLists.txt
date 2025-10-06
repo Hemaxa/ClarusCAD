@@ -181,7 +181,7 @@ endif()
 # НАСТРОЙКИ ДЛЯ WINDOWS
 # ====================================================================
 if(WIN32)
-    #подключение необходимых библиотек
+    # подключение необходимых библиотек
     target_link_libraries(ClarusCAD PRIVATE
         Qt6::Core
         Qt6::Widgets
@@ -189,40 +189,54 @@ if(WIN32)
         Qt6::Svg
     )
 
-    #определение компилятором математических констант
+    # определение компилятором математических констант
     target_compile_definitions(ClarusCAD PRIVATE _USE_MATH_DEFINES)
 
-    #задание свойств конечного файла
+    # задание свойств конечного файла
     set_target_properties(ClarusCAD PROPERTIES
         WIN32_EXECUTABLE TRUE
     )
 
-    #добавление файла ресурсов (resources.rc)
-    target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+    # добавление файла ресурсов (resources.rc)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
+        target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+    endif()
 
-    #исполняемый файл помещается в /bin
+    # исполняемый файл помещается в /bin
     install(TARGETS ClarusCAD DESTINATION bin)
 
-    #копирование иконки в /bin
-    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
+    # копирование иконки в /bin
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
+    endif()
 
-    #создание и настройка .exe
+    # создание и настройка .exe через CPack
     set(CPACK_PACKAGE_NAME "ClarusCAD")
     set(CPACK_PACKAGE_VENDOR "Yashin Sergey")
-    set(CPACK_PACKAGE_VERSION "${ClarusCAD_VERSION}")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "ClarusCAD")
-    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
-    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/ClarusCAD.exe" CACHE STRING "" FORCE)
+    set(CPACK_PACKAGE_EXECUTABLES "ClarusCAD;ClarusCAD")
+
+    # Настройки NSIS
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+        set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+        set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+    endif()
+
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/ClarusCAD.exe")
     set(CPACK_NSIS_DISPLAY_NAME "ClarusCAD")
-    set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${ClarusCAD_VERSION}")
-    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt")
+    set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${PROJECT_VERSION}")
     set(CPACK_NSIS_MODIFY_PATH OFF)
-    set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'")
-    set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\\\ClarusCAD.lnk'")
-    set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${ClarusCAD_VERSION}_windows")
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA
+        "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'"
+    )
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA
+        "Delete '$DESKTOP\\\\ClarusCAD.lnk'"
+    )
+    set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${PROJECT_VERSION}_windows")
     set(CPACK_GENERATOR "NSIS")
-    set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
+
+    # Включить CPack
     include(CPack)
 endif()
 
