@@ -183,7 +183,7 @@ endif()
 # НАСТРОЙКИ ДЛЯ WINDOWS
 # ====================================================================
 if(WIN32)
-    # подключение необходимых библиотек
+    # Подключение необходимых библиотек
     target_link_libraries(ClarusCAD PRIVATE
         Qt6::Core
         Qt6::Widgets
@@ -191,41 +191,47 @@ if(WIN32)
         Qt6::Svg
     )
 
-    # определение компилятором математических констант
+    # Определение компилятором математических констант
     target_compile_definitions(ClarusCAD PRIVATE _USE_MATH_DEFINES)
 
-    # задание свойств конечного файла
+    # Задание свойств конечного файла
     set_target_properties(ClarusCAD PROPERTIES
         WIN32_EXECUTABLE TRUE
     )
 
-    # добавление файла ресурсов (resources.rc)
+    # Добавление файла ресурсов (resources.rc)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
         target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
     endif()
 
-    # исполняемый файл помещается в /bin
+    # ШАГ 1: Установка целей для `cmake --install`.
+    # Это копирует исполняемый файл и иконку в промежуточную директорию,
+    # чтобы `windeployqt` мог их найти и обработать.
     install(TARGETS ClarusCAD DESTINATION bin)
-
-    # копирование иконки в /bin
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
     endif()
 
-    # создание и настройка .exe через CPack
+    # ШАГ 2: Настройка CPack для создания установщика.
     set(CPACK_PACKAGE_NAME "ClarusCAD")
     set(CPACK_PACKAGE_VENDOR "Yashin Sergey")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-    set(CPACK_PACKAGE_INSTALL_DIRECTORY "ClarusCAD")
-    set(CPACK_PACKAGE_EXECUTABLES "ClarusCAD;ClarusCAD")
+    set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${PROJECT_VERSION}_windows")
+    set(CPACK_GENERATOR "NSIS")
 
-    # Настройки NSIS
+    # >>> ГЛАВНОЕ ИЗМЕНЕНИЕ <<<
+    # Эта команда говорит CPack взять всё содержимое из папки ${CMAKE_INSTALL_PREFIX}
+    # (в вашем случае это папка `install/`, уже наполненная `windeployqt`)
+    # и упаковать его в корень установщика.
+    set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
+
+    # Настройки для NSIS (создание иконок и т.д.)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
     endif()
 
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/ClarusCAD.exe")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\ClarusCAD.exe")
     set(CPACK_NSIS_DISPLAY_NAME "ClarusCAD")
     set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${PROJECT_VERSION}")
     set(CPACK_NSIS_MODIFY_PATH OFF)
@@ -235,8 +241,6 @@ if(WIN32)
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
         "Delete '$DESKTOP\\\\ClarusCAD.lnk'"
     )
-    set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${PROJECT_VERSION}_windows")
-    set(CPACK_GENERATOR "NSIS")
 
     # Включить CPack
     include(CPack)
