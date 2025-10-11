@@ -132,6 +132,9 @@ if(APPLE)
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
     )
 
+    #добавление лицензии
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt")
+
     #поиск необходимых утилит для сборки проекта
     find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS ${Qt6_DIR}/../../../bin)
     find_program(PKGBUILD_EXECUTABLE pkgbuild)
@@ -183,7 +186,7 @@ endif()
 # НАСТРОЙКИ ДЛЯ WINDOWS
 # ====================================================================
 if(WIN32)
-    # Подключение необходимых библиотек
+    #подключение необходимых библиотек
     target_link_libraries(ClarusCAD PRIVATE
         Qt6::Core
         Qt6::Widgets
@@ -191,58 +194,47 @@ if(WIN32)
         Qt6::Svg
     )
 
-    # Определение компилятором математических констант
+    #определение компилятором математических констант
     target_compile_definitions(ClarusCAD PRIVATE _USE_MATH_DEFINES)
 
-    # Задание свойств конечного файла
+    #задание свойств конечного файла
     set_target_properties(ClarusCAD PROPERTIES
         WIN32_EXECUTABLE TRUE
     )
 
-    # Добавление файла ресурсов (resources.rc)
+    #добавление файла ресурсов (resources.rc)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
         target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
     endif()
 
-    # ШАГ 1: Установка целей для `cmake --install`.
-    # Это копирует исполняемый файл и иконку в промежуточную директорию,
-    # чтобы `windeployqt` мог их найти и обработать.
+    #установка целей для `cmake --install`
     install(TARGETS ClarusCAD DESTINATION bin)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
     endif()
 
-    # ШАГ 2: Настройка CPack для создания установщика.
+    #настройка CPack для создания установщика
     set(CPACK_PACKAGE_NAME "ClarusCAD")
     set(CPACK_PACKAGE_VENDOR "Yashin Sergey")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
     set(CPACK_PACKAGE_FILE_NAME "ClarusCAD_v${PROJECT_VERSION}_windows")
     set(CPACK_GENERATOR "NSIS")
-
-    # >>> ГЛАВНОЕ ИЗМЕНЕНИЕ <<<
-    # Эта команда говорит CPack взять всё содержимое из папки ${CMAKE_INSTALL_PREFIX}
-    # (в вашем случае это папка `install/`, уже наполненная `windeployqt`)
-    # и упаковать его в корень установщика.
     set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
 
-    # Настройки для NSIS (создание иконок и т.д.)
+    #настройки для NSIS
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
     endif()
-
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt")
     set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\ClarusCAD.exe")
     set(CPACK_NSIS_DISPLAY_NAME "ClarusCAD")
     set(CPACK_NSIS_PACKAGE_NAME "ClarusCAD ${PROJECT_VERSION}")
     set(CPACK_NSIS_MODIFY_PATH OFF)
-    set(CPACK_NSIS_CREATE_ICONS_EXTRA
-        "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'"
-    )
-    set(CPACK_NSIS_DELETE_ICONS_EXTRA
-        "Delete '$DESKTOP\\\\ClarusCAD.lnk'"
-    )
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\ClarusCAD.lnk' '$INSTDIR\\\\bin\\\\ClarusCAD.exe'")
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA "Delete '$DESKTOP\\\\ClarusCAD.lnk'")
 
-    # Включить CPack
+    #включение CPack
     include(CPack)
 endif()
 
@@ -278,6 +270,12 @@ if(UNIX AND NOT APPLE)
             RENAME ClarusCAD.desktop
         )
     endif()
+
+    #устанока файла лицензии
+    install(
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt"
+        DESTINATION share/doc/claruscad
+    )
 
     #копирование иконки приложения
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png")
