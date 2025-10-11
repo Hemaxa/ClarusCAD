@@ -14,36 +14,16 @@ ThemeManager& ThemeManager::instance()
     return manager;
 }
 
-ThemeManager::ThemeManager(QObject *parent) : QObject(parent), m_settings("MyCompany", "ClarusCAD")
-{
-    loadSettings();
-}
-
-void ThemeManager::loadSettings()
-{
-    m_currentThemeName = m_settings.value("theme/name", "ClarusCAD").toString();
-}
-
-void ThemeManager::saveSettings()
-{
-    m_settings.setValue("theme/name", m_currentThemeName);
-}
+ThemeManager::ThemeManager(QObject *parent) : QObject(parent) {}
 
 void ThemeManager::applyTheme(const QString& themeName)
 {
     loadThemeFromFile(themeName);
-    saveSettings();
-}
-
-void ThemeManager::reloadTheme()
-{
-    loadThemeFromFile(m_currentThemeName);
 }
 
 void ThemeManager::loadThemeFromFile(const QString& themeName)
 {
     //чтение файла выбранной темы
-    m_currentThemeName = themeName;
     QString filePath = QString(":/themes/themes/%1.qss").arg(themeName);
     QFile file(filePath);
 
@@ -127,6 +107,7 @@ void ThemeManager::parseThemeColors(const QString& styleSheet)
 
 QString ThemeManager::readAndReplaceSvg(const QString& path, const QMap<QString, QColor>& colorMap)
 {
+    //проверка окрытия файла
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "Не удалось открыть SVG-файл:" << path;
@@ -147,4 +128,3 @@ QString ThemeManager::readAndReplaceSvg(const QString& path, const QMap<QString,
 
 QColor ThemeManager::getIconColor() const { return m_iconColor; }
 QColor ThemeManager::getColor(const QString& key) const { return m_themeColors.value(key, Qt::white); }
-QString ThemeManager::getThemeName() const { return m_currentThemeName; }

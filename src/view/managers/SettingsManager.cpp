@@ -1,0 +1,35 @@
+#include "SettingsManager.h"
+
+SettingsManager& SettingsManager::instance()
+{
+    //конструктор будет вызван только один раз (переменная manager будет только одна)
+    static SettingsManager manager;
+    return manager;
+}
+
+SettingsManager::SettingsManager(QObject* parent) : QObject(parent), m_settings("MyCompany", "ClarusCAD") {}
+
+void SettingsManager::loadSettings()
+{
+    //шаблон: "ключ настройки", "значение по умолчанию"
+    m_currentThemeName = m_settings.value("theme/name", "ClarusCAD").toString();
+    m_gridStep = m_settings.value("grid/step", 50).toInt();
+    m_angleUnit = static_cast<AngleUnit>(m_settings.value("angle/unit", static_cast<int>(AngleUnit::Degrees)).toInt());
+}
+
+void SettingsManager::saveSettings()
+{
+    //шаблон: "ключ настройки", "значение, которое нужно сохранить"
+    m_settings.setValue("theme/name", m_currentThemeName);
+    m_settings.setValue("grid/step", m_gridStep);
+    m_settings.setValue("angle/unit", static_cast<int>(m_angleUnit));
+}
+
+void SettingsManager::setThemeName(const QString& themeName) { m_currentThemeName = themeName; }
+QString SettingsManager::getThemeName() const { return m_currentThemeName; }
+
+void SettingsManager::setGridStep(int step) { m_gridStep = step; }
+int SettingsManager::getGridStep() const { return m_gridStep; }
+
+void SettingsManager::setAngleUnit(AngleUnit unit) { m_angleUnit = unit; }
+AngleUnit SettingsManager::getAngleUnit() const { return m_angleUnit; }

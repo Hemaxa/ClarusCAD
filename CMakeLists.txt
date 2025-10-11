@@ -58,10 +58,12 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/SettingsWindow.h
     ${SRC_DIR}/view/SettingsWindow.cpp
 
-    ${SRC_DIR}/view/design/AnimationManager.h
-    ${SRC_DIR}/view/design/AnimationManager.cpp
-    ${SRC_DIR}/view/design/ThemeManager.h
-    ${SRC_DIR}/view/design/ThemeManager.cpp
+    ${SRC_DIR}/view/managers/AnimationManager.h
+    ${SRC_DIR}/view/managers/AnimationManager.cpp
+    ${SRC_DIR}/view/managers/SettingsManager.h
+    ${SRC_DIR}/view/managers/SettingsManager.cpp
+    ${SRC_DIR}/view/managers/ThemeManager.h
+    ${SRC_DIR}/view/managers/ThemeManager.cpp
 
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.h
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.cpp
@@ -99,7 +101,7 @@ target_include_directories(ClarusCAD PRIVATE
     #view
     ${SRC_DIR}/view
     ${SRC_DIR}/view/drawing
-    ${SRC_DIR}/view/design
+    ${SRC_DIR}/view/managers
     ${SRC_DIR}/view/panels
     ${SRC_DIR}/view/properties
 )
@@ -129,7 +131,7 @@ if(APPLE)
     #задание свойств конечного файла (Info.plist.in)
     set_target_properties(ClarusCAD PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.plist.in"
     )
 
     #добавление лицензии
@@ -203,12 +205,14 @@ if(WIN32)
     )
 
     #добавление файла ресурсов (resources.rc)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources.rc")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc")
         target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
     endif()
 
-    #установка целей для `cmake --install`
+    #исполняемый файл помещается в /bin
     install(TARGETS ClarusCAD DESTINATION bin)
+
+    #перемещение файла иконки
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
     endif()
@@ -251,9 +255,9 @@ if(UNIX AND NOT APPLE)
     )
 
     #регистрация приложения (Info.desktop.in)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.desktop.in")
         configure_file(
-            "${CMAKE_CURRENT_SOURCE_DIR}/Info.desktop.in"
+            "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.desktop.in"
             "${CMAKE_CURRENT_BINARY_DIR}/Info.desktop"
             COPYONLY
         )
@@ -271,12 +275,6 @@ if(UNIX AND NOT APPLE)
         )
     endif()
 
-    #устанока файла лицензии
-    install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt"
-        DESTINATION share/doc/claruscad
-    )
-
     #копирование иконки приложения
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png")
         install(
@@ -285,4 +283,10 @@ if(UNIX AND NOT APPLE)
             RENAME ClarusCAD.png
         )
     endif()
+
+    #добавление лицензии
+    install(
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt"
+        DESTINATION share/doc/claruscad
+    )
 endif()

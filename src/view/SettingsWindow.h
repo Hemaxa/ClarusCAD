@@ -22,7 +22,7 @@ public:
     int getGridStep() const;
     AngleUnit getAngleUnit() const;
 
-    //методы  установки текущих значений при открытии
+    //методы установки текущих значений при открытии
     void setCurrentTheme(const QString& themeName);
     void setGridStep(int step);
     void setAngleUnit(AngleUnit unit);

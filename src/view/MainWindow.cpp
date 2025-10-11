@@ -14,6 +14,7 @@
 #include "CommandParser.h"
 #include "SettingsWindow.h"
 #include "ThemeManager.h"
+#include "SettingsManager.h"
 
 #include <QDockWidget>
 #include <QMenuBar>
@@ -30,8 +31,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     setWindowState(Qt::WindowMaximized);
     setDockNestingEnabled(true);
 
-    //применение сохраненной темы при запуске
-    ThemeManager::instance().reloadTheme();
+    //загрузка сохраненных настроек
+    SettingsManager::instance().loadSettings();
+
+    //применение выбранной темы
+    ThemeManager::instance().applyTheme(SettingsManager::instance().getThemeName());
 
     //создание экземпляра сцены
     m_scene = new Scene();
@@ -46,6 +50,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     createConnections();
     createActions();
     createMenus();
+
+    //применение остальных настроек
+    m_viewportPanel->setGridStep(SettingsManager::instance().getGridStep());
+    PointPrimitive::setAngleUnit(SettingsManager::instance().getAngleUnit());
 
     //пустой виджет панели параметров объекта
     m_propertiesPanel->showPropertiesFor(nullptr);
@@ -262,25 +270,30 @@ void MainWindow::openSettingsWindow()
     SettingsWindow dialog(this);
 
     //передаются текущие настройки приложения
-    dialog.setCurrentTheme(ThemeManager::instance().getThemeName());
-    dialog.setGridStep(m_viewportPanel->getGridStep());
-    dialog.setAngleUnit(PointPrimitive::getAngleUnit());
+    dialog.setCurrentTheme(SettingsManager::instance().getThemeName());
+    dialog.setGridStep(SettingsManager::instance().getGridStep());
+    dialog.setAngleUnit(SettingsManager::instance().getAngleUnit());
 
     //если нажата клавиша "ОК", используются новые значения из диалога
     if (dialog.exec() == QDialog::Accepted) {
-        //применяется новая тема
+        //читаются новые значения из диалога
         QString selectedTheme = dialog.getCurrentTheme();
-        ThemeManager::instance().applyTheme(selectedTheme);
-
-        //применяется новый шаг сетки
         int newGridStep = dialog.getGridStep();
-        m_viewportPanel->setGridStep(newGridStep);
-
-        //применяются новые единицы измерения углов
         AngleUnit newAngleUnit = dialog.getAngleUnit();
+
+        //обновляются значения в SettingsManager
+        SettingsManager::instance().setThemeName(selectedTheme);
+        SettingsManager::instance().setGridStep(newGridStep);
+        SettingsManager::instance().setAngleUnit(newAngleUnit);
+
+        //сохраняются все настройки
+        SettingsManager::instance().saveSettings();
+
+        //применяются новые настройки к UI
+        ThemeManager::instance().applyTheme(selectedTheme);
+        m_viewportPanel->setGridStep(newGridStep);
         PointPrimitive::setAngleUnit(newAngleUnit);
 
-        //обновляются UI элементы
         updateApplicationIcons();
     }
 }
