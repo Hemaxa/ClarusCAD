@@ -90,6 +90,11 @@ jobs:
     - name: Build Project
       run: cmake --build build --config Release
 
+    # Установка NSIS
+    - name: Install NSIS
+      if: matrix.package_type == 'nsis'
+      run: choco install nsis
+
     # Linux Packaging
     - name: Package Linux (AppImage)
       if: matrix.package_type == 'appimage'
@@ -141,7 +146,7 @@ jobs:
         ./linuxdeployqt.AppImage AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes
 
         # Rename AppImage
-        mv ./*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage || echo "No AppImage found to rename"
+        mv ClarusCAD-*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage || echo "No AppImage found to rename"
 
     # Windows Packaging
     - name: Package Windows (NSIS)
