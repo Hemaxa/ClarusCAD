@@ -16,61 +16,68 @@ CommandParser::CommandParser(QObject* parent) : QObject(parent)
 ParsedCommand CommandParser::parse(const QString& commandString) const
 {
     ParsedCommand result;
-    result.color = Qt::white; //цвет по умолчанию
+    result.color = Qt::white;
+    QString trimmedCommand = commandString.trimmed();
 
-    //1. ([a-zA-Z_]+)
-    //имя команды (первая захватывающая группа)
-    //ищет последовательность из одной или более (+) больших или маленьких букв латинского алфавита или нижнего подчеркивания ([a-zA-Z_])
-    //2. \\s*
-    //отступ
-    //ищет ноль или более (*) пробельных символов (\\s)
-    //3. \\(
-    //открывающаяся скобка
-    //ищет открывающуюся скобку (\ нужен для экранирования, т.к. скобка специальный символ)
-    //4. (.+)
-    //строка с аргументами (вторая захватывающая группа)
-    //ищет любой символ (.) один или более раз (+)
-    //5. \\)
-    //закрывающаяся скобка
-    //ищет закрывающуюся скобку
-
-    static QRegularExpression regex("([a-zA-Z_]+)\\s*\\((.+)\\)");
-    QRegularExpressionMatch match = regex.match(commandString.trimmed());
-
-    //валидация не пройдена
-    if (!match.hasMatch()) {
+    //обработка пустой строки
+    if (trimmedCommand.isEmpty()) {
+        result.isValid = true;
         return result;
     }
 
-    //перевод команды в нижний регистр
+    //разбор на имя команды и часть с параметрами
+    static QRegularExpression regex("([a-zA-Z_]+)\\s*\\((.*)\\)");
+    QRegularExpressionMatch match = regex.match(trimmedCommand);
+
+    if (!match.hasMatch()) {
+        result.errorDescription = "Ожидается формат: команда(...)";
+        return result;
+    }
+
     result.name = match.captured(1).toLower();
+    QString argsPart = match.captured(2);
 
-    //создание списка параметров
-    QStringList argStrings = match.captured(2).split(QRegularExpression("[\\s,]+"), Qt::SkipEmptyParts);
+    if (!m_commandInfos.contains(result.name)) {
+        result.errorDescription = "Неизвестная команда: " + result.name;
+        return result;
+    }
 
-    //проверка наличия параметра цвета
+    if (argsPart.trimmed().endsWith(','))
+    {
+        result.errorDescription = "Лишняя запятая в конце.";
+        return result;
+    }
+
+    QStringList argStrings = argsPart.split(QRegularExpression("[\\s,]+"), Qt::SkipEmptyParts);
+
     if (!argStrings.isEmpty() && argStrings.last().startsWith('#')) {
         QColor color(argStrings.last());
-        //если получилось перевести в цвет
         if (color.isValid()) {
-            result.color = color; //сохранение цвета
-            argStrings.removeLast(); //удаление цвета из списка аргументов
+            result.color = color;
+            argStrings.removeLast();
+        } else {
+            result.errorDescription = "Неверный формат цвета.";
+            return result;
         }
     }
 
-    //разбор списка параметров
+    const CommandInfo& info = m_commandInfos[result.name];
+    if (argStrings.size() != info.argCount) {
+        result.errorDescription = QString("Ожидается %1 арг., получено %2.").arg(info.argCount).arg(argStrings.size());
+        return result;
+    }
+
     for (const QString& argStr : argStrings) {
         bool ok;
         double value = argStr.toDouble(&ok);
         if (ok) {
             result.args.append(value);
-        }
-        else {
-            return ParsedCommand();
+        } else {
+            result.errorDescription = "Аргумент \"" + argStr + "\" не является числом.";
+            return result;
         }
     }
 
-    //если все прошло хорошо, то
     result.isValid = true;
     return result;
 }
