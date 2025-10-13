@@ -1,9 +1,18 @@
 #include "CommandParser.h"
+#include "SettingsManager.h"
 
 #include <QRegularExpression>
 
-CommandParser::CommandParser(QObject* parent) : QObject(parent) {}
-
+CommandParser::CommandParser(QObject* parent) : QObject(parent)
+{
+    //заполняется информация о поддерживаемых командах для обеих систем
+    QString angleUnitHint = (SettingsManager::instance().getAngleUnit() == AngleUnit::Degrees) ? "°" : "rad";
+    m_commandInfos["segment"] = {
+        "segment(x1, y1, x2, y2, #цвет)",
+        QString("segment(r1, a1%1, r2, a2%1, #цвет)").arg(angleUnitHint),
+        4
+    };
+}
 ParsedCommand CommandParser::parse(const QString& commandString) const
 {
     ParsedCommand result;
@@ -64,4 +73,15 @@ ParsedCommand CommandParser::parse(const QString& commandString) const
     //если все прошло хорошо, то
     result.isValid = true;
     return result;
+}
+
+QString CommandParser::getHint(const QString& commandName, CoordinateSystemType coordSystem) const
+{
+    if (m_commandInfos.contains(commandName)) {
+        if (coordSystem == CoordinateSystemType::Polar) {
+            return m_commandInfos[commandName].syntaxPolar;
+        }
+        return m_commandInfos[commandName].syntaxCartesian;
+    }
+    return "Неизвестная команда.";
 }

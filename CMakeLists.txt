@@ -206,7 +206,7 @@ if(WIN32)
 
     #добавление файла ресурсов (resources.rc)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc")
-        target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+        target_sources(ClarusCAD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/packs/resources.rc)
     endif()
 
     #исполняемый файл помещается в /bin
