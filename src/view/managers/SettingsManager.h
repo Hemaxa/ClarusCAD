@@ -41,7 +41,7 @@ private:
     //объект для чтения и записи настроек
     QSettings m_settings;
 
-    //поля хранения текущих настроек
+    //поля хранения текущих настроек приложения
     QString m_currentThemeName;
     int m_gridStep;
     AngleUnit m_angleUnit;
