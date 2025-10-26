@@ -60,7 +60,7 @@ void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
 
 void SegmentPropertiesWidget::updateFieldValues()
 {
-    bool isCartesian = (m_coordSystem == CoordinateSystemType::Cartesian);
+    bool isCartesian = (m_selectedCoordSystem == CoordinateSystemType::Cartesian);
 
     //если существующий объект
     if (m_currentSegment) {
@@ -116,7 +116,7 @@ void SegmentPropertiesWidget::updatePrompt()
 void SegmentPropertiesWidget::onApplyButtonClicked()
 {
     PointPrimitive start, end;
-    bool isCartesian = (m_coordSystem == CoordinateSystemType::Cartesian);
+    bool isCartesian = (m_selectedCoordSystem == CoordinateSystemType::Cartesian);
 
     //считывание текста из полей ввода в зависимости от системы координат
     if (isCartesian) {
@@ -131,5 +131,5 @@ void SegmentPropertiesWidget::onApplyButtonClicked()
     }
 
     //отправка сигнала в PropertiesPanelWidget
-    emit propertiesApplied(m_currentSegment, start, end, m_selectedColor);
+    emit propertiesApplied(m_currentSegment, start, end, m_selectedColor, m_selectedLineType);
 }

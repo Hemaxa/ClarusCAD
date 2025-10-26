@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "EnumManager.h"
+
 #include <QObject>
 #include <QColor>
 
@@ -31,6 +33,9 @@ public:
 
     //виртуальный метод для установки цвета
     virtual void setColor(const QColor& color) { Q_UNUSED(color); }
+
+    //виртуальный метод для установки типа линии
+    virtual void setLineType(LineType type) { Q_UNUSED(type); }
 
     //виртуальный метод для получения установленного цвета
     virtual QColor getColor() const { return Qt::white; }

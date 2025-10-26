@@ -20,14 +20,14 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
 
     //создание и добавление кнопок в группы
     //шаблон: текст описания, путь до иконки, горячая клавиша
-    m_gridSnapBtn = new AnimationManager(":/icons/icons/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G);
+    m_gridSnapBtn = new AnimationManager(":/icons/icons/scene/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G);
     m_gridSnapBtn->setChecked(true);
 
-    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O);
+    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/scene/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O);
     m_primitiveSnapBtn->setChecked(true);
 
-    m_cartesianBtn = new AnimationManager(":/icons/icons/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D);
-    m_polarBtn = new AnimationManager(":/icons/icons/polar.svg", "Полярные координаты [P]", Qt::Key_P);
+    m_cartesianBtn = new AnimationManager(":/icons/icons/scene/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D);
+    m_polarBtn = new AnimationManager(":/icons/icons/scene/polar.svg", "Полярные координаты [P]", Qt::Key_P);
     m_cartesianBtn->setChecked(true);
 
     //добавление кнопок систем координат в их группу
@@ -56,7 +56,7 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     setMinimumWidth(200);
 }
 
-void SceneSettingsPanelWidget::updateIcons()
+void SceneSettingsPanelWidget::updateColors()
 {
     //получение цвета иконок из менеджера тем
     QColor iconColor = ThemeManager::instance().getIconColor();

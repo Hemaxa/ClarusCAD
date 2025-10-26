@@ -46,11 +46,14 @@ private slots:
     //слот установки цвета для инструмента
     void onColorChanged(const QColor& color);
 
+    //слот установки типа линии для инструмента
+    void onLineTypeChanged(LineType type);
+
     //слот отключения выбранного инструмента
     void deactivateCurrentTool();
 
     //слоты создания или обновления объектов
-    void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
+    void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
     //слот удаления объекта
     void deletePrimitive(BasePrimitive* primitive);

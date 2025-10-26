@@ -29,6 +29,9 @@ public:
     //переопределение метода для установки цвета
     void setColor(const QColor& color) override;
 
+    //переопределение метода для установки типа линии
+    void setLineType(LineType type) override;
+
     //переопределение метода для получения установленного цвета
     QColor getColor() const override;
 
@@ -37,7 +40,7 @@ public:
 
 signals:
     //сигнал, сообщающий об окончании ввода параметров и передающий координаты
-    void segmentDataReady(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
+    void segmentDataReady(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private:
     //состояние ввода
@@ -50,4 +53,5 @@ private:
     PointPrimitive m_firstPoint; //переменная хранения координат первой точки
     PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
     QColor m_currentColor = Qt::white; //переменная хранения цвета
+    LineType m_currentLineType = LineType::Solid; //переменная хранения типа линии
 };

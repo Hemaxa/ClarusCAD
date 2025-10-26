@@ -1,21 +1,25 @@
 <RCC>
     <qresource prefix="/icons">
-        <file>icons/segment.svg</file>
-        <file>icons/grid-snap.svg</file>
-        <file>icons/delete.svg</file>
-        <file>icons/cartesian.svg</file>
-        <file>icons/polar.svg</file>
-        <file>icons/point.svg</file>
-        <file>icons/rectangle.svg</file>
-        <file>icons/primitive-snap.svg</file>
+        <file>icons/tools/delete.svg</file>
+        <file>icons/tools/segment.svg</file>
+        <file>icons/scene/cartesian.svg</file>
+        <file>icons/scene/grid-snap.svg</file>
+        <file>icons/scene/polar.svg</file>
+        <file>icons/scene/primitive-snap.svg</file>
+        <file>icons/lines/dash-dot-dot.svg</file>
+        <file>icons/lines/dash-dot.svg</file>
+        <file>icons/lines/dashed.svg</file>
+        <file>icons/lines/dotted.svg</file>
+        <file>icons/lines/solid-thick.svg</file>
+        <file>icons/lines/solid.svg</file>
+    </qresource>
+    <qresource prefix="/promts">
+        <file>promts/segment-promt.svg</file>
     </qresource>
     <qresource prefix="/themes">
         <file>themes/ClarusCAD.qss</file>
         <file>themes/Dark.qss</file>
-        <file>themes/Light.qss</file>
         <file>themes/HelloKitty.qss</file>
-    </qresource>
-    <qresource prefix="/promts">
-        <file>promts/segment-promt.svg</file>
+        <file>themes/Light.qss</file>
     </qresource>
 </RCC>

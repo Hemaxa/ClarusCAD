@@ -121,8 +121,9 @@ void MainWindow::createConnections()
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
     connect(m_propertiesPanel, &PropertiesPanelWidget::segmentPropertiesApplied, this, &MainWindow::applySegmentChanges);
 
-    //2) панель свойств сообщает об изменении цвета для нового объекта
+    //2) панель свойств сообщает об изменении параметров для нового объекта
     connect(m_propertiesPanel, &PropertiesPanelWidget::colorChanged, this, &MainWindow::onColorChanged);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::lineTypeChanged, this, &MainWindow::onLineTypeChanged);
 
     //3) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
@@ -171,8 +172,9 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
 void MainWindow::updateApplicationIcons()
 {
     //отправка команды на обновление всем панелям, где есть иконки
-    m_toolbarPanel->updateIcons();
-    m_sceneSettingsPanel->updateIcons();
+    m_toolbarPanel->updateColors();
+    m_sceneSettingsPanel->updateColors();
+    m_propertiesPanel->updateColors();
 }
 
 void MainWindow::createActions()
@@ -224,7 +226,15 @@ void MainWindow::onColorChanged(const QColor& color)
     }
 }
 
-void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color)
+void MainWindow::onLineTypeChanged(LineType type)
+{
+    //если какой-либо инструмент сейчас активен, ему передается новый тип линии
+    if (m_currentTool) {
+        m_currentTool->setLineType(type);
+    }
+}
+
+void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType)
 {
     //режим редактирования
     if (segment) {
@@ -232,6 +242,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         segment->setStart(start);
         segment->setEnd(end);
         segment->setColor(color);
+        segment->setLineType(lineType);
 
         m_viewportPanel->update();
         emit sceneChanged(m_scene); //обновит список, но не изменит выбор
@@ -241,6 +252,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         //создается новый объект
         auto* newSegment = new SegmentPrimitive(start, end);
         newSegment->setColor(color);
+        newSegment->setLineType(lineType);
         addPrimitiveToScene(newSegment); //добавит объект и сделает его выбранным
     }
 }
@@ -361,7 +373,7 @@ void MainWindow::processConsoleCommand(const QString& commandStr)
     if (command.name == "segment" && command.args.size() == 4) {
         PointPrimitive start(command.args[0], command.args[1]);
         PointPrimitive end(command.args[2], command.args[3]);
-        applySegmentChanges(nullptr, start, end, command.color);
+        applySegmentChanges(nullptr, start, end, command.color, LineType::Solid); //команды из консоли пока будут сплошными линиями
     }
     else {
         qDebug("Неизвестная команда или неверное количество аргументов.");

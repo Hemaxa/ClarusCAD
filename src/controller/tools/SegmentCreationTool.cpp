@@ -24,7 +24,7 @@ void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
         //второй клик
         else if (m_currentState == State::WaitingForSecondPoint) {
             PointPrimitive secondPoint(snappedPos.x(), snappedPos.y());
-            emit segmentDataReady(nullptr, m_firstPoint, secondPoint, m_currentColor);
+            emit segmentDataReady(nullptr, m_firstPoint, secondPoint, m_currentColor, m_currentLineType);
             m_currentState = State::Idle;
         }
     }
@@ -69,5 +69,6 @@ void SegmentCreationTool::onPaint(QPainter& painter)
 }
 
 void SegmentCreationTool::setColor(const QColor& color) { m_currentColor = color; }
+void SegmentCreationTool::setLineType(LineType type) { m_currentLineType = type; }
 
 QColor SegmentCreationTool::getColor() const { return m_currentColor; }

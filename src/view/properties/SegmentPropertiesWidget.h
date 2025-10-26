@@ -24,7 +24,7 @@ public:
 
 signals:
     //сигнал, для создания или обновления примитива "Отрезок"
-    void propertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
+    void propertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private slots:
     //слот для обработки нажатия кнопки "Создать"

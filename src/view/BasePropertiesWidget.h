@@ -12,6 +12,7 @@ class QPushButton;
 class QFormLayout;
 class QStackedWidget;
 class QLabel;
+class QComboBox;
 
 class BasePropertiesWidget : public QWidget
 {
@@ -33,24 +34,41 @@ public:
     //метод обновления цвета
     void updateColor(const QColor& color);
 
+    //метод обновления типа линии
+    void updateLineType(LineType type);
+
 signals:
     //сигнал, информирующий о выборе цвета для примитва
     void colorChanged(const QColor& color);
+
+    //сигнал, информирующий о выборе типа линии для примитва
+    void lineTypeChanged(LineType type);
+
+public slots:
+    //слот, вызываемый при смене темы для перекраски всех иконок
+    void updateColors();
 
 protected slots:
     //слот нажатия на кнопку изменения цвета
     void onColorButtonClicked();
 
+    //слот нажатия на панель выбора типа линии
+    void onLineTypeBoxClicked(int index);
+
 protected:
     //метод обновления полей ввода
     virtual void updateFieldValues() = 0;
 
-    //метод обнолвения подсказки
+    //метод обнолвения подсказки (тип примитива и применная тема)
     virtual void updatePrompt();
 
+    //метод заполнения вкладки с типами линий
+    void populateLineTypeComboBox();
+
     BasePrimitive* m_currentPrimitive = nullptr;
-    CoordinateSystemType m_coordSystem;
+    CoordinateSystemType m_selectedCoordSystem;
     QColor m_selectedColor;
+    LineType m_selectedLineType;
 
     //виджеты для колонок
     QLabel* m_leftColumn; //левая колонка
@@ -61,7 +79,8 @@ protected:
     QWidget* m_cartesianWidgets; //виджет декартовой системы координат
     QWidget* m_polarWidgets; //виджет полярной системы координат
 
-    //кнопки
+    //интерфейсы взаимодействия
     QPushButton* m_colorButton;
+    QComboBox* m_lineTypeComboBox;
     QPushButton* m_applyButton;
 };

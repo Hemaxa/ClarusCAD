@@ -22,3 +22,13 @@ enum class AngleUnit {
     Degrees, //градусы
     Radians //радианы
 };
+
+//типы линий
+enum class LineType {
+    Solid, //cплошная (будет использоваться как тонкая)
+    SolidThick, //cплошная толстая
+    Dashed, //штриховая
+    Dotted, //пунктирная
+    DashDot, //штрих-пунктирная
+    DashDotDot //штрих-две-точки
+};

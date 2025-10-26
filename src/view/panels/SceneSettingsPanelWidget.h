@@ -18,7 +18,7 @@ public:
     explicit SceneSettingsPanelWidget(const QString& title, QWidget* parent = nullptr);
 
     //метод обновления иконок (перекрашивание)
-    void updateIcons();
+    void updateColors();
 
 signals:
     //сигналы нажатия соответствующих кнопок

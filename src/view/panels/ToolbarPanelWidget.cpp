@@ -20,8 +20,8 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
 
     //создание и добавление кнопок в группу
     //шаблон: текст описания, путь до иконки, горячая клавиша
-    m_deleteBtn = new AnimationManager(":/icons/icons/delete.svg", "Удаление [X]", Qt::Key_X);
-    m_createSegmentBtn = new AnimationManager(":/icons/icons/segment.svg", "Отрезок [S]", Qt::Key_S);
+    m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X);
+    m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S);
 
     //добавление кнопок в общую группу
     m_buttonGroup->addButton(m_deleteBtn);
@@ -45,7 +45,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     setMinimumWidth(200);
 }
 
-void ToolbarPanelWidget::updateIcons()
+void ToolbarPanelWidget::updateColors()
 {
     //получение цвета иконок из менеджера тем
     QColor iconColor = ThemeManager::instance().getIconColor();

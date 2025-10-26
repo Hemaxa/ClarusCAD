@@ -76,6 +76,30 @@ QLineEdit {
     border-radius: 4px;
 }
 
+/* --- Комбо бокс типа линии в панели свойств --- */
+QComboBox#LineTypeComboBox {
+    border: 1px solid #3c3c3c;
+    padding: 4px;
+    border-radius: 4px;
+    width: 110px;
+}
+
+QComboBox::drop-down#LineTypeComboBox {
+    width: 15px;
+    border: none;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background-color: #00ff7f;
+}
+
+QComboBox#LineTypeComboBox::drop-down {
+    width: 15px;
+    border: none;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background-color: #3c3c3c;
+}
+
 /* --- Список объектов --- */
 QListWidget {
     background-color: #1e1e1e;
@@ -124,10 +148,6 @@ QComboBox::drop-down {
 
 QComboBox {
     width: 110px;
-}
-
-QComboBox::down-arrow {
-
 }
 
 QSpinBox::up-button {

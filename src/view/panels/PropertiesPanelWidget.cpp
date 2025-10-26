@@ -25,6 +25,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     //сигналы от инструмента "Отрезок" пересылается (пробрасывается) в MainWindow
     connect(m_segmentProperties, &SegmentPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::segmentPropertiesApplied);
     connect(m_segmentProperties, &SegmentPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
+    connect(m_segmentProperties, &SegmentPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
 
     //минимальная высота окна
     setMinimumHeight(200);
@@ -72,4 +73,10 @@ void PropertiesPanelWidget::setCoordinateSystem(CoordinateSystemType type)
     if (currentWidget) {
         currentWidget->setCoordinateSystem(type);
     }
+}
+
+void PropertiesPanelWidget::updateColors()
+{
+    //передача вызова перекраски всем дочерним виджетам свойств
+    m_segmentProperties->updateColors();
 }

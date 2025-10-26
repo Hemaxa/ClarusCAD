@@ -1,5 +1,6 @@
 #include "BasePropertiesWidget.h"
 #include "BasePrimitive.h"
+#include "ThemeManager.h"
 
 #include <QPushButton>
 #include <QColorDialog>
@@ -9,11 +10,12 @@
 #include <QLabel>
 #include <QSpacerItem>
 #include <QVBoxLayout>
+#include <QComboBox>
 
 BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 {
-    //установка системы координат по-умолчанию
-    m_coordSystem = CoordinateSystemType::Cartesian;
+    //установка системы координат, цвета и типа линии по-умолчанию
+    m_selectedCoordSystem = CoordinateSystemType::Cartesian;
 
     //создание главной сетки
     auto* mainLayout = new QGridLayout(this);
@@ -37,6 +39,16 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     connect(m_colorButton, &QPushButton::clicked, this, &BasePropertiesWidget::onColorButtonClicked);
     rightLayout->addRow("Цвет:", m_colorButton);
 
+    //cоздание списка выбора типа линии
+    m_lineTypeComboBox = new QComboBox();
+    m_lineTypeComboBox->setFixedWidth(120);
+    m_lineTypeComboBox->setIconSize(QSize(95, 10)); //размер иконок
+    m_lineTypeComboBox->setObjectName("LineTypeComboBox");
+    m_lineTypeComboBox->setCursor(Qt::PointingHandCursor);
+    populateLineTypeComboBox(); //заполнение
+    connect(m_lineTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &BasePropertiesWidget::onLineTypeBoxClicked);
+    rightLayout->addRow("Тип линии:", m_lineTypeComboBox);
+
     //3) центральная колонка (сменяемые параметры)
     m_centralColumn = new QWidget();
     auto* centralLayout = new QVBoxLayout(m_centralColumn);
@@ -48,8 +60,11 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     m_cartesianWidgets = new QWidget();
     m_polarWidgets = new QWidget();
 
-    new QFormLayout(m_cartesianWidgets);
-    new QFormLayout(m_polarWidgets);
+    auto* cartesianLayout = new QFormLayout(m_cartesianWidgets);
+    cartesianLayout->setContentsMargins(0, 15, 10, 0);
+
+    auto* polarLayout = new QFormLayout(m_polarWidgets);
+    polarLayout->setContentsMargins(0, 15, 10, 0);
 
     m_paramsStack->addWidget(m_cartesianWidgets);
     m_paramsStack->addWidget(m_polarWidgets);
@@ -79,15 +94,19 @@ void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
     //режим редактирования
     if (m_currentPrimitive) {
         m_selectedColor = m_currentPrimitive->getColor();
+        m_selectedLineType = m_currentPrimitive->getLineType();
         m_applyButton->setText("Обновить");
     }
     //режим создания
     else
     {
+        m_selectedColor = Qt::white;
+        m_selectedLineType = LineType::Solid;
         m_applyButton->setText("Создать");
     }
 
     updateColor(m_selectedColor);
+    updateLineType(m_selectedLineType);
     updateFieldValues();
     updatePrompt();
 }
@@ -95,10 +114,10 @@ void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
 void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
 {
     //получение типа системы координат
-    m_coordSystem = type;
+    m_selectedCoordSystem = type;
 
     //декартова система координат
-    if (m_coordSystem == CoordinateSystemType::Cartesian)
+    if (m_selectedCoordSystem == CoordinateSystemType::Cartesian)
     {
         m_paramsStack->setCurrentWidget(m_cartesianWidgets);
     }
@@ -109,14 +128,27 @@ void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
     }
 
     updateFieldValues();
-    updatePrompt();
+    //updatePrompt();
 }
 
 void BasePropertiesWidget::updateColor(const QColor& color)
 {
     m_selectedColor = color;
+
     //обновление кружка цвета
     m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
+}
+
+void BasePropertiesWidget::updateLineType(LineType type)
+{
+    m_selectedLineType = type;
+
+    //обновление списка линий
+    int index = m_lineTypeComboBox->findData(static_cast<int>(m_selectedLineType));
+    if (index != -1)
+    {
+        m_lineTypeComboBox->setCurrentIndex(index);
+    }
 }
 
 void BasePropertiesWidget::onColorButtonClicked()
@@ -128,6 +160,54 @@ void BasePropertiesWidget::onColorButtonClicked()
         updateColor(m_selectedColor);
         emit colorChanged(m_selectedColor);
     }
+}
+
+void BasePropertiesWidget::onLineTypeBoxClicked(int index)
+{
+    if (index < 0) return;
+
+    //получение типа линии из данных элемента
+    LineType selectedType = static_cast<LineType>(m_lineTypeComboBox->itemData(index).toInt());
+    m_selectedLineType = selectedType;
+
+    //если активирован режим создания (нет m_currentPrimitive), то сразу отправляется сигнал для инструмента
+    if (!m_currentPrimitive) {
+        emit lineTypeChanged(m_selectedLineType);
+    }
+    //иначе сигнал не отправляется, тип линии применится по кнопке "Обновить"
+
+    //уведомление (для инструмента создания)
+    emit lineTypeChanged(m_selectedLineType);
+}
+
+void BasePropertiesWidget::populateLineTypeComboBox()
+{
+    m_lineTypeComboBox->clear();
+    QColor iconColor = ThemeManager::instance().getIconColor();
+
+    //карта <Тип линии, Путь к иконке>
+    //(я предполагаю, что вы создали иконки в res/icons/lines/)
+    QMap<LineType, QString> lineTypeIcons;
+    lineTypeIcons[LineType::Solid] = ":/icons/icons/lines/solid.svg";
+    lineTypeIcons[LineType::SolidThick] = ":/icons/icons/lines/solid-thick.svg";
+    lineTypeIcons[LineType::Dashed] = ":/icons/icons/lines/dashed.svg";
+    lineTypeIcons[LineType::Dotted] = ":/icons/icons/lines/dotted.svg";
+    lineTypeIcons[LineType::DashDot] = ":/icons/icons/lines/dash-dot.svg";
+    lineTypeIcons[LineType::DashDotDot] = ":/icons/icons/lines/dash-dot-dot.svg";
+
+    for (auto it = lineTypeIcons.constBegin(); it != lineTypeIcons.constEnd(); ++it)
+    {
+        LineType type = it.key();
+        QString path = it.value();
+        QIcon icon = ThemeManager::colorizeSvg(path, iconColor);
+        m_lineTypeComboBox->addItem(icon, "", static_cast<int>(type)); //сохраняем enum в UserData
+    }
+}
+
+void BasePropertiesWidget::updateColors()
+{
+    populateLineTypeComboBox(); //перерисовка иконок линий
+    updatePrompt(); //перерисовка иконки подсказки
 }
 
 void BasePropertiesWidget::updatePrompt() {}

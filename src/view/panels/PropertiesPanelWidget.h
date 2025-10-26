@@ -32,12 +32,18 @@ public slots:
     //слот, определяющий какую систему координат использовать
     void setCoordinateSystem(CoordinateSystemType type);
 
+    //слот для обновления цветов иконок при смене темы
+    void updateColors();
+
 signals:
     //сигнал, информирующий MainWindow о смене цвета в режиме создания объекта
     void colorChanged(const QColor& color);
 
+    //сигнал, информирующий MainWindow о смене типа линии в режиме создания объекта
+    void lineTypeChanged(LineType type);
+
     //сигналы, информирующие MainWindow о создании или изменении объекта
-    void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color);
+    void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого
