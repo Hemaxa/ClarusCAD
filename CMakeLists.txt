@@ -143,9 +143,9 @@ if(APPLE)
     find_program(PRODUCTBUILD_EXECUTABLE productbuild)
 
     #копирование иконки в .app
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.icns")
         add_custom_command(TARGET ClarusCAD POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.icns" "$<TARGET_BUNDLE_DIR:ClarusCAD>/Contents/Resources/icon.icns"
+            COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.icns" "$<TARGET_BUNDLE_DIR:ClarusCAD>/Contents/Resources/icon.icns"
         )
     endif()
 
@@ -213,8 +213,8 @@ if(WIN32)
     install(TARGETS ClarusCAD DESTINATION bin)
 
     #перемещение файла иконки
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico" DESTINATION bin)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.ico")
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.ico" DESTINATION bin)
     endif()
 
     #настройка CPack для создания установщика
@@ -226,9 +226,9 @@ if(WIN32)
     set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
 
     #настройки для NSIS
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
-        set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
-        set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.ico")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.ico")
+        set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.ico")
+        set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.ico")
     endif()
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt")
     set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\ClarusCAD.exe")
@@ -276,9 +276,9 @@ if(UNIX AND NOT APPLE)
     endif()
 
     #копирование иконки приложения
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.png")
         install(
-            FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/app-icon/icon.png"
+            FILES "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.png"
             DESTINATION share/icons/hicolor/256x256/apps
             RENAME ClarusCAD.png
         )

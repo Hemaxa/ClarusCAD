@@ -75,27 +75,27 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
     {
     case LineType::Solid:
         pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(1.0); // Тонкая
+        pen.setWidthF(1.5); // Тонкая
         break;
     case LineType::SolidThick:
         pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(2.0); // Толстая
+        pen.setWidthF(3.0); // Толстая
         break;
     case LineType::Dashed:
         pen.setStyle(Qt::DashLine);
-        pen.setWidthF(1.0);
+        pen.setWidthF(1.5);
         break;
     case LineType::Dotted:
         pen.setStyle(Qt::DotLine);
-        pen.setWidthF(1.0);
+        pen.setWidthF(1.5);
         break;
     case LineType::DashDot:
         pen.setStyle(Qt::DashDotLine);
-        pen.setWidthF(1.0);
+        pen.setWidthF(1.5);
         break;
     case LineType::DashDotDot:
         pen.setStyle(Qt::DashDotDotLine);
-        pen.setWidthF(1.0);
+        pen.setWidthF(1.5);
         break;
     }
 
@@ -103,8 +103,6 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
     painter.setPen(pen);
 
     // 4. Рисуем линию
-    // (Отказ от Брезенхема в пользу painter.drawLine(),
-    // который корректно поддерживает стили и толщину QPen)
     painter.drawLine(
         QPointF(segment->getStart().getX(), segment->getStart().getY()),
         QPointF(segment->getEnd().getX(), segment->getEnd().getY())

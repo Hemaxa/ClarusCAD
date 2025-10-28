@@ -41,8 +41,8 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 
     //cоздание списка выбора типа линии
     m_lineTypeComboBox = new QComboBox();
-    m_lineTypeComboBox->setFixedWidth(120);
-    m_lineTypeComboBox->setIconSize(QSize(95, 10)); //размер иконок
+    m_lineTypeComboBox->setFixedWidth(130); //ширина поля
+    m_lineTypeComboBox->setIconSize(QSize(100, 20)); //размер иконок
     m_lineTypeComboBox->setObjectName("LineTypeComboBox");
     m_lineTypeComboBox->setCursor(Qt::PointingHandCursor);
     populateLineTypeComboBox(); //заполнение
@@ -185,8 +185,7 @@ void BasePropertiesWidget::populateLineTypeComboBox()
     m_lineTypeComboBox->clear();
     QColor iconColor = ThemeManager::instance().getIconColor();
 
-    //карта <Тип линии, Путь к иконке>
-    //(я предполагаю, что вы создали иконки в res/icons/lines/)
+    //карта <тип линии, путь к иконке>
     QMap<LineType, QString> lineTypeIcons;
     lineTypeIcons[LineType::Solid] = ":/icons/icons/lines/solid.svg";
     lineTypeIcons[LineType::SolidThick] = ":/icons/icons/lines/solid-thick.svg";
@@ -200,7 +199,7 @@ void BasePropertiesWidget::populateLineTypeComboBox()
         LineType type = it.key();
         QString path = it.value();
         QIcon icon = ThemeManager::colorizeSvg(path, iconColor);
-        m_lineTypeComboBox->addItem(icon, "", static_cast<int>(type)); //сохраняем enum в UserData
+        m_lineTypeComboBox->addItem(icon, "-", static_cast<int>(type)); //сохраняем enum в UserData
     }
 }
 
