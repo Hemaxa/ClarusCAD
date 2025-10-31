@@ -1,15 +1,18 @@
 #include "MainWindow.h"
 #include "Scene.h"
-#include "BaseDrawingTool.h"
+
 #include "DeleteTool.h"
-#include "SegmentPrimitive.h"
 #include "SegmentCreationTool.h"
-#include "ViewportPanelWidget.h"
-#include "ToolbarPanelWidget.h"
+
+#include "SegmentPrimitive.h"
+
+#include "ConsolePanelWidget.h"
 #include "PropertiesPanelWidget.h"
 #include "SceneObjectsPanelWidget.h"
 #include "SceneSettingsPanelWidget.h"
-#include "ConsolePanelWidget.h"
+#include "ToolbarPanelWidget.h"
+#include "ViewportPanelWidget.h"
+
 #include "SettingsWindow.h"
 #include "ThemeManager.h"
 #include "SettingsManager.h"
@@ -45,7 +48,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     createActions();
     createMenus();
 
-    //применение настроек из окна менеджера настроек
+    //применение настроек
     m_viewportPanel->setGridStep(SettingsManager::instance().getGridStep());
     PointPrimitive::setAngleUnit(SettingsManager::instance().getAngleUnit());
 
@@ -148,6 +151,20 @@ void MainWindow::createConnections()
 
     //12) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
     connect(m_consolePanel, &ConsolePanelWidget::commandParsed, this, &MainWindow::onConsoleCommandParsed);
+
+    //================================================================================
+    // 13) ПОДПИСКА НА ГЛОБАЛЬНЫЕ НАСТРОЙКИ
+    //================================================================================
+
+    // Менеджер настроек сообщает об изменении -> Компоненты напрямую слушают
+    connect(&SettingsManager::instance(), &SettingsManager::gridStepChanged, m_viewportPanel, &ViewportPanelWidget::setGridStep);
+    connect(&SettingsManager::instance(), &SettingsManager::angleUnitChanged, &PointPrimitive::setAngleUnit);
+    connect(&SettingsManager::instance(), &SettingsManager::themeNameChanged, &ThemeManager::instance(), &ThemeManager::applyTheme);
+
+    // Менеджер тем сообщает о применении -> Панели обновляют свои иконки
+    connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_toolbarPanel, &ToolbarPanelWidget::updateColors);
+    connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_sceneSettingsPanel, &SceneSettingsPanelWidget::updateColors);
+    connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_propertiesPanel, &PropertiesPanelWidget::updateColors);
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -159,14 +176,6 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
         emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
         onSelectionChanged(primitive); //посылается сигнал, о выбранном объекте
     }
-}
-
-void MainWindow::updateApplicationIcons()
-{
-    //отправка команды на обновление всем панелям, где есть иконки
-    m_toolbarPanel->updateColors();
-    m_sceneSettingsPanel->updateColors();
-    m_propertiesPanel->updateColors();
 }
 
 void MainWindow::createActions()
@@ -279,34 +288,7 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
 void MainWindow::openSettingsWindow()
 {
     SettingsWindow dialog(this);
-
-    //передаются текущие настройки приложения
-    dialog.setCurrentTheme(SettingsManager::instance().getThemeName());
-    dialog.setGridStep(SettingsManager::instance().getGridStep());
-    dialog.setAngleUnit(SettingsManager::instance().getAngleUnit());
-
-    //если нажата клавиша "ОК", используются новые значения из диалога
-    if (dialog.exec() == QDialog::Accepted) {
-        //читаются новые значения из диалога
-        QString selectedTheme = dialog.getCurrentTheme();
-        int newGridStep = dialog.getGridStep();
-        AngleUnit newAngleUnit = dialog.getAngleUnit();
-
-        //обновляются значения в SettingsManager
-        SettingsManager::instance().setThemeName(selectedTheme);
-        SettingsManager::instance().setGridStep(newGridStep);
-        SettingsManager::instance().setAngleUnit(newAngleUnit);
-
-        //сохраняются все настройки
-        SettingsManager::instance().saveSettings();
-
-        //применяются новые настройки к UI
-        ThemeManager::instance().applyTheme(selectedTheme);
-        m_viewportPanel->setGridStep(newGridStep);
-        PointPrimitive::setAngleUnit(newAngleUnit);
-
-        updateApplicationIcons();
-    }
+    dialog.exec();
 }
 
 void MainWindow::deactivateCurrentTool()

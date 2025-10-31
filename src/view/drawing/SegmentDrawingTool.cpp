@@ -101,7 +101,7 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive, bool 
 
     if (isSelected) {
         // Например, делаем линию ярко-оранжевой, толстой и сплошной
-        pen.setColor(QColor(255, 165, 0)); // Яркий оранжевый
+        pen.setColor(QColor(0, 255, 127));
         pen.setWidthF(pen.widthF() + 1.5); // Делаем на 1.5 толще
         pen.setStyle(Qt::SolidLine); // Выбранный объект всегда сплошной
     }

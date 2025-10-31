@@ -30,6 +30,12 @@ public:
     void setAngleUnit(AngleUnit unit);
     AngleUnit getAngleUnit() const;
 
+signals:
+    //сигналы об изменении настроек
+    void themeNameChanged(const QString& themeName);
+    void gridStepChanged(int step);
+    void angleUnitChanged(AngleUnit unit);
+
 private:
     //конструктор
     explicit SettingsManager(QObject* parent = nullptr);

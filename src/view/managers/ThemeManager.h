@@ -32,6 +32,10 @@ public:
     QColor getIconColor() const;
     QColor getColor(const QString& key) const;
 
+signals:
+    //сигнал о том, что тема была применена
+    void themeApplied();
+
 private:
     //конструктор
     explicit ThemeManager(QObject *parent = nullptr);

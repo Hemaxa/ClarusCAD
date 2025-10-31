@@ -1,4 +1,5 @@
 #include "SettingsWindow.h"
+#include "SettingsManager.h"
 
 #include <QComboBox>
 #include <QSpinBox>
@@ -35,6 +36,11 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     m_angleUnitComboBox->addItem("Радианы", static_cast<int>(AngleUnit::Radians));
     m_angleUnitComboBox->setFixedHeight(30);
 
+    //установка текущиех значений для полей
+    setCurrentTheme(SettingsManager::instance().getThemeName());
+    setGridStep(SettingsManager::instance().getGridStep());
+    setAngleUnit(SettingsManager::instance().getAngleUnit());
+
     //расположение элементов интерфейса
     auto* appearanceGroup = new QGroupBox("Оформление");
     auto* formLayout = new QFormLayout();
@@ -46,6 +52,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 
     //кнопки "OK" и "Отмена"
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    connect(buttonBox, &QDialogButtonBox::accepted, this, &SettingsWindow::applySettings);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -55,6 +62,22 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     mainLayout->setSpacing(15);
     mainLayout->addWidget(appearanceGroup);
     mainLayout->addWidget(buttonBox);
+}
+
+void SettingsWindow::applySettings()
+{
+    //1. Читаем новые значения из UI
+    QString selectedTheme = getCurrentTheme();
+    int newGridStep = getGridStep();
+    AngleUnit newAngleUnit = getAngleUnit();
+
+    //2. Отправляем их в SettingsManager (он сам разошлет сигналы)
+    SettingsManager::instance().setThemeName(selectedTheme);
+    SettingsManager::instance().setGridStep(newGridStep);
+    SettingsManager::instance().setAngleUnit(newAngleUnit);
+
+    //3. Сохраняем
+    SettingsManager::instance().saveSettings();
 }
 
 void SettingsWindow::populateThemeComboBox()

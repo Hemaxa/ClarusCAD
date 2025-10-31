@@ -44,6 +44,9 @@ void ThemeManager::loadThemeFromFile(const QString& themeName)
 
     //применение стиля ко всему приложению
     qApp->setStyleSheet(styleSheet);
+
+    //отправка сигнала, что тема изменилась
+    emit themeApplied();
 }
 
 //перегрузка 1: один цвет

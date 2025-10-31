@@ -27,6 +27,10 @@ public:
     void setGridStep(int step);
     void setAngleUnit(AngleUnit unit);
 
+private slots:
+    //слот применения настроек
+    void applySettings();
+
 private:
     //метод заполнения списка тем
     void populateThemeComboBox();

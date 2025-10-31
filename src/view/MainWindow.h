@@ -90,8 +90,6 @@ private:
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
 
-    void updateApplicationIcons(); //метод обновления всех иконок
-
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
     Scene* m_scene; //указатель на объект сцены

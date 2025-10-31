@@ -25,11 +25,30 @@ void SettingsManager::saveSettings()
     m_settings.setValue("angle/unit", static_cast<int>(m_angleUnit));
 }
 
-void SettingsManager::setThemeName(const QString& themeName) { m_currentThemeName = themeName; }
+void SettingsManager::setThemeName(const QString& themeName)
+{
+    if (m_currentThemeName != themeName) {
+        m_currentThemeName = themeName;
+        emit themeNameChanged(m_currentThemeName);
+    }
+}
+
+void SettingsManager::setGridStep(int step)
+{
+if (m_gridStep != step) {
+        m_gridStep = step;
+        emit gridStepChanged(m_gridStep);
+    }
+}
+
+void SettingsManager::setAngleUnit(AngleUnit unit)
+{
+    if (m_angleUnit != unit) {
+        m_angleUnit = unit;
+        emit angleUnitChanged(m_angleUnit);
+    }
+}
+
 QString SettingsManager::getThemeName() const { return m_currentThemeName; }
-
-void SettingsManager::setGridStep(int step) { m_gridStep = step; }
 int SettingsManager::getGridStep() const { return m_gridStep; }
-
-void SettingsManager::setAngleUnit(AngleUnit unit) { m_angleUnit = unit; }
 AngleUnit SettingsManager::getAngleUnit() const { return m_angleUnit; }
