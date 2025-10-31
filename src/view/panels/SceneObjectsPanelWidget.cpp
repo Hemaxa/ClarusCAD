@@ -29,6 +29,9 @@ void SceneObjectsPanelWidget::updateView(const Scene* scene)
     //сохранение указателя на сцену
     m_currentScene = scene;
 
+    //блокировка сигналов на время очистки и заполнения
+    m_listWidget->blockSignals(true);
+
     //удаление старых объектов списка
     m_listWidget->clear();
 
@@ -37,11 +40,11 @@ void SceneObjectsPanelWidget::updateView(const Scene* scene)
 
     //цикл прохода по всем примитивам в векторе, полученном из класса Scene
     for (int i = 0; i < primitives.size(); ++i) {
-        //цикл записи примитивов "Отрезок"
-        if (primitives[i]->getType() == PrimitiveType::Segment) {
-            m_listWidget->addItem(QString("Отрезок %1").arg(i + 1));
-        }
+        m_listWidget->addItem(primitives[i]->getName());
     }
+
+    //разблокировка сигналов
+    m_listWidget->blockSignals(false);
 }
 
 void SceneObjectsPanelWidget::onSelectionChanged()

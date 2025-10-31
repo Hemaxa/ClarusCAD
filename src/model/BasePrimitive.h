@@ -5,15 +5,21 @@
 #include "EnumManager.h"
 
 #include <QColor> //для хранения цвета объекта
+#include <QString> //для хранения имени объекта
 #include <QObject>
 
 class BasePrimitive
 {
 
 public:
-    //виртуальные деструктор и метод получения типа примитива
+    //виртуальные деструктор и методы получения типа примитива
     virtual ~BasePrimitive() = default;
     virtual PrimitiveType getType() const { return PrimitiveType::Generic; }
+    virtual QString getTypeName() const { return "Примитив"; }
+
+    //виртуальные методы задания и получения имени примитива
+    virtual void setName(const QString& name) { m_name = name; }
+    virtual QString getName() const { return m_name; }
 
     //виртуальные методы задания и получения цвета примитива
     virtual void setColor(const QColor& color) { m_color = color; }
@@ -24,6 +30,7 @@ public:
     virtual LineType getLineType() const { return m_lineType; }
 
 private:
+    QString m_name; //имя примитива
     QColor m_color = Qt::white; //цвет примитива
     LineType m_lineType = LineType::Solid; //тип линии примитва
 };

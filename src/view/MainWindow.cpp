@@ -3,7 +3,6 @@
 #include "BaseDrawingTool.h"
 #include "DeleteTool.h"
 #include "SegmentPrimitive.h"
-#include "SegmentDrawingTool.h"
 #include "SegmentCreationTool.h"
 #include "ViewportPanelWidget.h"
 #include "ToolbarPanelWidget.h"
@@ -11,7 +10,6 @@
 #include "SceneObjectsPanelWidget.h"
 #include "SceneSettingsPanelWidget.h"
 #include "ConsolePanelWidget.h"
-#include "CommandParser.h"
 #include "SettingsWindow.h"
 #include "ThemeManager.h"
 #include "SettingsManager.h"
@@ -40,18 +38,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     //создание экземпляра сцены
     m_scene = new Scene();
 
-    //создание парсера команд
-    m_commandParser = new CommandParser(this);
-
     //вызов всех методов создания
     createTools();
-    createDrawingTools();
     createPanelWindows();
     createConnections();
     createActions();
     createMenus();
 
-    //применение остальных настроек
+    //применение настроек из окна менеджера настроек
     m_viewportPanel->setGridStep(SettingsManager::instance().getGridStep());
     PointPrimitive::setAngleUnit(SettingsManager::instance().getAngleUnit());
 
@@ -70,11 +64,6 @@ void MainWindow::createTools()
     m_segmentCreationTool = new SegmentCreationTool(this);
 }
 
-void MainWindow::createDrawingTools()
-{
-    m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
-}
-
 void MainWindow::createPanelWindows()
 {
     //создание интерфейсных панелей
@@ -85,13 +74,16 @@ void MainWindow::createPanelWindows()
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
     m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
 
-    //установка оформления из файлов тем
+    //установка имени для панелей для оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
+    m_toolbarPanel->setProperty("class", "ToolbarPanel");
+    m_propertiesPanel->setProperty("class", "PropertiesPanel");
     m_sceneObjectsPanel->setProperty("class", "SceneObjectsPanel");
+    m_sceneSettingsPanel->setProperty("class", "SceneSettingsPanel");
+    m_consolePanel->setProperty("class", "ConsolePanel");
 
-    //передача сцены и отрисовщиков в панель просмотра
+    //передача сцены в панель просмотра
     m_viewportPanel->setScene(m_scene);
-    m_viewportPanel->setDrawingTools(&m_drawingTools);
 
     //расстановка панелей интерфейса
     //левая колонка
@@ -136,13 +128,13 @@ void MainWindow::createConnections()
     connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
 
     //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (7 пункт)
-    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::objectSelected);
+    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::onSelectionChanged);
 
     //7) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
     connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor)); //QOverload используется, т.к. showPropertiesFor перегружен
 
     //8) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
-    connect(this, &MainWindow::objectSelected, this, [this](BasePrimitive* primitive) { m_selectedPrimitive = primitive; m_propertiesPanel->showPropertiesFor(primitive); });
+    //connect(this, &MainWindow::objectSelected, this, &MainWindow::onSelectionChanged); // <-- Изменено
 
     //9) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
@@ -155,7 +147,7 @@ void MainWindow::createConnections()
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
 
     //12) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
-    connect(m_consolePanel, &ConsolePanelWidget::commandEntered, this, &MainWindow::processConsoleCommand);
+    connect(m_consolePanel, &ConsolePanelWidget::commandParsed, this, &MainWindow::onConsoleCommandParsed);
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -165,7 +157,7 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
         m_viewportPanel->update(); //обновление окна просмотра
 
         emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
-        emit objectSelected(primitive); //посылается сигнал, о выбранном объекте
+        onSelectionChanged(primitive); //посылается сигнал, о выбранном объекте
     }
 }
 
@@ -234,6 +226,13 @@ void MainWindow::onLineTypeChanged(LineType type)
     }
 }
 
+void MainWindow::onSelectionChanged(BasePrimitive* primitive)
+{
+    m_selectedPrimitive = primitive;
+    m_propertiesPanel->showPropertiesFor(primitive);
+    m_viewportPanel->setSelectedPrimitive(primitive);
+}
+
 void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType)
 {
     //режим редактирования
@@ -269,7 +268,7 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
 
     //если удаленный объект был тем, который выбран в списке, то информация о нем забывается
     if (m_selectedPrimitive == primitive) {
-        m_selectedPrimitive = nullptr;
+        onSelectionChanged(nullptr);
     }
 
     //обновление окна просмотра
@@ -318,7 +317,7 @@ void MainWindow::deactivateCurrentTool()
         m_currentTool = nullptr; //сбрасывается указатель на инструмент
         m_viewportPanel->setActiveTool(nullptr); //сброс активного инструмента в окне просмотра
         m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
-        m_propertiesPanel->showPropertiesFor(nullptr); //панель свойств очищается
+        onSelectionChanged(nullptr); //панель свойств очищается
         m_viewportPanel->update(); //обновление окна просмотра
     }
 }
@@ -358,11 +357,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     QMainWindow::keyPressEvent(event);
 }
 
-void MainWindow::processConsoleCommand(const QString& commandStr)
+void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)
 {
-    //перенос команды в переменную
-    ParsedCommand command = m_commandParser->parse(commandStr);
-
     //обработка некорректного синтаксиса команды
     if (!command.isValid) {
         qDebug("Неверный синтаксис команды.");

@@ -12,8 +12,9 @@ public:
     //конструктор с параметрами по умолчанию
     PointPrimitive(double x = 0.0, double y = 0.0);
 
-    //переопределение метода получения типа для объекта "Точка"
+    //переопределение методов получения типа для объекта "Точка"
     PrimitiveType getType() const override { return PrimitiveType::Point; };
+    QString getTypeName() const override { return "Точка"; }
 
     //методы для установки глобальных единиц измерения углов
     static void setAngleUnit(AngleUnit unit);

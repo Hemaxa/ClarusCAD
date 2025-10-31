@@ -22,5 +22,5 @@ public:
     //это значит, что:
     // 1) нельзя создать экземпляр new BaseDrawingTool()
     // 2) любой класс, который от него наследуется, обязан реализовать этот метод
-    virtual void draw(QPainter& painter, BasePrimitive* primitive) const = 0;
+    virtual void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const = 0;
 };

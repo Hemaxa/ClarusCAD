@@ -10,5 +10,5 @@ class SegmentDrawingTool : public BaseDrawingTool
 
 public:
     //переопределние метода draw
-    void draw(QPainter& painter, BasePrimitive* primitive) const override;
+    void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const override;
 };

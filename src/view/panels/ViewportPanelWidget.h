@@ -20,13 +20,13 @@ class ViewportPanelWidget : public BasePanelWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    //конструктор и деструктор
     explicit ViewportPanelWidget(const QString& title, QWidget* parent = nullptr);
+    ~ViewportPanelWidget();
 
     //этими методами MainWindow настраивает и управляет вьюпортом
     void setScene(Scene* scene); //метод установки сцены для отрисовки
     void setActiveTool(BaseCreationTool* tool); //метод установки активного элемента
-    void setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools); //метод установки отрисовщиков
     void setGridStep(int step); //метод установки шага сетки
 
     int getGridStep() const; //геттер для шага сетки
@@ -46,12 +46,14 @@ public slots:
     void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
     void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
     void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам
+    void setSelectedPrimitive(BasePrimitive* primitive); //слот выбранных объектов
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
+    BasePrimitive* m_selectedPrimitive = nullptr; //указатель на выбранные объекты
     QLabel* m_infoLabel; //указатель на info-панель
     BaseCreationTool* m_activeTool = nullptr; //указатель на выбранный инструмент
-    const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* m_drawingTools = nullptr; //указатель на мапу отрисовщиков
+    std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools; //мапа отрисовщиков
     ThemeManager* m_themeManager = nullptr; //указатель на менеджер тем
 
     //параметры панели по умолчанию
@@ -75,5 +77,6 @@ private:
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
     void paintGrid(QPainter& painter); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
+    void createDrawingTools(); //метод создание отрисовщиков
     void updateInfoLabel(); //метод обновления содержимого info-панели
 };

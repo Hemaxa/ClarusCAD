@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "BaseCreationTool.h"
 #include "BaseDrawingTool.h"
+#include "SegmentDrawingTool.h"
 #include "SegmentPrimitive.h"
 #include "ThemeManager.h"
 
@@ -28,6 +29,9 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     //начальная позиция камеры
     m_panOffset = QPointF(50.0, 50.0);
 
+    //создание отрисовщиков
+    createDrawingTools();
+
     //создание и настройка info-панели
     m_infoLabel = new QLabel(canvas());
     m_infoLabel->setObjectName("InfoLabel");
@@ -42,6 +46,8 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
 
     updateInfoLabel();
 }
+
+ViewportPanelWidget::~ViewportPanelWidget() = default;
 
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
@@ -142,6 +148,11 @@ double ViewportPanelWidget::calculateDynamicGridStep() const
     return dynamicGridStep;
 }
 
+void ViewportPanelWidget::createDrawingTools()
+    {
+        m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
+    }
+
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 {
     Q_UNUSED(event);
@@ -153,7 +164,7 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     paintGizmo(painter);
 
     //если нет сцены или отрисовщиков, то графика не отрисовывается
-    if (!m_scene || !m_drawingTools) return;
+    if (!m_scene) return;
     painter.setTransform(QTransform()
         .translate(0, canvas()->height()) //сдвиг системы координат
         .scale(1, -1) //инвертация осей
@@ -162,10 +173,11 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     //цикл по примтивам для перерисовки
     for (const auto& primitive : m_scene->getPrimitives()) {
         PrimitiveType type = primitive->getType();
-        auto it = m_drawingTools->find(type);
-        if (it != m_drawingTools->end()) {
+        auto it = m_drawingTools.find(type);
+        if (it != m_drawingTools.end()) {
             const auto& drawer = it->second;
-            drawer->draw(painter, primitive.get());
+            bool isSelected = (primitive.get() == m_selectedPrimitive);
+            drawer->draw(painter, primitive.get(), isSelected);
         }
     }
     //отрисовка поверх сцены
@@ -436,11 +448,11 @@ QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
 
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
-void ViewportPanelWidget::setDrawingTools(const std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>>* tools) { m_drawingTools = tools; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; if (m_gridStep > 0) { m_gridMultiplier = calculateDynamicGridStep() / m_gridStep; } updateInfoLabel(); update(); } }
 void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled = enabled; }
 void ViewportPanelWidget::setPrimitiveSnapEnabled(bool enabled) { m_isPrimitiveSnapEnabled = enabled; }
 void ViewportPanelWidget::setCoordinateSystem(CoordinateSystemType type) { m_coordSystemType = type; updateInfoLabel(); }
+void ViewportPanelWidget::setSelectedPrimitive(BasePrimitive* primitive) { m_selectedPrimitive = primitive; update(); }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }

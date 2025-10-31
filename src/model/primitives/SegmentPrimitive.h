@@ -12,8 +12,9 @@ public:
     //конструктор
     SegmentPrimitive(const PointPrimitive& start, const PointPrimitive& end);
 
-    //переопределение метода получения типа для объекта "Отрезок"
+    //переопределение методов получения типа для объекта "Отрезок"
     PrimitiveType getType() const override { return PrimitiveType::Segment; };
+    QString getTypeName() const override { return "Отрезок"; }
 
     //геттер и сеттер начальной точки
     const PointPrimitive& getStart() const;

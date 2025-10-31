@@ -56,7 +56,7 @@
 //     painter.drawPoint(x2, y2);
 // }
 
-void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
+void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive, bool isSelected) const
 {
     //приведение базового типа к конкретному
     auto* segment = static_cast<SegmentPrimitive*>(primitive);
@@ -99,6 +99,13 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
         break;
     }
 
+    if (isSelected) {
+        // Например, делаем линию ярко-оранжевой, толстой и сплошной
+        pen.setColor(QColor(255, 165, 0)); // Яркий оранжевый
+        pen.setWidthF(pen.widthF() + 1.5); // Делаем на 1.5 толще
+        pen.setStyle(Qt::SolidLine); // Выбранный объект всегда сплошной
+    }
+
     // 3. Устанавливаем перо
     painter.setPen(pen);
 
@@ -106,5 +113,5 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
     painter.drawLine(
         QPointF(segment->getStart().getX(), segment->getStart().getY()),
         QPointF(segment->getEnd().getX(), segment->getEnd().getY())
-        );
+    );
 }

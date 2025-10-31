@@ -1,10 +1,15 @@
 #include "ConsolePanelWidget.h"
+#include "CommandParser.h"
 
 #include <QLineEdit>
 #include <QVBoxLayout>
+#include <QDebug>
 
 ConsolePanelWidget::ConsolePanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
+    //создание парсера консольных команд
+    m_commandParser = new CommandParser(this);
+
     //создание QLineEdit для консоли
     m_commandInput = new QLineEdit();
 
@@ -24,10 +29,19 @@ ConsolePanelWidget::ConsolePanelWidget(const QString& title, QWidget* parent) : 
 void ConsolePanelWidget::onReturnPressed()
 {
     //сохранение команды
-    QString command = m_commandInput->text();
-    //если команда не пустая, то ее отправка
-    if (!command.isEmpty()) {
-        emit commandEntered(command);
+    QString commandStr = m_commandInput->text();
+    //если команда не пустая, то ее необходимо обработать
+    if (!commandStr.isEmpty()) {
+        ParsedCommand command = m_commandParser->parse(commandStr);
+
+        if (command.isValid) {
+            emit commandParsed(command);
+
+        }
+        else {
+            // TODO: (в будущем) можно выводить ошибку в саму консоль
+            qDebug() << "Ошибка парсинга:" << command.errorDescription;
+        }
 
         //очистка строки ввода
         m_commandInput->clear();

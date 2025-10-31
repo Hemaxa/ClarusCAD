@@ -3,6 +3,9 @@
 #pragma once
 
 #include "BasePanelWidget.h"
+#include "CommandParser.h"
+
+struct ParsedCommand;
 
 class QLineEdit;
 
@@ -17,7 +20,7 @@ public:
 
 signals:
     //сигнал отправки команды нажатием Enter
-    void commandEntered(const QString& command);
+    void commandParsed(const ParsedCommand& command);
 
 private slots:
     //слот обработки нажатия Enter
@@ -25,4 +28,5 @@ private slots:
 
 private:
     QLineEdit* m_commandInput; //указатель на поле текста
+    CommandParser* m_commandParser; //указатель на парсер команд
 };

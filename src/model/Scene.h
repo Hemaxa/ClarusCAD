@@ -2,10 +2,12 @@
 
 #pragma once
 
+#include "EnumManager.h"
 #include "BasePrimitive.h"
 
 #include <vector>
 #include <memory>
+#include <QMap>
 
 class Scene
 {
@@ -26,4 +28,7 @@ public:
 private:
     //хранилище всех объектов
     std::vector<std::unique_ptr<BasePrimitive>> m_primitives;
+
+    //хранилище количетсва всех объектов для генерации уникальных имен
+    QMap<PrimitiveType, int> m_primitiveCounters;
 };
