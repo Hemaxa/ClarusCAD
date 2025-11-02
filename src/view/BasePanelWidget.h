@@ -12,21 +12,18 @@ class BasePanelWidget : public QDockWidget
 
 public:
     //explicit запрещает неявное преобразование типов для конструктора
-    explicit BasePanelWidget(const QString& title, QWidget* parent = nullptr) : QDockWidget(title, parent)
-    {
-        //создание пустого универсального холста для окна
-        m_canvas = new QWidget();
-
-        //установка холста в качестве основного виджета QDockWidget
-        setWidget(m_canvas);
-    }
+    explicit BasePanelWidget(const QString& title, QWidget* parent);
 
     //virtual означает, что деструктор создается автоматически из унаследованного класса
     virtual ~BasePanelWidget() = default;
 
+public slots:
+    //метод обновления иконок (перекрашивание)
+    virtual void updateColors();
+
 protected:
     //доступ к холсту предоставлен только классам-наслденикам
-    QWidget* canvas() const { return m_canvas; }
+    QWidget* canvas() const;
 
 private:
     //указатель на холст

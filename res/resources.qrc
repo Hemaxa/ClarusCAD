@@ -12,6 +12,9 @@
         <file>icons/lines/dotted.svg</file>
         <file>icons/lines/solid-thick.svg</file>
         <file>icons/lines/solid.svg</file>
+        <file>icons/tools/move.svg</file>
+        <file>icons/scene/zoom-in.svg</file>
+        <file>icons/scene/zoom-out.svg</file>
     </qresource>
     <qresource prefix="/promts">
         <file>promts/segment-promt.svg</file>

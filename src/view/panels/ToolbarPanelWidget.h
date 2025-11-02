@@ -17,18 +17,20 @@ public:
     explicit ToolbarPanelWidget(const QString& title, QWidget* parent = nullptr);
 
     //метод обновления иконок (перекрашивание)
-    void updateColors();
+    //svoid updateColors();
 
     //метод снятия выделения с инструментов
     void clearSelection();
 
     //геттры для указателей на кнопки
     QToolButton* getDeleteButton() const;
+    QToolButton* getMoveButton() const;
     QToolButton* getCreateSegmentButton() const;
 
 signals:
     //сигналы нажатия соответствующих кнопок
     void deleteToolActivated();
+    void moveToolActivated();
     void segmentToolActivated();
 
 private:
@@ -37,5 +39,6 @@ private:
 
     //указатели на соответствующие кнопки
     QToolButton* m_deleteBtn;
+    QToolButton* m_moveBtn;
     QToolButton* m_createSegmentBtn;
 };

@@ -4,11 +4,11 @@
 #include <QPainter>
 #include <QPaintEvent>
 
-AnimationManager::AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, QWidget* parent) : QToolButton(parent), m_iconPath(iconPath)
+AnimationManager::AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, bool isCheckable, QWidget* parent) : QToolButton(parent), m_iconPath(iconPath)
 {
     //установка свойств для кнопки
     setToolTip(toolTip);
-    setCheckable(true);
+    setCheckable(isCheckable);
     setShortcut(shortcut);
     setFixedSize(42, 42); //размер кнопки
 

@@ -41,12 +41,27 @@ public:
     QPointF worldToScreen(const QPointF& worldPos) const;
     QPointF screenToWorld(const QPointF& screenPos) const;
 
+    void pan(const QPointF& screenDelta); //метод активации панаромирования
+
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
+
+    // ---> НОВЫЙ БЛОК <---
+    void zoomIn(); // Зум к центру
+    void zoomIn(const QPoint& anchorPoint); // Зум к точке
+    void zoomOut(); // Отдаление от центра
+    void zoomOut(const QPoint& anchorPoint); // Отдаление от точки
+    void setZoomStep(double step); // Слот для SettingsManager
+    // ---> КОНЕЦ НОВОГО БЛОКА <---
+
     void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
     void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
     void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам
     void setSelectedPrimitive(BasePrimitive* primitive); //слот выбранных объектов
+
+signals:
+    //cигнал, который передает позицию мыши
+    void mouseMoved(const QPoint& screenPos);
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
@@ -58,6 +73,7 @@ private:
 
     //параметры панели по умолчанию
     int m_gridStep = 50; //шаг сетки
+    double m_zoomStep = 1.25; //шаг увеличения/уменьшения
     QPointF m_panOffset{0.0, 0.0}; //смещение вида (панорамирование), хранит данные о сдвиге сцены
     double m_zoomFactor = 1.0; //коэффициент масштабирования (1.0 = 100%)
     QPoint m_lastPanPos; //последняя позиция курсора во время панорамирования для расчета смещения

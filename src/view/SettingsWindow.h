@@ -8,6 +8,7 @@
 
 class QComboBox;
 class QSpinBox;
+class QDoubleSpinBox;
 
 class SettingsWindow : public QDialog
 {
@@ -17,15 +18,17 @@ public:
     //конструктор
     explicit SettingsWindow(QWidget* parent = nullptr);
 
-    //методы получения выбранных значений
-    QString getCurrentTheme() const;
-    int getGridStep() const;
-    AngleUnit getAngleUnit() const;
-
     //методы установки текущих значений при открытии
     void setCurrentTheme(const QString& themeName);
     void setGridStep(int step);
+    void setZoomStep(double step);
     void setAngleUnit(AngleUnit unit);
+
+    //методы получения выбранных значений
+    QString getCurrentTheme() const;
+    int getGridStep() const;
+    double getZoomStep() const;
+    AngleUnit getAngleUnit() const;
 
 private slots:
     //слот применения настроек
@@ -38,5 +41,6 @@ private:
     //элементы интерфейса
     QComboBox* m_themeComboBox;
     QSpinBox* m_gridStepSpinBox;
+    QDoubleSpinBox* m_zoomStepSpinBox;
     QComboBox* m_angleUnitComboBox;
 };

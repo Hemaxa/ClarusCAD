@@ -66,11 +66,11 @@ void DeleteTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWid
     }
 }
 
-void DeleteTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {}
-void DeleteTool::onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {}
-
 void DeleteTool::reset()
 {
     //возвращается вид курсора
     QApplication::restoreOverrideCursor();
 }
+
+void DeleteTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {}
+void DeleteTool::onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {}

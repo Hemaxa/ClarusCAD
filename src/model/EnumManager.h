@@ -6,9 +6,9 @@
 
 //типы примитивов
 enum class PrimitiveType {
-    Generic,
-    Point,
-    Segment
+    Generic, //общий
+    Point, //точка
+    Segment //отрезок
 };
 
 //типы систем координат

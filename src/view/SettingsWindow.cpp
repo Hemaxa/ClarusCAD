@@ -3,6 +3,7 @@
 
 #include <QComboBox>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
@@ -19,17 +20,26 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     //создание элементов интерфейса
     m_themeComboBox = new QComboBox();
     m_gridStepSpinBox = new QSpinBox();
+    m_zoomStepSpinBox = new QDoubleSpinBox();
     m_angleUnitComboBox = new QComboBox();
 
     //настройка элементов интерфейса
     //настройка списка тем
+    populateThemeComboBox();
     m_themeComboBox->setFixedHeight(30);
 
     //настройка шага сетки
-    populateThemeComboBox();
     m_gridStepSpinBox->setRange(10, 100);
     m_gridStepSpinBox->setSingleStep(5);
     m_gridStepSpinBox->setSuffix(" px");
+    m_gridStepSpinBox->setFixedHeight(30);
+
+    //настройка шага увеличения/уменьшения
+    m_zoomStepSpinBox->setRange(1.10, 3.00);
+    m_zoomStepSpinBox->setSingleStep(0.05);
+    m_zoomStepSpinBox->setDecimals(2);
+    m_zoomStepSpinBox->setSuffix("x");
+    m_zoomStepSpinBox->setFixedHeight(30);
 
     //настройка единиц измерения углов
     m_angleUnitComboBox->addItem("Градусы", static_cast<int>(AngleUnit::Degrees));
@@ -39,15 +49,19 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     //установка текущиех значений для полей
     setCurrentTheme(SettingsManager::instance().getThemeName());
     setGridStep(SettingsManager::instance().getGridStep());
+    setZoomStep(SettingsManager::instance().getZoomStep());
     setAngleUnit(SettingsManager::instance().getAngleUnit());
 
     //расположение элементов интерфейса
     auto* appearanceGroup = new QGroupBox("Оформление");
     auto* formLayout = new QFormLayout();
     formLayout->setSpacing(15);
+
     formLayout->addRow("Тема оформления:", m_themeComboBox);
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
-    formLayout->addRow("Единицы углов:", m_angleUnitComboBox);
+    formLayout->addRow("Шаг увеличения/уменьшения:", m_zoomStepSpinBox);
+    formLayout->addRow("Единицы измерения углов:", m_angleUnitComboBox);
+
     appearanceGroup->setLayout(formLayout);
 
     //кнопки "OK" и "Отмена"
@@ -66,17 +80,19 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 
 void SettingsWindow::applySettings()
 {
-    //1. Читаем новые значения из UI
+    //получение новых значений из UI
     QString selectedTheme = getCurrentTheme();
     int newGridStep = getGridStep();
+    double newZoomStep = getZoomStep();
     AngleUnit newAngleUnit = getAngleUnit();
 
-    //2. Отправляем их в SettingsManager (он сам разошлет сигналы)
+    //отправка значений в SettingsManager
     SettingsManager::instance().setThemeName(selectedTheme);
     SettingsManager::instance().setGridStep(newGridStep);
+    SettingsManager::instance().setZoomStep(newZoomStep);
     SettingsManager::instance().setAngleUnit(newAngleUnit);
 
-    //3. Сохраняем
+    //сохранение значений в SettingsManager
     SettingsManager::instance().saveSettings();
 }
 
@@ -91,8 +107,10 @@ void SettingsWindow::populateThemeComboBox()
 
 void SettingsWindow::setCurrentTheme(const QString& themeName) { int index = m_themeComboBox->findData(themeName); if (index != -1) { m_themeComboBox->setCurrentIndex(index); } }
 void SettingsWindow::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
+void SettingsWindow::setZoomStep(double step) { m_zoomStepSpinBox->setValue(step); }
 void SettingsWindow::setAngleUnit(AngleUnit unit) { int index = m_angleUnitComboBox->findData(static_cast<int>(unit)); if (index != -1) { m_angleUnitComboBox->setCurrentIndex(index); } }
 
 QString SettingsWindow::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
 int SettingsWindow::getGridStep() const { return m_gridStepSpinBox->value(); }
+double SettingsWindow::getZoomStep() const { return m_zoomStepSpinBox->value(); }
 AngleUnit SettingsWindow::getAngleUnit() const { return static_cast<AngleUnit>(m_angleUnitComboBox->currentData().toInt()); }

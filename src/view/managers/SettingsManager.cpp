@@ -14,6 +14,7 @@ void SettingsManager::loadSettings()
     //шаблон: "ключ настройки", "значение по умолчанию"
     m_currentThemeName = m_settings.value("theme/name", "ClarusCAD").toString();
     m_gridStep = m_settings.value("grid/step", 50).toInt();
+    m_zoomStep = m_settings.value("zoom/step", 1.25).toDouble();
     m_angleUnit = static_cast<AngleUnit>(m_settings.value("angle/unit", static_cast<int>(AngleUnit::Degrees)).toInt());
 }
 
@@ -22,6 +23,7 @@ void SettingsManager::saveSettings()
     //шаблон: "ключ настройки", "значение, которое нужно сохранить"
     m_settings.setValue("theme/name", m_currentThemeName);
     m_settings.setValue("grid/step", m_gridStep);
+    m_settings.setValue("zoom/step", m_zoomStep);
     m_settings.setValue("angle/unit", static_cast<int>(m_angleUnit));
 }
 
@@ -41,6 +43,14 @@ if (m_gridStep != step) {
     }
 }
 
+void SettingsManager::setZoomStep(double step)
+{
+    if (m_zoomStep != step) {
+        m_zoomStep = step;
+        emit zoomStepChanged(m_zoomStep);
+    }
+}
+
 void SettingsManager::setAngleUnit(AngleUnit unit)
 {
     if (m_angleUnit != unit) {
@@ -51,4 +61,5 @@ void SettingsManager::setAngleUnit(AngleUnit unit)
 
 QString SettingsManager::getThemeName() const { return m_currentThemeName; }
 int SettingsManager::getGridStep() const { return m_gridStep; }
+double SettingsManager::getZoomStep() const { return m_zoomStep; }
 AngleUnit SettingsManager::getAngleUnit() const { return m_angleUnit; }

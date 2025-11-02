@@ -19,45 +19,52 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->setExclusive(true); //возможность выбора только одной кнопки
 
     //создание и добавление кнопок в группу
-    //шаблон: текст описания, путь до иконки, горячая клавиша
-    m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X);
-    m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S);
+    //шаблон: путь до иконки, текст описания, горячая клавиша, залипание
+    m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X, true);
+    m_moveBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Перемещение [M]", Qt::Key_M, true);
+    m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S, true);
 
     //добавление кнопок в общую группу
     m_buttonGroup->addButton(m_deleteBtn);
+    m_buttonGroup->addButton(m_moveBtn);
     m_buttonGroup->addButton(m_createSegmentBtn);
 
     //добавление кнопок в шаблон
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
-    layout->addWidget(m_createSegmentBtn, 1, 0, Qt::AlignLeft);
+    layout->addWidget(m_moveBtn, 1, 0, Qt::AlignLeft);
+    layout->addWidget(m_createSegmentBtn, 2, 0, Qt::AlignLeft);
 
     //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(1, 1);
 
     //последняя путсая строка должна растягиваться, прижимая кнопки вверх
-    layout->setRowStretch(2, 1);
+    layout->setRowStretch(3, 1);
 
     //подключение сигналов от кнопок
     connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
+    connect(m_moveBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::moveToolActivated);
     connect(m_createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
 
     //минимальная ширина окна
     setMinimumWidth(200);
 }
 
-void ToolbarPanelWidget::updateColors()
-{
-    //получение цвета иконок из менеджера тем
-    QColor iconColor = ThemeManager::instance().getIconColor();
+// void ToolbarPanelWidget::updateColors()
+// {
+//     //получение цвета иконок из менеджера тем
+//     QColor iconColor = ThemeManager::instance().getIconColor();
 
-    //вызов метода перекрашивания иконки из AnimationManager
-    if (m_deleteBtn) {
-        static_cast<AnimationManager*>(m_deleteBtn)->updateIconColor(iconColor);
-    }
-    if (m_createSegmentBtn) {
-        static_cast<AnimationManager*>(m_createSegmentBtn)->updateIconColor(iconColor);
-    }
-}
+//     //вызов метода перекрашивания иконки из AnimationManager
+//     if (m_deleteBtn) {
+//         static_cast<AnimationManager*>(m_deleteBtn)->updateIconColor(iconColor);
+//     }
+//     if (m_moveBtn) {
+//         static_cast<AnimationManager*>(m_moveBtn)->updateIconColor(iconColor);
+//     }
+//     if (m_createSegmentBtn) {
+//         static_cast<AnimationManager*>(m_createSegmentBtn)->updateIconColor(iconColor);
+//     }
+// }
 
 void ToolbarPanelWidget::clearSelection()
 {
@@ -71,4 +78,5 @@ void ToolbarPanelWidget::clearSelection()
 }
 
 QToolButton* ToolbarPanelWidget::getDeleteButton() const { return m_deleteBtn; }
+QToolButton* ToolbarPanelWidget::getMoveButton() const { return m_moveBtn; }
 QToolButton* ToolbarPanelWidget::getCreateSegmentButton() const { return m_createSegmentBtn; }

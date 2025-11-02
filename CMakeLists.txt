@@ -34,6 +34,8 @@ target_sources (ClarusCAD PRIVATE
 
     ${SRC_DIR}/controller/tools/DeleteTool.h
     ${SRC_DIR}/controller/tools/DeleteTool.cpp
+    ${SRC_DIR}/controller/tools/MoveTool.h
+    ${SRC_DIR}/controller/tools/MoveTool.cpp
     ${SRC_DIR}/controller/tools/SegmentCreationTool.h
     ${SRC_DIR}/controller/tools/SegmentCreationTool.cpp
 
@@ -49,8 +51,9 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/primitives/SegmentPrimitive.cpp
 
     #view
-    ${SRC_DIR}/view/BasePanelWidget.h
     ${SRC_DIR}/view/BaseDrawingTool.h
+    ${SRC_DIR}/view/BasePanelWidget.h
+    ${SRC_DIR}/view/BasePanelWidget.cpp
     ${SRC_DIR}/view/BasePropertiesWidget.h
     ${SRC_DIR}/view/BasePropertiesWidget.cpp
     ${SRC_DIR}/view/MainWindow.h

@@ -126,7 +126,7 @@ QGroupBox::title {
     padding: 0 3px;
 }
 
-QComboBox, QSpinBox {
+QComboBox, QSpinBox, QDoubleSpinBox {
     background-color: #2a2a2a;
     border: 1px solid #00ff7f;
     border-radius: 6px;
@@ -145,20 +145,20 @@ QComboBox {
     width: 110px;
 }
 
-QSpinBox::up-button {
+QSpinBox::up-button, QDoubleSpinBox::up-button {
     width: 15px;
     border: none;
     border-top-right-radius: 4px;
     background-color: #00ff7f;
 }
 
-QSpinBox::down-button {
+QSpinBox::down-button, QDoubleSpinBox::down-button {
     width: 15px;
     border: none;
     border-bottom-right-radius: 4px;
     background-color: #00ff7f;
 }
 
-QSpinBox {
+QSpinBox, QDoubleSpinBox {
     width: 114px;
 }

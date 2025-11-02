@@ -19,16 +19,19 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     coordSystemGroup->setExclusive(true);
 
     //создание и добавление кнопок в группы
-    //шаблон: текст описания, путь до иконки, горячая клавиша
-    m_gridSnapBtn = new AnimationManager(":/icons/icons/scene/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G);
+    //шаблон: путь до иконки, текст описания, горячая клавиша, залипание
+    m_gridSnapBtn = new AnimationManager(":/icons/icons/scene/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G, true);
     m_gridSnapBtn->setChecked(true);
 
-    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/scene/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O);
+    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/scene/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O, true);
     m_primitiveSnapBtn->setChecked(true);
 
-    m_cartesianBtn = new AnimationManager(":/icons/icons/scene/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D);
-    m_polarBtn = new AnimationManager(":/icons/icons/scene/polar.svg", "Полярные координаты [P]", Qt::Key_P);
+    m_cartesianBtn = new AnimationManager(":/icons/icons/scene/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D, true);
+    m_polarBtn = new AnimationManager(":/icons/icons/scene/polar.svg", "Полярные координаты [P]", Qt::Key_P, true);
     m_cartesianBtn->setChecked(true);
+
+    m_zoomInBtn = new AnimationManager(":/icons/icons/scene/zoom-in.svg", "Приблизить [Ctrl+]", QKeySequence::ZoomIn, false);
+    m_zoomOutBtn = new AnimationManager(":/icons/icons/scene/zoom-out.svg", "Отдалить [Ctrl-]", QKeySequence::ZoomOut, false);
 
     //добавление кнопок систем координат в их группу
     coordSystemGroup->addButton(m_cartesianBtn);
@@ -39,9 +42,11 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     layout->addWidget(m_primitiveSnapBtn, 1, 0, Qt::AlignLeft);
     layout->addWidget(m_cartesianBtn, 2, 0, Qt::AlignLeft);
     layout->addWidget(m_polarBtn, 3, 0, Qt::AlignLeft);
+    layout->addWidget(m_zoomInBtn, 0, 1, Qt::AlignLeft);
+    layout->addWidget(m_zoomOutBtn, 1, 1, Qt::AlignLeft);
 
     //последняя пустая колонка должна растягиваться, прижимая кнопки влево
-    layout->setColumnStretch(1, 1);
+    layout->setColumnStretch(2, 1);
 
     //последняя путсая строка должна растягиваться, прижимая кнопки вверх
     layout->setRowStretch(4, 1);
@@ -51,6 +56,8 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     connect(m_primitiveSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::primitiveSnapToggled);
     connect(m_cartesianBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Cartesian); });
     connect(m_polarBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Polar); });
+    connect(m_zoomInBtn, &QToolButton::clicked, this, &SceneSettingsPanelWidget::zoomInClicked);
+    connect(m_zoomOutBtn, &QToolButton::clicked, this, &SceneSettingsPanelWidget::zoomOutClicked);
 
     //минимальная ширина окна
     setMinimumWidth(200);
@@ -73,5 +80,11 @@ void SceneSettingsPanelWidget::updateColors()
     }
     if (m_polarBtn) {
         static_cast<AnimationManager*>(m_polarBtn)->updateIconColor(iconColor);
+    }
+    if (m_zoomInBtn) {
+        static_cast<AnimationManager*>(m_zoomInBtn)->updateIconColor(iconColor);
+    }
+    if (m_zoomOutBtn) {
+        static_cast<AnimationManager*>(m_zoomOutBtn)->updateIconColor(iconColor);
     }
 }

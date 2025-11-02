@@ -5,6 +5,7 @@
 #include "SegmentDrawingTool.h"
 #include "SegmentPrimitive.h"
 #include "ThemeManager.h"
+#include "SettingsManager.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -43,6 +44,8 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     layout->addWidget(m_infoLabel, 1, 1, Qt::AlignBottom | Qt::AlignRight);
     layout->setRowStretch(0, 1);
     layout->setColumnStretch(0, 1);
+
+    m_zoomStep = SettingsManager::instance().getZoomStep();
 
     updateInfoLabel();
 }
@@ -83,6 +86,8 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         //событие перемещения мыши
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+
+            emit mouseMoved(mouseEvent->pos());
 
             //обновление координа в info-панели
             m_currentMouseWorldPos = screenToWorld(mouseEvent->pos());
@@ -366,6 +371,35 @@ void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
     update();
 }
 
+void ViewportPanelWidget::zoomIn()
+{
+    // Зум к центру холста
+    applyZoom(m_zoomStep, canvas()->rect().center());
+}
+
+void ViewportPanelWidget::zoomIn(const QPoint& anchorPoint)
+{
+    // Зум к указанной точке
+    applyZoom(m_zoomStep, anchorPoint);
+}
+
+void ViewportPanelWidget::zoomOut()
+{
+    // Отдаление от центра холста
+    applyZoom(1.0 / m_zoomStep, canvas()->rect().center());
+}
+
+void ViewportPanelWidget::zoomOut(const QPoint& anchorPoint)
+{
+    // Отдаление от указанной точки
+    applyZoom(1.0 / m_zoomStep, anchorPoint);
+}
+
+void ViewportPanelWidget::setZoomStep(double step)
+{
+    m_zoomStep = step;
+}
+
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 {
     //вычисление и возврат полученных координат
@@ -381,6 +415,12 @@ QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
     double worldX = (screenPos.x() / m_zoomFactor) - m_panOffset.x();
     double worldY = (invertedY / m_zoomFactor) - m_panOffset.y();
     return QPointF(worldX, worldY);
+}
+
+void ViewportPanelWidget::pan(const QPointF& screenDelta)
+{
+    m_panOffset += QPointF(screenDelta.x() / m_zoomFactor, -screenDelta.y() / m_zoomFactor);
+    update();
 }
 
 QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const

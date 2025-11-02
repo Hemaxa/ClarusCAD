@@ -2,6 +2,7 @@
 #include "Scene.h"
 
 #include "DeleteTool.h"
+#include "MoveTool.h"
 #include "SegmentCreationTool.h"
 
 #include "SegmentPrimitive.h"
@@ -64,6 +65,7 @@ MainWindow::~MainWindow()
 void MainWindow::createTools()
 {
     m_deleteTool = new DeleteTool(this);
+    m_moveTool = new MoveTool(this);
     m_segmentCreationTool = new SegmentCreationTool(this);
 }
 
@@ -125,6 +127,7 @@ void MainWindow::createConnections()
 
     //4) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool); // ---> НОВАЯ СТРОКА <---
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
     //5) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
@@ -152,6 +155,9 @@ void MainWindow::createConnections()
     //12) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
     connect(m_consolePanel, &ConsolePanelWidget::commandParsed, this, &MainWindow::onConsoleCommandParsed);
 
+    //13) панель просмотра сцены сообщает о движении мыши -> MoveTool обновляет свою позицию
+    connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
+
     //================================================================================
     // 13) ПОДПИСКА НА ГЛОБАЛЬНЫЕ НАСТРОЙКИ
     //================================================================================
@@ -165,6 +171,10 @@ void MainWindow::createConnections()
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_toolbarPanel, &ToolbarPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_sceneSettingsPanel, &SceneSettingsPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_propertiesPanel, &PropertiesPanelWidget::updateColors);
+
+    // 14) Кнопки зума на панели настроек сцены
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
@@ -206,6 +216,20 @@ void MainWindow::activateDeleteTool()
     m_propertiesPanel->showPropertiesFor(nullptr);  //пустая панель свойств
 
     m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
+}
+
+void MainWindow::activateMoveTool()
+{
+    deactivateCurrentTool(); // Это сбросит курсор на Arrow
+    m_currentTool = m_moveTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+
+    // Активируем инструмент и меняем курсор
+    m_moveTool->activate(m_viewportPanel);
+    m_viewportPanel->getCanvas()->setCursor(Qt::OpenHandCursor);
+
+    emit toolActivated(PrimitiveType::Generic); // Показываем пустую панель свойств
+    m_toolbarPanel->getMoveButton()->setChecked(true);
 }
 
 void MainWindow::activateSegmentCreationTool()
@@ -301,24 +325,41 @@ void MainWindow::deactivateCurrentTool()
         m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
         onSelectionChanged(nullptr); //панель свойств очищается
         m_viewportPanel->update(); //обновление окна просмотра
+        m_viewportPanel->getCanvas()->setCursor(Qt::ArrowCursor);
+        m_viewportPanel->update(); //обновление окна просмотра
     }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
-    //1) Esc
+    //1) Пробел
+    if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
+        // Если Pan - УЖЕ текущий инструмент (выбран на панели), ничего не делаем
+        if (m_currentTool == m_moveTool) {
+            return;
+        }
+        // Активируем временный режим
+        if (!m_moveTool->isActive()) {
+            m_previousCursor = m_viewportPanel->getCanvas()->cursor(); // Сохраняем текущий курсор (напр. CrossCursor)
+            m_moveTool->activate(m_viewportPanel);
+            m_viewportPanel->getCanvas()->setCursor(Qt::OpenHandCursor);
+        }
+        return;
+    }
+
+    //2) Esc
     if (event->key() == Qt::Key_Escape) {
         deactivateCurrentTool();
         return;
     }
 
-    //2) Delete / Backspace
+    //3) Delete / Backspace
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedPrimitive) {
         deletePrimitive(m_selectedPrimitive);
         return;
     }
 
-    //3) Cmd + / Cmd -
+    //4) Cmd + / Cmd -
     bool cursorIsOverViewport = m_viewportPanel->underMouse();
 
     if (cursorIsOverViewport) {
@@ -326,17 +367,30 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         if ((event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) && (event->modifiers() & Qt::MetaModifier)) {
             //считается позиция курсора относительно холста окна просмотра
             QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
-            m_viewportPanel->applyZoom(1.25, mousePos); //больше на 25%
+            m_viewportPanel->zoomIn(mousePos);
             return;
         }
         // cmd -
         if (event->key() == Qt::Key_Minus && (event->modifiers() & Qt::MetaModifier)) {
             QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
-            m_viewportPanel->applyZoom(0.75, mousePos); //меньше на 25%
+            m_viewportPanel->zoomOut(mousePos);
             return;
         }
     }
     QMainWindow::keyPressEvent(event);
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
+        // Если Pan - НЕ текущий инструмент (т.е. это был временный режим)
+        if (m_currentTool != m_moveTool) {
+            m_moveTool->deactivate();
+            m_viewportPanel->getCanvas()->setCursor(m_previousCursor); // Восстанавливаем старый курсор
+        }
+        return;
+    }
+    QMainWindow::keyReleaseEvent(event);
 }
 
 void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)

@@ -7,12 +7,12 @@
 #include <QObject>
 #include <QColor>
 
+class BasePrimitive;
+class Scene;
+class ViewportPanelWidget;
 class QMouseEvent;
 class QKeyEvent;
 class QPainter;
-class Scene;
-class ViewportPanelWidget;
-class BasePrimitive;
 
 class BaseCreationTool : public QObject
 {
@@ -31,6 +31,9 @@ public:
     //виртуальный метод очистки инструмента
     virtual void reset() {}
 
+    //виртуальный вспомогательный метод для дополнительной геометрии
+    virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }
+
     //виртуальный метод для установки цвета
     virtual void setColor(const QColor& color) { Q_UNUSED(color); }
 
@@ -40,6 +43,6 @@ public:
     //виртуальный метод для получения установленного цвета
     virtual QColor getColor() const { return Qt::white; }
 
-    //виртуальный вспомогательный метод для дополнительной геометрии
-    virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }
+    //виртуальный метод для получения типа линии
+    virtual LineType getLineType() const { return LineType::Solid; }
 };

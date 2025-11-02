@@ -21,12 +21,19 @@ public:
     void saveSettings();
 
     //геттеры и сеттеры для настроек
+    //тема приложения
     void setThemeName(const QString& themeName);
     QString getThemeName() const;
 
+    //шаг сетки
     void setGridStep(int step);
     int getGridStep() const;
 
+    //шаг увеличения/уменьшения
+    void setZoomStep(double step);
+    double getZoomStep() const;
+
+    //единицы измерения углов
     void setAngleUnit(AngleUnit unit);
     AngleUnit getAngleUnit() const;
 
@@ -34,6 +41,7 @@ signals:
     //сигналы об изменении настроек
     void themeNameChanged(const QString& themeName);
     void gridStepChanged(int step);
+    void zoomStepChanged(double step);
     void angleUnitChanged(AngleUnit unit);
 
 private:
@@ -50,5 +58,6 @@ private:
     //поля хранения текущих настроек
     QString m_currentThemeName;
     int m_gridStep;
+    double m_zoomStep;
     AngleUnit m_angleUnit;
 };

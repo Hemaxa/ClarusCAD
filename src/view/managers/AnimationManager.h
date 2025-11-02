@@ -15,7 +15,7 @@ class AnimationManager : public QToolButton
 
 public:
     //конструктор
-    explicit AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, QWidget* parent = nullptr);
+    explicit AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, bool isCheckable = true, QWidget* parent = nullptr);
 
     //метод изменения цвета иконки
     void updateIconColor(const QColor& color);

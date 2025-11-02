@@ -16,6 +16,7 @@ class SegmentPrimitive;
 class BaseCreationTool;
 class BaseDrawingTool;
 class DeleteTool;
+class MoveTool;
 class SegmentCreationTool;
 
 class ConsolePanelWidget;
@@ -41,6 +42,7 @@ public:
 private slots:
     //слоты активации инструментов
     void activateDeleteTool();
+    void activateMoveTool();
     void activateSegmentCreationTool();
 
     //слот установки цвета для инструмента
@@ -78,8 +80,9 @@ signals:
     void toolActivated(PrimitiveType type);
 
 protected:
-    //переопределение метода перехватки событий клавиатуры
+    //переопределение методов перехватки событий клавиатуры
     void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
     void createTools(); //метод создания инструментов
@@ -99,8 +102,11 @@ private:
 
     BasePrimitive* m_selectedPrimitive = nullptr; //указатель на выбранный объект
 
+    QCursor m_previousCursor; //позиция курсора
+
     //инструменты
     DeleteTool* m_deleteTool;
+    MoveTool* m_moveTool;
     SegmentCreationTool* m_segmentCreationTool;
 
     //интерфейсные панели
