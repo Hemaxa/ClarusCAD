@@ -21,7 +21,7 @@ SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* 
     setMinimumWidth(200);
 }
 
-void SceneObjectsPanelWidget::updateView(const Scene* scene)
+void SceneObjectsPanelWidget::update(const Scene* scene)
 {
     //если нет указателя на обновленную сцену, функция не отрабатывает
     if (!scene) return;

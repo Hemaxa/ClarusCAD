@@ -19,7 +19,7 @@ public:
 
 public slots:
     //слот обновления списка объектов (подключен к сигналу sceneChanged из MainWindow)
-    void updateView(const Scene* scene);
+    void update(const Scene* scene);
 
 signals:
     //сигнал, информирующий о выборе объекта в списке

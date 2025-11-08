@@ -5,7 +5,6 @@
 #include "SegmentDrawingTool.h"
 #include "SegmentPrimitive.h"
 #include "ThemeManager.h"
-#include "SettingsManager.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -44,8 +43,6 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     layout->addWidget(m_infoLabel, 1, 1, Qt::AlignBottom | Qt::AlignRight);
     layout->setRowStretch(0, 1);
     layout->setColumnStretch(0, 1);
-
-    m_zoomStep = SettingsManager::instance().getZoomStep();
 
     updateInfoLabel();
 }
@@ -154,9 +151,9 @@ double ViewportPanelWidget::calculateDynamicGridStep() const
 }
 
 void ViewportPanelWidget::createDrawingTools()
-    {
-        m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
-    }
+{
+    m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
+}
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 {
@@ -373,31 +370,26 @@ void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
 
 void ViewportPanelWidget::zoomIn()
 {
-    // Зум к центру холста
+    //зум к центру холста
     applyZoom(m_zoomStep, canvas()->rect().center());
 }
 
 void ViewportPanelWidget::zoomIn(const QPoint& anchorPoint)
 {
-    // Зум к указанной точке
+    //зум к указанной точке
     applyZoom(m_zoomStep, anchorPoint);
 }
 
 void ViewportPanelWidget::zoomOut()
 {
-    // Отдаление от центра холста
+    //отдаление от центра холста
     applyZoom(1.0 / m_zoomStep, canvas()->rect().center());
 }
 
 void ViewportPanelWidget::zoomOut(const QPoint& anchorPoint)
 {
-    // Отдаление от указанной точки
+    //отдаление от указанной точки
     applyZoom(1.0 / m_zoomStep, anchorPoint);
-}
-
-void ViewportPanelWidget::setZoomStep(double step)
-{
-    m_zoomStep = step;
 }
 
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
@@ -493,6 +485,7 @@ void ViewportPanelWidget::setGridSnapEnabled(bool enabled) { m_isGridSnapEnabled
 void ViewportPanelWidget::setPrimitiveSnapEnabled(bool enabled) { m_isPrimitiveSnapEnabled = enabled; }
 void ViewportPanelWidget::setCoordinateSystem(CoordinateSystemType type) { m_coordSystemType = type; updateInfoLabel(); }
 void ViewportPanelWidget::setSelectedPrimitive(BasePrimitive* primitive) { m_selectedPrimitive = primitive; update(); }
+void ViewportPanelWidget::setZoomStep(double step) { m_zoomStep = step; }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }

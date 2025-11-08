@@ -46,14 +46,13 @@ public:
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
 
-    // ---> НОВЫЙ БЛОК <---
-    void zoomIn(); // Зум к центру
-    void zoomIn(const QPoint& anchorPoint); // Зум к точке
-    void zoomOut(); // Отдаление от центра
-    void zoomOut(const QPoint& anchorPoint); // Отдаление от точки
-    void setZoomStep(double step); // Слот для SettingsManager
-    // ---> КОНЕЦ НОВОГО БЛОКА <---
+    //методы для зумирования
+    void zoomIn(); //зум к центру
+    void zoomIn(const QPoint& anchorPoint); //зум к точке
+    void zoomOut(); //отдаление от центра
+    void zoomOut(const QPoint& anchorPoint); //отдаление от точки
 
+    void setZoomStep(double step); //слот установки шага увеличения/уменьшения
     void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
     void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
     void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам

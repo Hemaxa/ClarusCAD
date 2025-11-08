@@ -64,52 +64,52 @@ void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive, bool 
     //если приведение не удалось или пришел nullptr, прекращается выполнение
     if (!segment) return;
 
-    // 1. Создаем QPen
+    //создание пера
     QPen pen;
     pen.setColor(segment->getColor());
 
-    // 2. Настраиваем QPen в соответствии с LineType
+    //настройка пера QPen в соответствии с LineType
     LineType lineType = segment->getLineType();
 
     switch (lineType)
     {
     case LineType::Solid:
         pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(1.5); // Тонкая
+        pen.setWidthF(1.5); //тонкая
         break;
     case LineType::SolidThick:
         pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(3.0); // Толстая
+        pen.setWidthF(3.0); //толстая
         break;
     case LineType::Dashed:
         pen.setStyle(Qt::DashLine);
-        pen.setWidthF(1.5);
+        pen.setWidthF(1.5); //пунктирная
         break;
     case LineType::Dotted:
         pen.setStyle(Qt::DotLine);
-        pen.setWidthF(1.5);
+        pen.setWidthF(1.5); //точечная
         break;
     case LineType::DashDot:
         pen.setStyle(Qt::DashDotLine);
-        pen.setWidthF(1.5);
+        pen.setWidthF(1.5); //пунктир/точка
         break;
     case LineType::DashDotDot:
         pen.setStyle(Qt::DashDotDotLine);
-        pen.setWidthF(1.5);
+        pen.setWidthF(1.5); //пунктир/пунктир/точка
         break;
     }
 
+    //настройка выбранного элемента
     if (isSelected) {
-        // Например, делаем линию ярко-оранжевой, толстой и сплошной
         pen.setColor(QColor(0, 255, 127));
-        pen.setWidthF(pen.widthF() + 1.5); // Делаем на 1.5 толще
-        pen.setStyle(Qt::SolidLine); // Выбранный объект всегда сплошной
+        pen.setWidthF(pen.widthF() + 1.5);
+        pen.setStyle(Qt::SolidLine);
     }
 
-    // 3. Устанавливаем перо
+    //установка пера
     painter.setPen(pen);
 
-    // 4. Рисуем линию
+    //отрисовка линии
     painter.drawLine(
         QPointF(segment->getStart().getX(), segment->getStart().getY()),
         QPointF(segment->getEnd().getX(), segment->getEnd().getY())

@@ -16,9 +16,6 @@ public:
     //конструктор
     explicit ToolbarPanelWidget(const QString& title, QWidget* parent = nullptr);
 
-    //метод обновления иконок (перекрашивание)
-    //svoid updateColors();
-
     //метод снятия выделения с инструментов
     void clearSelection();
 

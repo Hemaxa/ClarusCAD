@@ -15,13 +15,13 @@ BasePanelWidget::BasePanelWidget(const QString& title, QWidget* parent = nullptr
 
 void BasePanelWidget::updateColors()
 {
-    // 1. Получаем цвет
+    //получение цвета из менеджера тем
     QColor iconColor = ThemeManager::instance().getIconColor();
 
-    // 2. Находим ВСЕ дочерние виджеты типа AnimationManager
+    //получение всех дочерних элементов виджета AnimationManager
     auto buttons = this->findChildren<AnimationManager*>();
 
-    // 3. Перекрашиваем их в цикле
+    //перекрашивание элементов в цикле
     for (AnimationManager* button : buttons) {
         if (button) {
             button->updateIconColor(iconColor);

@@ -1,5 +1,4 @@
 #include "ToolbarPanelWidget.h"
-#include "ThemeManager.h"
 #include "AnimationManager.h"
 
 #include <QButtonGroup>
@@ -48,23 +47,6 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     //минимальная ширина окна
     setMinimumWidth(200);
 }
-
-// void ToolbarPanelWidget::updateColors()
-// {
-//     //получение цвета иконок из менеджера тем
-//     QColor iconColor = ThemeManager::instance().getIconColor();
-
-//     //вызов метода перекрашивания иконки из AnimationManager
-//     if (m_deleteBtn) {
-//         static_cast<AnimationManager*>(m_deleteBtn)->updateIconColor(iconColor);
-//     }
-//     if (m_moveBtn) {
-//         static_cast<AnimationManager*>(m_moveBtn)->updateIconColor(iconColor);
-//     }
-//     if (m_createSegmentBtn) {
-//         static_cast<AnimationManager*>(m_createSegmentBtn)->updateIconColor(iconColor);
-//     }
-// }
 
 void ToolbarPanelWidget::clearSelection()
 {

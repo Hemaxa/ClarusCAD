@@ -54,39 +54,38 @@ void MoveTool::onPanTimerTimeout()
     QSize canvasSize = m_viewport->getCanvas()->size();
     QPointF panDelta(0.0, 0.0);
 
-    // --- Логика панорамирования ViewportPanelWidget::pan(deltaX, deltaY) ---
-    // +deltaX -> Сцена ВПРАВО
-    // -deltaX -> Сцена ВЛЕВО
-    // +deltaY -> Сцена ВНИЗ
-    // -deltaY -> Сцена ВВЕРХ
-    // ------------------------------------------------------------------
+    // логика панорамирования ViewportPanelWidget::pan(deltaX, deltaY)
+    // +deltaX -> сцена вправо
+    // -deltaX -> сцена влево
+    // +deltaY -> сцена вниз
+    // -deltaY -> сцена вверх
 
-    // --- Ось X (Пропорциональная скорость) ---
-    // Мышь у левого края (сцена должна двигаться ВПРАВО)
+    //ось X
+    //мышь у левого края
     if (m_currentMousePos.x() < m_borderThreshold) {
         double distance = m_borderThreshold - m_currentMousePos.x();
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
         panDelta.setX(m_maxPanSpeed * speedFactor);
     }
-    // Мышь у правого края (сцена должна двигаться ВЛЕВО)
+    //мышь у правого края
     else if (m_currentMousePos.x() > canvasSize.width() - m_borderThreshold) {
         double distance = m_currentMousePos.x() - (canvasSize.width() - m_borderThreshold);
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
         panDelta.setX(-m_maxPanSpeed * speedFactor);
     }
 
-    // --- Ось Y (Пропорциональная скорость + ИСПРАВЛЕННАЯ ЛОГИКА) ---
-    // Мышь у верхнего края (сцена должна двигаться ВНИЗ)
+    //ось Y
+    //мышь у верхнего края
     if (m_currentMousePos.y() < m_borderThreshold) {
         double distance = m_borderThreshold - m_currentMousePos.y();
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setY(m_maxPanSpeed * speedFactor); // <-- ИСПРАВЛЕНО
+        panDelta.setY(m_maxPanSpeed * speedFactor);
     }
-    // Мышь у нижнего края (сцена должна двигаться ВВЕРХ)
+    //мышь у нижнего края
     else if (m_currentMousePos.y() > canvasSize.height() - m_borderThreshold) {
         double distance = m_currentMousePos.y() - (canvasSize.height() - m_borderThreshold);
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setY(-m_maxPanSpeed * speedFactor); // <-- ИСПРАВЛЕНО
+        panDelta.setY(-m_maxPanSpeed * speedFactor);
     }
 
     if (!panDelta.isNull()) {

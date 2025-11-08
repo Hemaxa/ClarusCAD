@@ -49,8 +49,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     createActions();
     createMenus();
 
-    //применение настроек
+    //применение первоначальных настроек
     m_viewportPanel->setGridStep(SettingsManager::instance().getGridStep());
+    m_viewportPanel->setZoomStep(SettingsManager::instance().getZoomStep());
     PointPrimitive::setAngleUnit(SettingsManager::instance().getAngleUnit());
 
     //пустой виджет панели параметров объекта
@@ -62,8 +63,12 @@ MainWindow::~MainWindow()
     delete m_scene;
 }
 
+
+
+//--- МЕТОДЫ СОЗДАНИЯ ---
 void MainWindow::createTools()
 {
+    //создание экземпляров инструментов
     m_deleteTool = new DeleteTool(this);
     m_moveTool = new MoveTool(this);
     m_segmentCreationTool = new SegmentCreationTool(this);
@@ -79,7 +84,7 @@ void MainWindow::createPanelWindows()
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
     m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
 
-    //установка имени для панелей для оформления из файлов тем
+    //установка имен панелей для оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
     m_toolbarPanel->setProperty("class", "ToolbarPanel");
     m_propertiesPanel->setProperty("class", "PropertiesPanel");
@@ -114,78 +119,72 @@ void MainWindow::createPanelWindows()
 
 void MainWindow::createConnections()
 {
-    //1) инструмент и/или панель свойств сообщают данные -> в главном окне вызывается слот создания соответствующего объекта
-    connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
+    //- MainWindow -
+    //главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
+    connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::update);
+
+    //главное окно сообщает окну просмотра, что сцена изменилась -> окно просмотра перерисовывается
+    connect(this, &MainWindow::sceneChanged, m_viewportPanel, &ViewportPanelWidget::update);
+
+    //главное окно сообщает панели свойств, что активирован инструмент создания -> панель свойств показывает пустую форму в зависимости от типа примитива
+    connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor));
+
+    //- PropertiesPanelWidget -
+    //панель свойств сообщает данные -> в главном окне вызывается слот создания соответствующего примитива
     connect(m_propertiesPanel, &PropertiesPanelWidget::segmentPropertiesApplied, this, &MainWindow::applySegmentChanges);
 
-    //2) панель свойств сообщает об изменении параметров для нового объекта
+    //панель свойств сообщает об изменении данных (параметров) при создании нового примитива -> в главном окне вызываются слот установки параметра
     connect(m_propertiesPanel, &PropertiesPanelWidget::colorChanged, this, &MainWindow::onColorChanged);
     connect(m_propertiesPanel, &PropertiesPanelWidget::lineTypeChanged, this, &MainWindow::onLineTypeChanged);
 
-    //3) инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
-    connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
-
-    //4) панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
+    //- ToolbarPanelWidget -
+    //панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
-    connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool); // ---> НОВАЯ СТРОКА <---
+    connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
-    //5) главное окно сообщает панели объектов, что сцена изменилась -> панель объектов сцены обновляется
-    connect(this, &MainWindow::sceneChanged, m_sceneObjectsPanel, &SceneObjectsPanelWidget::updateView);
-
-    //6) панель объектов сцены сообщает, что пользователь выбрал примитив -> главное окно транслируем этот сигнал дальше (7 пункт)
-    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::onSelectionChanged);
-
-    //7) главное окно сообщает панели свойств, что активирован инструмент -> панель свойств показывает пустую форму
-    connect(this, &MainWindow::toolActivated, m_propertiesPanel, QOverload<PrimitiveType>::of(&PropertiesPanelWidget::showPropertiesFor)); //QOverload используется, т.к. showPropertiesFor перегружен
-
-    //8) главное окно сообщает панели свойств, что выбран объект -> сохраняется указатель на объект и панель свойств показывает его свойства
-    //connect(this, &MainWindow::objectSelected, this, &MainWindow::onSelectionChanged); // <-- Изменено
-
-    //9) панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
+    //- SceneSettingsPanelWidget -
+    //панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::primitiveSnapToggled, m_viewportPanel, &ViewportPanelWidget::setPrimitiveSnapEnabled);
 
-    //10) панель параметров сцены сообщает об изменении системы координат -> панель свойств меняет содержимое
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
+    //панель параметров сцены сообщает о нажатии кнопки -> окно просмтора активирует соответствующий метод
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
 
-    //11) панель параметров сцены сообщает об изменении системы координат -> окно просмотра меняет содержимое
+    //панель параметров сцены сообщает об изменении системы координат -> панель свойств и окна просмотра меняют содержимое
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
 
-    //12) панель консольного ввода сообщает о вводе команды -> главное окно запускает метод обработки команды
+    //- SceneObjectsPanelWidget -
+    //панель объектов сцены сообщает, что пользователь выбрал примитив -> в главном окне вызывается слот изменения выбранного примитива
+    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::onSelectionChanged);
+
+    //- ConsolePanelWidget -
+    //панель консольного ввода сообщает о вводе команды -> главное окно вызывает слот обработки консольной команды
     connect(m_consolePanel, &ConsolePanelWidget::commandParsed, this, &MainWindow::onConsoleCommandParsed);
 
-    //13) панель просмотра сцены сообщает о движении мыши -> MoveTool обновляет свою позицию
+    //- Tools -
+    //инструмент создания сообщает данные -> в главном окне вызывается слот создания соответствующего примитива
+    connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
+
+    //инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
+    connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
+
+    //панель просмотра сцены сообщает о движении мыши -> инструмент перемещения обновляет свою позицию
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
 
-    //================================================================================
-    // 13) ПОДПИСКА НА ГЛОБАЛЬНЫЕ НАСТРОЙКИ
-    //================================================================================
-
-    // Менеджер настроек сообщает об изменении -> Компоненты напрямую слушают
+    //- Managers -
+    //менеджер настроек сообщает об изменении настройки -> компоненты обновляются
     connect(&SettingsManager::instance(), &SettingsManager::gridStepChanged, m_viewportPanel, &ViewportPanelWidget::setGridStep);
+    connect(&SettingsManager::instance(), &SettingsManager::zoomStepChanged, m_viewportPanel, &ViewportPanelWidget::setZoomStep);
     connect(&SettingsManager::instance(), &SettingsManager::angleUnitChanged, &PointPrimitive::setAngleUnit);
     connect(&SettingsManager::instance(), &SettingsManager::themeNameChanged, &ThemeManager::instance(), &ThemeManager::applyTheme);
 
-    // Менеджер тем сообщает о применении -> Панели обновляют свои иконки
+    //менеджер тем сообщает об изменении темы -> панели обновляются
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_toolbarPanel, &ToolbarPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_sceneSettingsPanel, &SceneSettingsPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_propertiesPanel, &PropertiesPanelWidget::updateColors);
-
-    // 14) Кнопки зума на панели настроек сцены
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
-}
-
-void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
-{
-    if (primitive) {
-        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive)); //добавление примитива в вектор сцены
-        m_viewportPanel->update(); //обновление окна просмотра
-
-        emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
-        onSelectionChanged(primitive); //посылается сигнал, о выбранном объекте
-    }
 }
 
 void MainWindow::createActions()
@@ -204,45 +203,9 @@ void MainWindow::createMenus()
     fileMenu->addAction(m_settingsAction);
 }
 
-void MainWindow::activateDeleteTool()
-{
-    deactivateCurrentTool(); //дективация старого инструмента
 
-    m_currentTool = m_deleteTool; //обновляется указатель на текущий инструмент
-    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
 
-    QApplication::setOverrideCursor(Qt::CrossCursor); //изменение курсора
-
-    m_propertiesPanel->showPropertiesFor(nullptr);  //пустая панель свойств
-
-    m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
-}
-
-void MainWindow::activateMoveTool()
-{
-    deactivateCurrentTool(); // Это сбросит курсор на Arrow
-    m_currentTool = m_moveTool;
-    m_viewportPanel->setActiveTool(m_currentTool);
-
-    // Активируем инструмент и меняем курсор
-    m_moveTool->activate(m_viewportPanel);
-    m_viewportPanel->getCanvas()->setCursor(Qt::OpenHandCursor);
-
-    emit toolActivated(PrimitiveType::Generic); // Показываем пустую панель свойств
-    m_toolbarPanel->getMoveButton()->setChecked(true);
-}
-
-void MainWindow::activateSegmentCreationTool()
-{
-    deactivateCurrentTool(); //дективация старого инструмента
-
-    m_currentTool = m_segmentCreationTool; //обновляется указатель на текущий инструмент
-    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
-
-    emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
-    m_toolbarPanel->getCreateSegmentButton()->setChecked(true); //установка кнопки в активное положение
-}
-
+//--- МЕТОДЫ ИЗМЕНЕНИЯ СОСТОЯНИЙ ---
 void MainWindow::onColorChanged(const QColor& color)
 {
     //если какой-либо инструмент сейчас активен, ему передается новый цвет
@@ -261,11 +224,87 @@ void MainWindow::onLineTypeChanged(LineType type)
 
 void MainWindow::onSelectionChanged(BasePrimitive* primitive)
 {
+    //меняется указатель на примитив и вызываются методы в необходимых панелях
     m_selectedPrimitive = primitive;
     m_propertiesPanel->showPropertiesFor(primitive);
     m_viewportPanel->setSelectedPrimitive(primitive);
 }
 
+void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)
+{
+    //обработка разных команд
+    if (command.name == "segment" && command.args.size() == 4) {
+        PointPrimitive start(command.args[0], command.args[1]);
+        PointPrimitive end(command.args[2], command.args[3]);
+        applySegmentChanges(nullptr, start, end, command.color, LineType::Solid); //команды из консоли пока будут сплошными линиями
+    }
+    else {
+        qDebug("Неизвестная команда или неверное количество аргументов.");
+    }
+}
+
+
+
+//--- МЕТОДЫ АКТИВАЦИИ/ДЕАКТИВАЦИИ ИНСТРУМЕНТОВ ---
+void MainWindow::activateDeleteTool()
+{
+    deactivateCurrentTool(); //дективация старого инструмента
+
+    m_currentTool = m_deleteTool; //обновляется указатель на текущий инструмент
+    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
+
+    m_viewportPanel->getCanvas()->setCursor(Qt::CrossCursor); //изменение курсора
+
+    emit toolActivated(PrimitiveType::Generic); //показывается пустая панель свойств
+
+    m_toolbarPanel->getDeleteButton()->setChecked(true); //установка кнопки в активное положение
+}
+
+void MainWindow::activateMoveTool()
+{
+    deactivateCurrentTool();
+
+    m_currentTool = m_moveTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+
+    m_moveTool->activate(m_viewportPanel); //инструмент активиурется
+
+    m_viewportPanel->getCanvas()->setCursor(Qt::OpenHandCursor);
+
+    emit toolActivated(PrimitiveType::Generic);
+
+    m_toolbarPanel->getMoveButton()->setChecked(true);
+}
+
+void MainWindow::activateSegmentCreationTool()
+{
+    deactivateCurrentTool(); //дективация старого инструмента
+
+    m_currentTool = m_segmentCreationTool; //обновляется указатель на текущий инструмент
+    m_viewportPanel->setActiveTool(m_currentTool); //окну просмотра передается информация о выбранном инструменте
+
+    emit toolActivated(PrimitiveType::Segment); //посылается сигнал о выборе инструмента
+
+    m_toolbarPanel->getCreateSegmentButton()->setChecked(true); //установка кнопки в активное положение
+}
+
+void MainWindow::deactivateCurrentTool()
+{
+    //если какой-либо инструмент активен
+    if (m_currentTool) {
+        m_currentTool->reset(); //сбрасывается состояние инструмента
+        m_currentTool = nullptr; //сбрасывается указатель на инструмент
+        m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
+        m_propertiesPanel->showPropertiesFor(nullptr); //сброс панель свойств
+        m_viewportPanel->setActiveTool(nullptr); //сброс активного инструмента в окне просмотра
+        m_viewportPanel->getCanvas()->setCursor(Qt::ArrowCursor); //установка стандартного курсора
+        m_viewportPanel->update(); //обновление окна просмотра
+    }
+}
+
+
+
+//--- МЕТОДЫ ВЗАИМОДЕЙСТВИЯ С ОБЪЕКТАМИ ---
 void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType)
 {
     //режим редактирования
@@ -276,7 +315,6 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         segment->setColor(color);
         segment->setLineType(lineType);
 
-        m_viewportPanel->update();
         emit sceneChanged(m_scene); //обновит список, но не изменит выбор
     }
     //режим создания
@@ -286,6 +324,16 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         newSegment->setColor(color);
         newSegment->setLineType(lineType);
         addPrimitiveToScene(newSegment); //добавит объект и сделает его выбранным
+    }
+}
+
+void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
+{
+    if (primitive) {
+        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive)); //добавление примитива в вектор сцены
+
+        emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
+        onSelectionChanged(primitive); //посылается сигнал, о выбранном объекте
     }
 }
 
@@ -306,71 +354,49 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
 
     //обновление окна просмотра
     emit sceneChanged(m_scene);
-    m_viewportPanel->update();
 }
 
-void MainWindow::openSettingsWindow()
-{
-    SettingsWindow dialog(this);
-    dialog.exec();
-}
 
-void MainWindow::deactivateCurrentTool()
-{
-    //если какой-либо инструмент активен
-    if (m_currentTool) {
-        m_currentTool->reset(); //сбрасывается состояние инструмента
-        m_currentTool = nullptr; //сбрасывается указатель на инструмент
-        m_viewportPanel->setActiveTool(nullptr); //сброс активного инструмента в окне просмотра
-        m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
-        onSelectionChanged(nullptr); //панель свойств очищается
-        m_viewportPanel->update(); //обновление окна просмотра
-        m_viewportPanel->getCanvas()->setCursor(Qt::ArrowCursor);
-        m_viewportPanel->update(); //обновление окна просмотра
-    }
-}
 
+//--- МЕТОДЫ ПЕРЕХВАТА ДЕЙСТВИЙ С КЛАВИАТУРЫ ---
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
-    //1) Пробел
+    //1) space
     if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
-        // Если Pan - УЖЕ текущий инструмент (выбран на панели), ничего не делаем
         if (m_currentTool == m_moveTool) {
             return;
         }
-        // Активируем временный режим
+        //активируется режим перемещения
         if (!m_moveTool->isActive()) {
-            m_previousCursor = m_viewportPanel->getCanvas()->cursor(); // Сохраняем текущий курсор (напр. CrossCursor)
+            m_previousCursor = m_viewportPanel->getCanvas()->cursor();
             m_moveTool->activate(m_viewportPanel);
             m_viewportPanel->getCanvas()->setCursor(Qt::OpenHandCursor);
         }
         return;
     }
 
-    //2) Esc
+    //2) esc
     if (event->key() == Qt::Key_Escape) {
         deactivateCurrentTool();
         return;
     }
 
-    //3) Delete / Backspace
+    //3) delete / backspace
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedPrimitive) {
         deletePrimitive(m_selectedPrimitive);
         return;
     }
 
-    //4) Cmd + / Cmd -
+    //4) cmd + / cmd -
     bool cursorIsOverViewport = m_viewportPanel->underMouse();
 
     if (cursorIsOverViewport) {
-        // cmd + или cmd =
         if ((event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) && (event->modifiers() & Qt::MetaModifier)) {
             //считается позиция курсора относительно холста окна просмотра
             QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
             m_viewportPanel->zoomIn(mousePos);
             return;
         }
-        // cmd -
         if (event->key() == Qt::Key_Minus && (event->modifiers() & Qt::MetaModifier)) {
             QPoint mousePos = m_viewportPanel->getCanvas()->mapFromGlobal(QCursor::pos());
             m_viewportPanel->zoomOut(mousePos);
@@ -382,34 +408,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event)
 {
+    // отжатие space
     if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
-        // Если Pan - НЕ текущий инструмент (т.е. это был временный режим)
         if (m_currentTool != m_moveTool) {
             m_moveTool->deactivate();
-            m_viewportPanel->getCanvas()->setCursor(m_previousCursor); // Восстанавливаем старый курсор
+            m_viewportPanel->getCanvas()->setCursor(m_previousCursor); //восстанавливается старый курсор
         }
         return;
     }
     QMainWindow::keyReleaseEvent(event);
 }
 
-void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)
-{
-    //обработка некорректного синтаксиса команды
-    if (!command.isValid) {
-        qDebug("Неверный синтаксис команды.");
-        return;
-    }
 
-    //обработка разных команд
-    if (command.name == "segment" && command.args.size() == 4) {
-        PointPrimitive start(command.args[0], command.args[1]);
-        PointPrimitive end(command.args[2], command.args[3]);
-        applySegmentChanges(nullptr, start, end, command.color, LineType::Solid); //команды из консоли пока будут сплошными линиями
-    }
-    else {
-        qDebug("Неизвестная команда или неверное количество аргументов.");
-    }
+
+//--- ОСТАЛЬНОЕ ---
+void MainWindow::openSettingsWindow()
+{
+    SettingsWindow dialog(this);
+    dialog.exec();
 }
 
 void MainWindow::showEvent(QShowEvent* event)

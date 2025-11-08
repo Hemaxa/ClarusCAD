@@ -1,5 +1,4 @@
 #include "SceneSettingsPanelWidget.h"
-#include "ThemeManager.h"
 #include "AnimationManager.h"
 
 #include <QButtonGroup>
@@ -61,30 +60,4 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
 
     //минимальная ширина окна
     setMinimumWidth(200);
-}
-
-void SceneSettingsPanelWidget::updateColors()
-{
-    //получение цвета иконок из менеджера тем
-    QColor iconColor = ThemeManager::instance().getIconColor();
-
-    //вызов метода перекрашивания иконки из AnimationManager
-    if (m_gridSnapBtn) {
-        static_cast<AnimationManager*>(m_gridSnapBtn)->updateIconColor(iconColor);
-    }
-    if (m_primitiveSnapBtn) {
-        static_cast<AnimationManager*>(m_primitiveSnapBtn)->updateIconColor(iconColor);
-    }
-    if (m_cartesianBtn) {
-        static_cast<AnimationManager*>(m_cartesianBtn)->updateIconColor(iconColor);
-    }
-    if (m_polarBtn) {
-        static_cast<AnimationManager*>(m_polarBtn)->updateIconColor(iconColor);
-    }
-    if (m_zoomInBtn) {
-        static_cast<AnimationManager*>(m_zoomInBtn)->updateIconColor(iconColor);
-    }
-    if (m_zoomOutBtn) {
-        static_cast<AnimationManager*>(m_zoomOutBtn)->updateIconColor(iconColor);
-    }
 }

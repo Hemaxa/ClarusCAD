@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "PointPrimitive.h"
 #include "BasePrimitive.h"
+#include "PointPrimitive.h"
 
 #include <QMainWindow>
 #include <QShowEvent>
