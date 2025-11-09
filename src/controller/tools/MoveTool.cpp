@@ -52,44 +52,45 @@ void MoveTool::onPanTimerTimeout()
     if (!m_viewport) return;
 
     QSize canvasSize = m_viewport->getCanvas()->size();
-    QPointF panDelta(0.0, 0.0);
+    QPointF worldDelta(0.0, 0.0); //БЫЛО: panDelta
 
-    // логика панорамирования ViewportPanelWidget::pan(deltaX, deltaY)
-    // +deltaX -> сцена вправо
-    // -deltaX -> сцена влево
-    // +deltaY -> сцена вниз
-    // -deltaY -> сцена вверх
+    // логика панорамирования в МИРОВЫХ координатах (Y-up)
+    // +X -> мир вправо (сцена влево)
+    // -X -> мир влево (сцена вправо)
+    // +Y -> мир вверх (сцена вниз)
+    // -Y -> мир вниз (сцена вверх)
 
     //ось X
-    //мышь у левого края
+    //мышь у левого края -> панорамируем мир вправо (+X)
     if (m_currentMousePos.x() < m_borderThreshold) {
         double distance = m_borderThreshold - m_currentMousePos.x();
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setX(m_maxPanSpeed * speedFactor);
+        worldDelta.setX(m_maxPanSpeed * speedFactor); // Pan World +X
     }
-    //мышь у правого края
+    //мышь у правого края -> панорамируем мир влево (-X)
     else if (m_currentMousePos.x() > canvasSize.width() - m_borderThreshold) {
         double distance = m_currentMousePos.x() - (canvasSize.width() - m_borderThreshold);
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setX(-m_maxPanSpeed * speedFactor);
+        worldDelta.setX(-m_maxPanSpeed * speedFactor); // Pan World -X
     }
 
-    //ось Y
-    //мышь у верхнего края
+    //ось Y (Мир Y-up: +Y = вверх)
+    //мышь у верхнего края -> панорамируем мир вниз (-Y)
     if (m_currentMousePos.y() < m_borderThreshold) {
         double distance = m_borderThreshold - m_currentMousePos.y();
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setY(m_maxPanSpeed * speedFactor);
+        worldDelta.setY(-m_maxPanSpeed * speedFactor); // ИЗМЕНЕН ЗНАК
     }
-    //мышь у нижнего края
+    //мышь у нижнего края -> панорамируем мир вверх (+Y)
     else if (m_currentMousePos.y() > canvasSize.height() - m_borderThreshold) {
         double distance = m_currentMousePos.y() - (canvasSize.height() - m_borderThreshold);
         double speedFactor = std::max(0.0, std::min(1.0, distance / m_borderThreshold));
-        panDelta.setY(-m_maxPanSpeed * speedFactor);
+        worldDelta.setY(m_maxPanSpeed * speedFactor); // ИЗМЕНЕН ЗНАК
     }
 
-    if (!panDelta.isNull()) {
-        m_viewport->pan(panDelta);
+    if (!worldDelta.isNull()) {
+        // m_viewport->pan(panDelta); // <-- СТАРОЕ
+        m_viewport->panWorld(worldDelta); // <-- НОВОЕ
     }
 }
 

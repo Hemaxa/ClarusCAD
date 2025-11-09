@@ -11,6 +11,8 @@
 #include <QEvent>
 #include <QLabel>
 #include <QGridLayout>
+#include <QtMath>
+#include <QPropertyAnimation>
 
 ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
@@ -20,17 +22,22 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     //включение "фильтра событий" на холст, чтобы все события холста проходили через метод eventFilter
     canvas()->installEventFilter(this);
 
-    //позволяет виджету получать фокус (например, по клику), что необходимо для обработки нажатий клавиш
-    setFocusPolicy(Qt::StrongFocus);
-
     //курсор по умолчанию - стрелка
     canvas()->setCursor(Qt::ArrowCursor);
+
+    //позволяет виджету получать фокус (например, по клику), что необходимо для обработки нажатий клавиш
+    setFocusPolicy(Qt::StrongFocus);
 
     //начальная позиция камеры
     m_panOffset = QPointF(50.0, 50.0);
 
     //создание отрисовщиков
     createDrawingTools();
+
+    //создание и настройка анимации вращения
+    m_rotationAnimation = new QPropertyAnimation(this, "rotationAngle", this);
+    m_rotationAnimation->setDuration(300); //длительность анимации
+    m_rotationAnimation->setEasingCurve(QEasingCurve::OutCubic);
 
     //создание и настройка info-панели
     m_infoLabel = new QLabel(canvas());
@@ -64,6 +71,13 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         case QEvent::MouseButtonPress: {
             //преобразование общего события QEvent в более конкретный QMouseEvent
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            // --- НОВЫЙ КОД ---
+            // Проверка нажатия на гизмо
+            if (getGizmoRect().contains(mouseEvent->pos())) {
+                rotateScene(); // Запускаем вращение
+                return true; // Поглощаем событие
+            }
+            // --- КОНЕЦ НОВОГО КОДА ---
             //если нажата ЛКМ и нет активного инструмента (перемещение по холсту)
             if (mouseEvent->button() == Qt::LeftButton && !m_activeTool) {
                 m_isPanning = true; //включение режима панорамирования
@@ -84,6 +98,18 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
 
+            // --- НОВЫЙ КОД ---
+            // Проверка наведения на гизмо для смены курсора
+            if (getGizmoRect().contains(mouseEvent->pos())) {
+                canvas()->setCursor(Qt::PointingHandCursor);
+            }
+            // Восстанавливаем курсор, если мы не над гизмо И не панорамируем
+            else if (!m_isPanning && !m_activeTool) {
+                canvas()->setCursor(Qt::ArrowCursor);
+            }
+            // (Активный инструмент или панорамирование сами установят свой курсор)
+            // --- КОНЕЦ НОВОГО КОДА ---
+
             emit mouseMoved(mouseEvent->pos());
 
             //обновление координа в info-панели
@@ -92,10 +118,10 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 
             //если активен режим панорамирования
             if (m_isPanning) {
-                QPoint delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
+                QPointF delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
                 m_lastPanPos = mouseEvent->pos(); //обновляется последняя позиция
-                m_panOffset += QPointF(delta.x() / m_zoomFactor, -delta.y() / m_zoomFactor); //добавление смещения к общему смещению вида, скорректировав на зум
-                update();
+                pan(delta); // <-- ВЫЗЫВАЕМ НОВЫЙ МЕТОД
+                // update() вызывать не нужно, pan() сделает это сам
             }
             //если есть активный инструмент
             else if (m_activeTool) {
@@ -161,18 +187,22 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     QPainter painter(canvas());
     painter.setRenderHint(QPainter::Antialiasing);
 
-    //отрисовка сетки и гизмо
-    paintGrid(painter);
+    // 1. Получаем нашу единую трансформацию
+    QTransform worldToScreen = getWorldToScreenTransform();
+
+    // 2. Рисуем сетку (теперь она в мировых координатах)
+    //    Мы передаем ей и мировую, и экранную (сброшенную) трансформацию
+    paintGrid(painter, worldToScreen);
+
+    // 3. Рисуем гизмо (он рисуется в экранных координатах)
     paintGizmo(painter);
 
-    //если нет сцены или отрисовщиков, то графика не отрисовывается
     if (!m_scene) return;
-    painter.setTransform(QTransform()
-        .translate(0, canvas()->height()) //сдвиг системы координат
-        .scale(1, -1) //инвертация осей
-        .scale(m_zoomFactor, m_zoomFactor) //масштабирование
-        .translate(m_panOffset.x(), m_panOffset.y())); //сдвиг системы координат
-    //цикл по примтивам для перерисовки
+
+    // 4. Устанавливаем мировую трансформацию для примитивов
+    painter.setTransform(worldToScreen);
+
+    // 5. Цикл по примтивам для перерисовки (код не изменен)
     for (const auto& primitive : m_scene->getPrimitives()) {
         PrimitiveType type = primitive->getType();
         auto it = m_drawingTools.find(type);
@@ -182,141 +212,247 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
             drawer->draw(painter, primitive.get(), isSelected);
         }
     }
-    //отрисовка поверх сцены
+    // 6. Отрисовка поверх сцены (код не изменен)
     if (m_activeTool) {
         m_activeTool->onPaint(painter);
     }
 }
 
-void ViewportPanelWidget::paintGrid(QPainter& painter)
+void ViewportPanelWidget::paintGrid(QPainter& painter, const QTransform& worldTransform)
 {
-    //отрисовка сетки
-    QPen gridPen(QColor(60, 60, 60), 1.0); //перо для обычной сетки
-    QPen axisXPen(Qt::red, 1.5); //перо для оси X
-    QPen axisYPen(Qt::green, 1.5); //перо для оси Y
+    QPen gridPen(QColor(60, 60, 60), 1.0);
+    QPen axisXPen(Qt::red, 1.5);
+    QPen axisYPen(Qt::green, 1.5);
 
-    painter.setPen(gridPen);
+    painter.save(); // Сохраняем состояние (экранные координаты)
+    painter.setTransform(worldTransform); // Применяем мировую трансформацию
 
-    //вычисление параметров окна просмотра
-    const int width = canvas()->width();
-    const int height = canvas()->height();
+    // Определяем видимые границы в МИРОВЫХ координатах
+    QTransform screenToWorldTf = worldTransform.inverted();
+    QRectF visibleWorldRect = screenToWorldTf.mapRect(canvas()->rect());
+    QRectF worldBounds = visibleWorldRect; // AABB
 
-    QPointF topLeft = screenToWorld(QPoint(0, 0));
-    QPointF bottomRight = screenToWorld(QPoint(width, height));
-
-    //рассчет видимого размера шага сетки в пикселях
-    double visualGridStep = m_gridStep * m_zoomFactor;
-
-    //корректировка шага, чтобы он оставался в комфортных пределах
     const double dynamicGridStep = calculateDynamicGridStep();
 
-    double startX = std::floor(topLeft.x() / dynamicGridStep) * dynamicGridStep;
-    double startY = std::floor(bottomRight.y() / dynamicGridStep) * dynamicGridStep;
+    double startX = std::floor(worldBounds.left() / dynamicGridStep) * dynamicGridStep;
+    double endX = std::ceil(worldBounds.right() / dynamicGridStep) * dynamicGridStep;
 
-    //отрисовка вертикальных линий
-    for (double x = startX; x <= bottomRight.x(); x += dynamicGridStep) {
-        if (std::abs(x) < 1e-9) {
-            painter.setPen(axisYPen);
-        }
-        else {
-            painter.setPen(gridPen);
-        }
-        QPointF p1 = worldToScreen(QPointF(x, topLeft.y()));
-        QPointF p2 = worldToScreen(QPointF(x, bottomRight.y()));
-        painter.drawLine(p1, p2);
+    // --- Твой фикс для горизонтальных линий (он правильный) ---
+    double startY = std::floor(worldBounds.top() / dynamicGridStep) * dynamicGridStep;
+    double endY = std::ceil(worldBounds.bottom() / dynamicGridStep) * dynamicGridStep;
+
+    // --- Отрисовка линий (в мировых координатах) ---
+    // Вертикальные линии
+    for (double x = startX; x <= endX; x += dynamicGridStep) {
+        if (std::abs(x) < 1e-9) painter.setPen(axisYPen);
+        else painter.setPen(gridPen);
+        painter.drawLine(QPointF(x, startY), QPointF(x, endY));
     }
 
-    //отрисовка горизонтальных линий
-    for (double y = startY; y <= topLeft.y(); y += dynamicGridStep) {
-        if (std::abs(y) < 1e-9) {
-            painter.setPen(axisXPen);
-        } else {
-            painter.setPen(gridPen);
-        }
-        QPointF p1 = worldToScreen(QPointF(topLeft.x(), y));
-        QPointF p2 = worldToScreen(QPointF(bottomRight.x(), y));
-        painter.drawLine(p1, p2);
+    // Горизонтальные линии
+    for (double y = startY; y <= endY; y += dynamicGridStep) {
+        if (std::abs(y) < 1e-9) painter.setPen(axisXPen);
+        else painter.setPen(gridPen);
+        painter.drawLine(QPointF(startX, y), QPointF(endX, y));
     }
 
-    //отрисовка тоцки в центре координат
-    QPointF originPointScreen = worldToScreen(QPointF(0.0, 0.0));
+    painter.restore(); // Возвращаемся в экранные координаты
+
+    // --- ИСПРАВЛЕНИЕ 2 (ШКАЛЫ) ---
+    // Получаем экранные векторы, указывающие направление осей
+    QPointF originScreen = worldTransform.map(QPointF(0.0, 0.0));
+    QPointF xAxisScreen = worldTransform.map(QPointF(1.0, 0.0));
+    QPointF yAxisScreen = worldTransform.map(QPointF(0.0, 1.0));
+
+    // Получаем векторы
+    QPointF xVec = xAxisScreen - originScreen;
+    QPointF yVec = yAxisScreen - originScreen;
+
+    // Нормализуем их вручную (нужен #include <QtMath>)
+    qreal xLen = qSqrt(xVec.x() * xVec.x() + xVec.y() * xVec.y());
+    qreal yLen = qSqrt(yVec.x() * yVec.x() + yVec.y() * yVec.y());
+
+    QPointF xDir(0, 0);
+    QPointF yDir(0, 0);
+
+    if (xLen > 1e-6) xDir = xVec / xLen;
+    if (yLen > 1e-6) yDir = yVec / yLen;
+
+    // Из-за Y-инверсии нашей матрицы, yDir указывает "вверх" по экрану.
+    // Нам нужен вектор "вниз" (перпендикулярно оси X).
+    QPointF downDir = -yDir;
+    // xDir указывает "вправо" по экрану. Нам нужен "влево" (перпендикулярно оси Y).
+    QPointF leftDir = -xDir;
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ 2 ---
+
+
+    // --- Отрисовка текста и точки (0,0) (в экранных координатах) ---
+    QColor scaleColor = ThemeManager::instance().getColor("axisScaleColor");
+    painter.setFont(QFont("Monaco", 9));
+
+    // Шкала X
+    for (double x = startX; x <= endX; x += dynamicGridStep) {
+        if (std::abs(x) < 1e-9) continue;
+
+        // 1. Получаем позицию риски на экране
+        QPointF tickPosScreen = worldTransform.map(QPointF(x, 0.0));
+
+        // 2. Смещаем ее на 15 пикселей "вниз" (вдоль вектора downDir)
+        QPointF textScreenPos = tickPosScreen + (downDir * 15.0);
+
+        painter.save();
+        painter.setPen(scaleColor);
+        // 3. Рисуем текст в этом месте
+        painter.drawText(QRectF(textScreenPos.x() - 25, textScreenPos.y() - 10, 50, 20), Qt::AlignCenter, QString::number(x));
+        painter.restore();
+    }
+
+    // Шкала Y
+    for (double y = startY; y <= endY; y += dynamicGridStep) {
+        if (std::abs(y) < 1e-9) continue;
+
+        // 1. Получаем позицию риски на экране
+        QPointF tickPosScreen = worldTransform.map(QPointF(0.0, y));
+
+        // 2. Смещаем ее на 15 пикселей "влево" (вдоль вектора leftDir)
+        QPointF textScreenPos = tickPosScreen + (leftDir * 15.0);
+
+        painter.save();
+        painter.setPen(scaleColor);
+        // 3. Рисуем текст в этом месте
+        painter.drawText(QRectF(textScreenPos.x() - 55, textScreenPos.y() - 10, 50, 20), Qt::AlignRight | Qt::AlignVCenter, QString::number(y));
+        painter.restore();
+    }
+
+    // Точка в центре координат
+    QPointF originPointScreen = worldTransform.map(QPointF(0.0, 0.0));
+    painter.save();
     painter.setPen(Qt::white);
     painter.setBrush(Qt::white);
     painter.drawEllipse(originPointScreen, 3, 3);
-
-    //отрисовка шкал
-    QColor scaleColor = ThemeManager::instance().getColor("axisScaleColor");
-    painter.setPen(scaleColor);
-    painter.setFont(QFont("Monaco", 9));
-
-    //шкала на оси X
-    for (double x = std::floor(topLeft.x() / dynamicGridStep) * dynamicGridStep; x <= bottomRight.x(); x += dynamicGridStep) {
-        if (std::abs(x) < 1e-9) continue; //пропуск нуля
-
-        QPointF tickPosScreen = worldToScreen(QPointF(x, 0.0));
-        //основные деления делаются длиннее (каждые 5 шагов сетки)
-        int tickLength = (std::fmod(std::round(x / dynamicGridStep), 5.0) == 0) ? 10 : 5;
-
-        painter.drawLine(tickPosScreen, tickPosScreen + QPointF(0, tickLength));
-        painter.drawText(QRectF(tickPosScreen.x() - 25, tickPosScreen.y() + 5, 50, 20), Qt::AlignCenter, QString::number(x));
-    }
-
-    //шкала на оси Y
-    for (double y = std::floor(bottomRight.y() / dynamicGridStep) * dynamicGridStep; y <= topLeft.y(); y += dynamicGridStep) {
-        if (std::abs(y) < 1e-9) continue; //пропуск нуля
-
-        QPointF tickPosScreen = worldToScreen(QPointF(0.0, y));
-        int tickLength = (std::fmod(std::round(y / dynamicGridStep), 5.0) == 0) ? 10 : 5;
-
-        painter.drawLine(tickPosScreen, tickPosScreen - QPointF(tickLength, 0));
-        painter.drawText(QRectF(tickPosScreen.x() - 60, tickPosScreen.y() - 10, 50, 20), Qt::AlignRight | Qt::AlignVCenter, QString::number(y));
-    }
+    painter.restore();
 }
 
 void ViewportPanelWidget::paintGizmo(QPainter& painter)
 {
-    painter.save(); //сохранение текущих трансформаций
-    painter.resetTransform(); //сбрасывание всех трансформаций, чтобы рисовать в экранных координатах
-    painter.setRenderHint(QPainter::Antialiasing); //сглаживание для красивых стрелок
+    painter.save();
+    painter.resetTransform();
+    painter.setRenderHint(QPainter::Antialiasing);
 
-    int gizmoSize = 50; //длина оси
-    int padding = 15; //отступ от края окна
-    QPoint origin(padding, canvas()->height() - padding); //начало координат гизмо
+    int gizmoSize = 50;
+    int padding = 60;
+    QPoint origin(padding, canvas()->height() - padding);
 
-    //ось X
+    // --- НОВЫЙ КОД ---
+    // Создаем трансформацию для осей гизмо
+    // Вращаем в обратную сторону, т.к. Y на экране "вниз"
+    QTransform gizmoTransform;
+    gizmoTransform.rotate(-m_rotationAngle); // <-- Применяем вращение
+
+    QPointF xAxisEnd = gizmoTransform.map(QPointF(gizmoSize, 0));
+    QPointF yAxisEnd = gizmoTransform.map(QPointF(0, -gizmoSize)); // (0, -size) т.к. Y "вверх"
+    // --- КОНЕЦ НОВОГО КОДА ---
+
+    // Ось X (рисуем до 'rotated' точки)
     painter.setPen(QPen(Qt::red, 2.0));
     painter.setBrush(Qt::red);
-    painter.drawLine(origin, origin + QPoint(gizmoSize, 0));
+    painter.drawLine(origin, origin + xAxisEnd.toPoint());
 
     QPolygonF arrowHeadX;
-    arrowHeadX << QPointF(origin.x() + gizmoSize, origin.y())
-               << QPointF(origin.x() + gizmoSize - 8, origin.y() - 4)
-               << QPointF(origin.x() + gizmoSize - 8, origin.y() + 4);
+    arrowHeadX << origin + xAxisEnd
+               << origin + gizmoTransform.map(QPointF(gizmoSize - 8, -4)).toPoint()
+               << origin + gizmoTransform.map(QPointF(gizmoSize - 8, 4)).toPoint();
     painter.drawPolygon(arrowHeadX);
 
-    //ось Y
+    // Ось Y (рисуем до 'rotated' точки)
     painter.setPen(QPen(Qt::green, 2.0));
     painter.setBrush(Qt::green);
-    painter.drawLine(origin, origin - QPoint(0, gizmoSize));
+    painter.drawLine(origin, origin + yAxisEnd.toPoint());
 
     QPolygonF arrowHeadY;
-    arrowHeadY << QPointF(origin.x(), origin.y() - gizmoSize)
-               << QPointF(origin.x() - 4, origin.y() - gizmoSize + 8)
-               << QPointF(origin.x() + 4, origin.y() - gizmoSize + 8);
+    arrowHeadY << origin + yAxisEnd
+               << origin + gizmoTransform.map(QPointF(-4, -gizmoSize + 8)).toPoint()
+               << origin + gizmoTransform.map(QPointF(4, -gizmoSize + 8)).toPoint();
     painter.drawPolygon(arrowHeadY);
 
-    //точка в начале координат
+    // ... (точка в начале координат - не меняется) ...
     painter.setPen(Qt::white);
     painter.setBrush(Qt::white);
     painter.drawEllipse(origin, 3, 3);
 
-    //подписи осей
+    // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+    // painter.drawText(origin + xAxisEnd.toPoint() + QPoint(8, 4), "X"); // <-- БЫЛО
+    // painter.drawText(origin + yAxisEnd.toPoint() + QPoint(-4, -8), "Y"); // <-- БЫЛО
+
+    // Задаем смещение в 12px "наружу" от конца оси ВНУТРИ системы гизмо
+    QPointF xTextPos = gizmoTransform.map(QPointF(gizmoSize + 12, 0));
+    QPointF yTextPos = gizmoTransform.map(QPointF(0, -gizmoSize - 12));
+
+    // Рисуем текст в прямоугольнике 20x20, центрируя его
     painter.setPen(Qt::white);
     painter.setBrush(Qt::NoBrush);
-    painter.drawText(origin + QPoint(gizmoSize + 8, 4), "X");
-    painter.drawText(origin - QPoint(4, gizmoSize + 8), "Y");
+    painter.drawText(QRectF(origin.x() + xTextPos.x() - 10, origin.y() + xTextPos.y() - 10, 20, 20), Qt::AlignCenter, "X");
+    painter.drawText(QRectF(origin.x() + yTextPos.x() - 10, origin.y() + yTextPos.y() - 10, 20, 20), Qt::AlignCenter, "Y");
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
-    painter.restore(); //восстановление состояния QPainter
+    painter.restore();
+}
+
+// НОВЫЙ МЕТОД: ГЛАВНЫЙ ХЕЛПЕР ТРАНСФОРМАЦИИ
+// НОВЫЙ МЕТОД: ГЛАВНЫЙ ХЕЛПЕР ТРАНСФОРМАЦИИ
+QTransform ViewportPanelWidget::getWorldToScreenTransform() const
+{
+    QTransform t;
+    // 6. Переносим в левый нижний угол
+    t.translate(0, canvas()->height());
+    // 5. Инвертируем Y
+    t.scale(1, -1);
+    // 4. Масштабируем
+    t.scale(m_zoomFactor, m_zoomFactor);
+
+    // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ ПРАВИЛЬНЫЙ ПОРЯДОК ---
+    // 3. Панорамируем (в мировых координатах)
+    t.translate(m_panOffset.x(), m_panOffset.y()); // <-- СНАЧАЛА СДВИГ
+    // 2. Вращаем (уже сдвинутый мир)
+    t.rotate(m_rotationAngle);                    // <-- ПОТОМ ВРАЩЕНИЕ
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+    // 1. (Входная точка - мировые координаты)
+    return t;
+}
+
+// НОВЫЙ МЕТОД: ОБЛАСТЬ НАЖАТИЯ ГИЗМО
+QRect ViewportPanelWidget::getGizmoRect() const
+{
+    int gizmoSize = 50;
+    int padding = 60;
+    int clickAreaSize = gizmoSize + padding; // 65
+    // Прямоугольник 65x65 в левом нижнем углу
+    return QRect(0, canvas()->height() - clickAreaSize, clickAreaSize, clickAreaSize);
+}
+
+// НОВЫЙ МЕТОД: СЛОТ ДЛЯ ЗАПУСКА АНИМАЦИИ
+void ViewportPanelWidget::rotateScene()
+{
+    // 0 -> 1, 1 -> 2, 2 -> 3, 3 -> 0
+    m_targetRotationStep = (m_targetRotationStep + 1); // <-- ИСПРАВЛЕНИЕ: Убираем % 4 (см. проблему 4)
+    qreal targetAngle = m_targetRotationStep * 90.0;
+
+    m_rotationAnimation->stop();
+    m_rotationAnimation->setEndValue(targetAngle);
+    m_rotationAnimation->start();
+}
+
+// НОВЫЕ МЕТОДЫ: СЕТТЕР/ГЕТТЕР ДЛЯ Q_PROPERTY
+void ViewportPanelWidget::setRotationAngle(qreal angle)
+{
+    m_rotationAngle = angle;
+    update();
+}
+
+qreal ViewportPanelWidget::getRotationAngle() const
+{
+    return m_rotationAngle;
 }
 
 void ViewportPanelWidget::updateInfoLabel()
@@ -394,36 +530,75 @@ void ViewportPanelWidget::zoomOut(const QPoint& anchorPoint)
 
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 {
-    //вычисление и возврат полученных координат
-    double screenX = (worldPos.x() + m_panOffset.x()) * m_zoomFactor;
-    double screenY = (worldPos.y() + m_panOffset.y()) * m_zoomFactor;
-    return QPointF(screenX, canvas()->height() - screenY);
+    return getWorldToScreenTransform().map(worldPos);
 }
 
 QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
 {
-    //вычисление и возврат полученных координат
-    double invertedY = canvas()->height() - screenPos.y();
-    double worldX = (screenPos.x() / m_zoomFactor) - m_panOffset.x();
-    double worldY = (invertedY / m_zoomFactor) - m_panOffset.y();
-    return QPointF(worldX, worldY);
+    bool invertible;
+    // Получаем обратную трансформацию
+    QTransform screenToWorldTf = getWorldToScreenTransform().inverted(&invertible);
+
+    if (invertible) {
+        return screenToWorldTf.map(screenPos);
+    }
+    // На всякий случай
+    return QPointF(0, 0);
 }
 
 void ViewportPanelWidget::pan(const QPointF& screenDelta)
 {
-    m_panOffset += QPointF(screenDelta.x() / m_zoomFactor, -screenDelta.y() / m_zoomFactor);
+    // 1. Получаем ПОЛНУЮ обратную трансформацию
+    bool invertible;
+    QTransform screenToWorldTf = getWorldToScreenTransform().inverted(&invertible);
+    if (!invertible) return;
+
+    // 2. Находим, какой мировой точке соответствует (0,0) на экране
+    QPointF worldP0 = screenToWorldTf.map(QPointF(0.0, 0.0));
+
+    // 3. Находим, какой мировой точке соответствует смещение (screenDelta) на экране
+    QPointF worldP1 = screenToWorldTf.map(screenDelta);
+
+    // 4. Разница между этими двумя мировыми точками и есть
+    //    наш вектор смещения в МИРОВЫХ координатах.
+    QPointF worldDelta = worldP1 - worldP0;
+
+    // --- ИСПРАВЛЕНИЕ ---
+    // 5. 'm_panOffset' находится в "повернутом" пространстве (т.к. применяется *после* вращения).
+    //    'worldDelta' находится в "мировом" пространстве.
+    //    Мы должны сконвертировать 'worldDelta' в 'panOffsetDelta'.
+    //    Трансформация из мира в 'panOffset' - это просто вращение.
+
+    QTransform worldToPanOffsetTransform;
+    worldToPanOffsetTransform.rotate(m_rotationAngle); // <-- НОВАЯ СТРОКА
+
+    QPointF panOffsetDelta = worldToPanOffsetTransform.map(worldDelta); // <-- НОВАЯ СТРОКА
+
+    // 6. Применяем дельту в правильном пространстве
+    // m_panOffset += worldDelta; // <-- БЫЛО (НЕПРАВИЛЬНО)
+    m_panOffset += panOffsetDelta; // <-- СТАЛО (ИЗМЕНЕНО)
+    update();
+}
+
+void ViewportPanelWidget::panWorld(const QPointF& worldDelta)
+{
+    m_panOffset += worldDelta;
     update();
 }
 
 QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
 {
-    if (m_gridStep <= 0) {
+    const double dynamicGridStep = calculateDynamicGridStep(); // <-- СТАЛО
+    if (dynamicGridStep <= 0) { // <-- СТАЛО
         return worldPos;
     }
 
     //округление координат
-    double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep;
-    double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep;
+    // double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep; // <-- БЫЛО
+    // double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep; // <-- БЫЛО
+    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep; // <-- СТАЛО
+    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep; // <-- СТАЛО
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
     return QPointF(snappedX, snappedY);
 }
 

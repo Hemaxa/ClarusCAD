@@ -7,17 +7,19 @@
 #include "EnumManager.h"
 
 #include <QPointF>
+#include <QPropertyAnimation> //класс анимаций Qt, нужен для анимации вращения рабочей области
 
 class Scene;
+class ThemeManager;
 class BaseCreationTool;
 class BaseDrawingTool;
-class ThemeManager;
 class QLabel;
 
 //наслдедуется от базового класса BasePanelWidget
 class ViewportPanelWidget : public BasePanelWidget
 {
     Q_OBJECT
+    Q_PROPERTY(qreal rotationAngle READ getRotationAngle WRITE setRotationAngle)
 
 public:
     //конструктор и деструктор
@@ -35,16 +37,23 @@ public:
     QWidget* getCanvas() const; //геттер для холста
     QPointF getSnappedPoint(const QPointF& worldPos) const; //геттер для точки привязки
 
-    void update(); //метод перерисовки сцены
-
     //методы для трансформации координат
     QPointF worldToScreen(const QPointF& worldPos) const;
     QPointF screenToWorld(const QPointF& screenPos) const;
 
     void pan(const QPointF& screenDelta); //метод активации панаромирования
 
+    void panWorld(const QPointF& worldDelta); //НОВЫЙ МЕТОД
+
+    void update(); //метод перерисовки сцены
+
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
+
+    //---------------
+    // Новый слот для анимации (будет вызван из eventFilter)
+    void rotateScene();
+    //---------------
 
     //методы для зумирования
     void zoomIn(); //зум к центру
@@ -85,12 +94,27 @@ private:
     double m_gridMultiplier = 1.0; //текущий множитель сетки
     CoordinateSystemType m_coordSystemType = CoordinateSystemType::Cartesian; //текущая система координат
 
+    //---------------
+    // --- НОВЫЕ ПОЛЯ ДЛЯ ВРАЩЕНИЯ ---
+    qreal m_rotationAngle = 0.0; // Текущий угол вращения в градусах
+    int m_targetRotationStep = 0; // Шаг вращения (0=0, 1=90, 2=180, 3=270)
+    QPropertyAnimation* m_rotationAnimation; // Аниматор
+
+    // --- НОВЫЕ/ИЗМЕНЕННЫЕ ПРИВАТНЫЕ МЕТОДЫ ---
+    QTransform getWorldToScreenTransform() const; // Главный хелпер трансформации
+    QRect getGizmoRect() const; // Область нажатия для гизмо
+
+    // --- НОВЫЙ СЕТТЕР/ГЕТТЕР ДЛЯ Q_PROPERTY ---
+    void setRotationAngle(qreal angle);
+    qreal getRotationAngle() const;
+    //---------------
+
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
     double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки
     QPointF snapToGrid(const QPointF& worldPos) const; //метод привязки к сетке
     QPointF snapToPrimitives(const QPointF& worldPos) const; //метод привязки к примитивам
     void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
-    void paintGrid(QPainter& painter); //метод отрисовки сетки
+    void paintGrid(QPainter& painter, const QTransform& worldTransform); //метод отрисовки сетки
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
     void createDrawingTools(); //метод создание отрисовщиков
     void updateInfoLabel(); //метод обновления содержимого info-панели
