@@ -24,6 +24,7 @@ signals:
     void coordinateSystemChanged(CoordinateSystemType type);
     void zoomInClicked();
     void zoomOutClicked();
+    void zoomExtentsClicked();
 
 private:
     //указатели на соответствующие кнопки
@@ -33,4 +34,5 @@ private:
     QToolButton* m_polarBtn;
     QToolButton* m_zoomInBtn;
     QToolButton* m_zoomOutBtn;
+    QToolButton* m_zoomExtentsBtn;
 };

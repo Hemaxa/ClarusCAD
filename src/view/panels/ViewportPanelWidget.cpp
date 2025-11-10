@@ -1,8 +1,10 @@
 #include "ViewportPanelWidget.h"
+#include "ViewportCamera.h"
 #include "Scene.h"
 #include "BaseCreationTool.h"
 #include "BaseDrawingTool.h"
 #include "SegmentDrawingTool.h"
+#include "PointPrimitive.h"
 #include "SegmentPrimitive.h"
 #include "ThemeManager.h"
 
@@ -12,7 +14,6 @@
 #include <QLabel>
 #include <QGridLayout>
 #include <QtMath>
-#include <QPropertyAnimation>
 
 ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
@@ -28,16 +29,12 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
     //позволяет виджету получать фокус (например, по клику), что необходимо для обработки нажатий клавиш
     setFocusPolicy(Qt::StrongFocus);
 
-    //начальная позиция камеры
-    m_panOffset = QPointF(50.0, 50.0);
+    m_camera = new ViewportCamera(this);
+
+    connect(m_camera, &ViewportCamera::updated, this, &ViewportPanelWidget::onCameraUpdated);
 
     //создание отрисовщиков
     createDrawingTools();
-
-    //создание и настройка анимации вращения
-    m_rotationAnimation = new QPropertyAnimation(this, "rotationAngle", this);
-    m_rotationAnimation->setDuration(300); //длительность анимации
-    m_rotationAnimation->setEasingCurve(QEasingCurve::OutCubic);
 
     //создание и настройка info-панели
     m_infoLabel = new QLabel(canvas());
@@ -56,12 +53,24 @@ ViewportPanelWidget::ViewportPanelWidget(const QString& title, QWidget* parent) 
 
 ViewportPanelWidget::~ViewportPanelWidget() = default;
 
+void ViewportPanelWidget::onCameraUpdated()
+{
+    // Камера говорит, что ее состояние (зум, поворот, смещение) изменилось
+    // Нам нужно обновить инфо-панель и перерисовать холст
+    updateInfoLabel();
+    update(); // (update() вызывает canvas()->update())
+}
+
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
     //проверка, что событие пришло именно от холста (canvas), а не от другого элемента
     if (obj == canvas()) {
         //используется switch для определения типа события
         switch (event->type()) {
+        // НОВОЕ: сообщаем камере об изменении размера холста
+        case QEvent::Resize:
+            m_camera->setCanvasSize(canvas()->size());
+            break; // Позволяем событию идти дальше
         //событие перерисовки
         case QEvent::Paint:
             paintCanvas(static_cast<QPaintEvent*>(event)); //вызов метода перерисовки
@@ -74,7 +83,7 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             // --- НОВЫЙ КОД ---
             // Проверка нажатия на гизмо
             if (getGizmoRect().contains(mouseEvent->pos())) {
-                rotateScene(); // Запускаем вращение
+                m_camera->rotate();
                 return true; // Поглощаем событие
             }
             // --- КОНЕЦ НОВОГО КОДА ---
@@ -90,7 +99,6 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
                 m_activeTool->onMousePress(&transformedEvent, m_scene, this); //передача обработанных координат в активный инструмент
             }
-            update(); //перерисовка сцены
             return true;
         }
 
@@ -114,14 +122,14 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 
             //обновление координа в info-панели
             m_currentMouseWorldPos = screenToWorld(mouseEvent->pos());
-            updateInfoLabel();
+            updateInfoLabel(); // Обновляем координаты в инфо
 
             //если активен режим панорамирования
             if (m_isPanning) {
-                QPointF delta = mouseEvent->pos() - m_lastPanPos; //вычисляется смещение мыши
-                m_lastPanPos = mouseEvent->pos(); //обновляется последняя позиция
-                pan(delta); // <-- ВЫЗЫВАЕМ НОВЫЙ МЕТОД
-                // update() вызывать не нужно, pan() сделает это сам
+                QPointF delta = mouseEvent->pos() - m_lastPanPos;
+                m_lastPanPos = mouseEvent->pos();
+                m_camera->pan(delta); // <-- ИЗМЕНЕНО: Делегируем камере
+                // update() не нужен, pan() вызовет onCameraUpdated()
             }
             //если есть активный инструмент
             else if (m_activeTool) {
@@ -161,7 +169,7 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 double ViewportPanelWidget::calculateDynamicGridStep() const
 {
     //вычисление шага
-    double visualGridStep = m_gridStep * m_zoomFactor;
+    double visualGridStep = m_gridStep * getZoomFactor();
     double dynamicGridStep = m_gridStep;
 
     //корректировка шага
@@ -188,7 +196,7 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing);
 
     // 1. Получаем нашу единую трансформацию
-    QTransform worldToScreen = getWorldToScreenTransform();
+    QTransform worldToScreen = m_camera->getWorldToScreenTransform();
 
     // 2. Рисуем сетку (теперь она в мировых координатах)
     //    Мы передаем ей и мировую, и экранную (сброшенную) трансформацию
@@ -347,7 +355,7 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     // Создаем трансформацию для осей гизмо
     // Вращаем в обратную сторону, т.к. Y на экране "вниз"
     QTransform gizmoTransform;
-    gizmoTransform.rotate(-m_rotationAngle); // <-- Применяем вращение
+    gizmoTransform.rotate(-m_camera->getRotationAngle()); // <-- Применяем вращение
 
     QPointF xAxisEnd = gizmoTransform.map(QPointF(gizmoSize, 0));
     QPointF yAxisEnd = gizmoTransform.map(QPointF(0, -gizmoSize)); // (0, -size) т.к. Y "вверх"
@@ -398,29 +406,6 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     painter.restore();
 }
 
-// НОВЫЙ МЕТОД: ГЛАВНЫЙ ХЕЛПЕР ТРАНСФОРМАЦИИ
-// НОВЫЙ МЕТОД: ГЛАВНЫЙ ХЕЛПЕР ТРАНСФОРМАЦИИ
-QTransform ViewportPanelWidget::getWorldToScreenTransform() const
-{
-    QTransform t;
-    // 6. Переносим в левый нижний угол
-    t.translate(0, canvas()->height());
-    // 5. Инвертируем Y
-    t.scale(1, -1);
-    // 4. Масштабируем
-    t.scale(m_zoomFactor, m_zoomFactor);
-
-    // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ ПРАВИЛЬНЫЙ ПОРЯДОК ---
-    // 3. Панорамируем (в мировых координатах)
-    t.translate(m_panOffset.x(), m_panOffset.y()); // <-- СНАЧАЛА СДВИГ
-    // 2. Вращаем (уже сдвинутый мир)
-    t.rotate(m_rotationAngle);                    // <-- ПОТОМ ВРАЩЕНИЕ
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-
-    // 1. (Входная точка - мировые координаты)
-    return t;
-}
-
 // НОВЫЙ МЕТОД: ОБЛАСТЬ НАЖАТИЯ ГИЗМО
 QRect ViewportPanelWidget::getGizmoRect() const
 {
@@ -434,37 +419,71 @@ QRect ViewportPanelWidget::getGizmoRect() const
 // НОВЫЙ МЕТОД: СЛОТ ДЛЯ ЗАПУСКА АНИМАЦИИ
 void ViewportPanelWidget::rotateScene()
 {
-    // 0 -> 1, 1 -> 2, 2 -> 3, 3 -> 0
-    m_targetRotationStep = (m_targetRotationStep + 1); // <-- ИСПРАВЛЕНИЕ: Убираем % 4 (см. проблему 4)
-    qreal targetAngle = m_targetRotationStep * 90.0;
-
-    m_rotationAnimation->stop();
-    m_rotationAnimation->setEndValue(targetAngle);
-    m_rotationAnimation->start();
+    m_camera->rotate();
 }
 
-// НОВЫЕ МЕТОДЫ: СЕТТЕР/ГЕТТЕР ДЛЯ Q_PROPERTY
-void ViewportPanelWidget::setRotationAngle(qreal angle)
+void ViewportPanelWidget::zoomToExtents()
 {
-    m_rotationAngle = angle;
-    update();
-}
+    if (!m_scene || m_scene->getPrimitives().empty()) {
+        // Если сцена пуста, можно просто сбросить вид (по желанию)
+        // m_camera->resetView(); // (потребовалось бы добавить в камеру)
+        return;
+    }
 
-qreal ViewportPanelWidget::getRotationAngle() const
-{
-    return m_rotationAngle;
+    // 1. Считаем общий AABB в Мировом пространстве
+    QRectF worldBounds;
+    bool first = true;
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        QRectF primBounds = primitive->getBoundingBox();
+        if (!primBounds.isValid() && primBounds.size().isEmpty()) {
+            // Для точек (0x0 rect) мы используем united,
+            // который правильно обработает их как координаты
+            if (first) {
+                worldBounds = primBounds;
+                first = false;
+            } else {
+                worldBounds = worldBounds.united(primBounds);
+            }
+        } else if (primBounds.isValid()) {
+            if (first) {
+                worldBounds = primBounds;
+                first = false;
+            } else {
+                worldBounds = worldBounds.united(primBounds);
+            }
+        }
+    }
+
+    // Если у нас только одна точка (или несколько в одном месте),
+    // worldBounds будет 0x0. Дадим ему мин. размер.
+    if (worldBounds.width() == 0 && worldBounds.height() == 0) {
+        worldBounds.adjust(-50, -50, 50, 50); // Даем +/- 50
+    }
+
+    if (!worldBounds.isValid()) return;
+
+    // 2. Делегируем камере
+    m_camera->fitBounds(worldBounds);
 }
 
 void ViewportPanelWidget::updateInfoLabel()
 {
     QString infoText;
+
+    if (m_gridStep > 0) {
+        m_gridMultiplier = calculateDynamicGridStep() / m_gridStep;
+    }
+    else {
+        m_gridMultiplier = 1.0;
+    }
+
     //проверка текущей системы координат
     //декартова система координат
     if (m_coordSystemType == CoordinateSystemType::Cartesian) {
         infoText = QString("X: %1\nY: %2\nGrid: x%3")
         .arg(m_currentMouseWorldPos.x(), 0, 'f', 2)
-        .arg(m_currentMouseWorldPos.y(), 0, 'f', 2)
-        .arg(m_gridMultiplier, 0, 'f', 2);
+            .arg(m_currentMouseWorldPos.y(), 0, 'f', 2)
+            .arg(m_gridMultiplier, 0, 'f', 2);
     }
     //полярная система координат
     else {
@@ -480,28 +499,7 @@ void ViewportPanelWidget::updateInfoLabel()
 
 void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
 {
-    //вместо центра экрана используется переданная позиция курсора
-    QPointF worldPosBeforeZoom = screenToWorld(anchorPoint);
-
-    //получение нового коэффициента масштабирования
-    m_zoomFactor *= factor;
-
-    //определение границ зума
-    m_zoomFactor = std::max(0.05, std::min(m_zoomFactor, 50.0));
-
-    //новая позиция центра экрана
-    QPointF worldPosAfterZoom = screenToWorld(anchorPoint);
-
-    //отработка смещения
-    m_panOffset += worldPosBeforeZoom - worldPosAfterZoom;
-
-    //обработка зум-фактора для info-панели
-    if (m_gridStep > 0) {
-        m_gridMultiplier = calculateDynamicGridStep() / m_gridStep;
-    }
-
-    updateInfoLabel();
-    update();
+    m_camera->applyZoom(factor, anchorPoint);
 }
 
 void ViewportPanelWidget::zoomIn()
@@ -530,60 +528,12 @@ void ViewportPanelWidget::zoomOut(const QPoint& anchorPoint)
 
 QPointF ViewportPanelWidget::worldToScreen(const QPointF& worldPos) const
 {
-    return getWorldToScreenTransform().map(worldPos);
+    return m_camera->getWorldToScreenTransform().map(worldPos);
 }
 
 QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
 {
-    bool invertible;
-    // Получаем обратную трансформацию
-    QTransform screenToWorldTf = getWorldToScreenTransform().inverted(&invertible);
-
-    if (invertible) {
-        return screenToWorldTf.map(screenPos);
-    }
-    // На всякий случай
-    return QPointF(0, 0);
-}
-
-void ViewportPanelWidget::pan(const QPointF& screenDelta)
-{
-    // 1. Получаем ПОЛНУЮ обратную трансформацию
-    bool invertible;
-    QTransform screenToWorldTf = getWorldToScreenTransform().inverted(&invertible);
-    if (!invertible) return;
-
-    // 2. Находим, какой мировой точке соответствует (0,0) на экране
-    QPointF worldP0 = screenToWorldTf.map(QPointF(0.0, 0.0));
-
-    // 3. Находим, какой мировой точке соответствует смещение (screenDelta) на экране
-    QPointF worldP1 = screenToWorldTf.map(screenDelta);
-
-    // 4. Разница между этими двумя мировыми точками и есть
-    //    наш вектор смещения в МИРОВЫХ координатах.
-    QPointF worldDelta = worldP1 - worldP0;
-
-    // --- ИСПРАВЛЕНИЕ ---
-    // 5. 'm_panOffset' находится в "повернутом" пространстве (т.к. применяется *после* вращения).
-    //    'worldDelta' находится в "мировом" пространстве.
-    //    Мы должны сконвертировать 'worldDelta' в 'panOffsetDelta'.
-    //    Трансформация из мира в 'panOffset' - это просто вращение.
-
-    QTransform worldToPanOffsetTransform;
-    worldToPanOffsetTransform.rotate(m_rotationAngle); // <-- НОВАЯ СТРОКА
-
-    QPointF panOffsetDelta = worldToPanOffsetTransform.map(worldDelta); // <-- НОВАЯ СТРОКА
-
-    // 6. Применяем дельту в правильном пространстве
-    // m_panOffset += worldDelta; // <-- БЫЛО (НЕПРАВИЛЬНО)
-    m_panOffset += panOffsetDelta; // <-- СТАЛО (ИЗМЕНЕНО)
-    update();
-}
-
-void ViewportPanelWidget::panWorld(const QPointF& worldDelta)
-{
-    m_panOffset += worldDelta;
-    update();
+    return m_camera->getScreenToWorldTransform().map(screenPos);
 }
 
 QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
@@ -608,7 +558,7 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
         return worldPos;
     }
 
-    double minDistance = 10.0 / m_zoomFactor; //порог привязки (10 пикселей)
+    double minDistance = 10.0 / getZoomFactor(); //порог привязки (10 пикселей)
     QPointF bestSnapPoint = worldPos;
 
     for (const auto& primitive : m_scene->getPrimitives()) {
@@ -653,6 +603,11 @@ QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
     return snappedPos;
 }
 
+void ViewportPanelWidget::panWorld(const QPointF& worldDelta)
+{
+    m_camera->panWorld(worldDelta);
+}
+
 void ViewportPanelWidget::setScene(Scene* scene) { m_scene = scene; }
 void ViewportPanelWidget::setActiveTool(BaseCreationTool* tool) { m_activeTool = tool; }
 void ViewportPanelWidget::setGridStep(int step) { if (step > 0) { m_gridStep = step; if (m_gridStep > 0) { m_gridMultiplier = calculateDynamicGridStep() / m_gridStep; } updateInfoLabel(); update(); } }
@@ -664,7 +619,7 @@ void ViewportPanelWidget::setZoomStep(double step) { m_zoomStep = step; }
 
 int ViewportPanelWidget::getGridStep() const { return m_gridStep; }
 double ViewportPanelWidget::getDynamicGridStep() const { return calculateDynamicGridStep(); }
-double ViewportPanelWidget::getZoomFactor() const { return m_zoomFactor; }
+double ViewportPanelWidget::getZoomFactor() const { return m_camera->getZoomFactor(); }
 QWidget* ViewportPanelWidget::getCanvas() const { return canvas(); }
 
 void ViewportPanelWidget::update() { canvas()->update(); }

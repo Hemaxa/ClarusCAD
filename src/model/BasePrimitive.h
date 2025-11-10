@@ -7,6 +7,7 @@
 #include <QColor> //для хранения цвета объекта
 #include <QString> //для хранения имени объекта
 #include <QObject>
+#include <QRectF>
 
 class BasePrimitive
 {
@@ -14,8 +15,11 @@ class BasePrimitive
 public:
     //виртуальные деструктор и методы получения типа примитива
     virtual ~BasePrimitive() = default;
+
+    //виртуальные методы получения общей характеристики примитива
     virtual PrimitiveType getType() const { return PrimitiveType::Generic; }
     virtual QString getTypeName() const { return "Примитив"; }
+    virtual QRectF getBoundingBox() const { return QRectF(); }
 
     //виртуальные методы задания и получения имени примитива
     virtual void setName(const QString& name) { m_name = name; }

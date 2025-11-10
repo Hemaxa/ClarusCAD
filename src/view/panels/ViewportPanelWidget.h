@@ -7,9 +7,9 @@
 #include "EnumManager.h"
 
 #include <QPointF>
-#include <QPropertyAnimation> //класс анимаций Qt, нужен для анимации вращения рабочей области
 
 class Scene;
+class ViewportCamera;
 class ThemeManager;
 class BaseCreationTool;
 class BaseDrawingTool;
@@ -19,7 +19,6 @@ class QLabel;
 class ViewportPanelWidget : public BasePanelWidget
 {
     Q_OBJECT
-    Q_PROPERTY(qreal rotationAngle READ getRotationAngle WRITE setRotationAngle)
 
 public:
     //конструктор и деструктор
@@ -41,25 +40,18 @@ public:
     QPointF worldToScreen(const QPointF& worldPos) const;
     QPointF screenToWorld(const QPointF& screenPos) const;
 
-    void pan(const QPointF& screenDelta); //метод активации панаромирования
-
-    void panWorld(const QPointF& worldDelta); //НОВЫЙ МЕТОД
-
     void update(); //метод перерисовки сцены
 
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
-
-    //---------------
-    // Новый слот для анимации (будет вызван из eventFilter)
     void rotateScene();
-    //---------------
 
     //методы для зумирования
     void zoomIn(); //зум к центру
     void zoomIn(const QPoint& anchorPoint); //зум к точке
     void zoomOut(); //отдаление от центра
     void zoomOut(const QPoint& anchorPoint); //отдаление от точки
+    void zoomToExtents();
 
     void setZoomStep(double step); //слот установки шага увеличения/уменьшения
     void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
@@ -67,9 +59,15 @@ public slots:
     void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам
     void setSelectedPrimitive(BasePrimitive* primitive); //слот выбранных объектов
 
+    void panWorld(const QPointF& worldDelta);
+
 signals:
     //cигнал, который передает позицию мыши
     void mouseMoved(const QPoint& screenPos);
+
+private slots:
+    // НОВЫЙ СЛОТ для связи с камерой
+    void onCameraUpdated();
 
 private:
     Scene* m_scene = nullptr; //указатель на сцену
@@ -82,8 +80,6 @@ private:
     //параметры панели по умолчанию
     int m_gridStep = 50; //шаг сетки
     double m_zoomStep = 1.25; //шаг увеличения/уменьшения
-    QPointF m_panOffset{0.0, 0.0}; //смещение вида (панорамирование), хранит данные о сдвиге сцены
-    double m_zoomFactor = 1.0; //коэффициент масштабирования (1.0 = 100%)
     QPoint m_lastPanPos; //последняя позиция курсора во время панорамирования для расчета смещения
 
     bool m_isPanning = false; //флаг активации перемещения по сцене (зажатие ЛКМ)
@@ -94,20 +90,9 @@ private:
     double m_gridMultiplier = 1.0; //текущий множитель сетки
     CoordinateSystemType m_coordSystemType = CoordinateSystemType::Cartesian; //текущая система координат
 
-    //---------------
-    // --- НОВЫЕ ПОЛЯ ДЛЯ ВРАЩЕНИЯ ---
-    qreal m_rotationAngle = 0.0; // Текущий угол вращения в градусах
-    int m_targetRotationStep = 0; // Шаг вращения (0=0, 1=90, 2=180, 3=270)
-    QPropertyAnimation* m_rotationAnimation; // Аниматор
+    ViewportCamera* m_camera;
 
-    // --- НОВЫЕ/ИЗМЕНЕННЫЕ ПРИВАТНЫЕ МЕТОДЫ ---
-    QTransform getWorldToScreenTransform() const; // Главный хелпер трансформации
     QRect getGizmoRect() const; // Область нажатия для гизмо
-
-    // --- НОВЫЙ СЕТТЕР/ГЕТТЕР ДЛЯ Q_PROPERTY ---
-    void setRotationAngle(qreal angle);
-    qreal getRotationAngle() const;
-    //---------------
 
     bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
     double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки

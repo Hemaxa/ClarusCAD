@@ -152,6 +152,9 @@ void MainWindow::createConnections()
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
 
+    //панель параметров сцены сообщает о нажатии кнопки -> в главном окне активируется соответствующий метод
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomExtentsClicked, this, &MainWindow::onZoomExtents);
+
     //панель параметров сцены сообщает об изменении системы координат -> панель свойств и окна просмотра меняют содержимое
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
@@ -220,6 +223,11 @@ void MainWindow::onLineTypeChanged(LineType type)
     if (m_currentTool) {
         m_currentTool->setLineType(type);
     }
+}
+
+void MainWindow::onZoomExtents()
+{
+    m_viewportPanel->zoomToExtents();
 }
 
 void MainWindow::onSelectionChanged(BasePrimitive* primitive)

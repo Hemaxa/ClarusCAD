@@ -51,6 +51,8 @@ private slots:
     //слот установки типа линии для инструмента
     void onLineTypeChanged(LineType type);
 
+    void onZoomExtents();
+
     //слот установки выбранных объектов
     void onSelectionChanged(BasePrimitive* primitive);
 

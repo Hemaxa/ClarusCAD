@@ -5,6 +5,8 @@
 #include "BasePrimitive.h"
 #include "EnumManager.h"
 
+#include <QRectF>
+
 class PointPrimitive : public BasePrimitive
 {
 
@@ -15,6 +17,9 @@ public:
     //переопределение методов получения типа для объекта "Точка"
     PrimitiveType getType() const override { return PrimitiveType::Point; };
     QString getTypeName() const override { return "Точка"; }
+
+    //переопределение метода получения габаритов объекта "Точка"
+    QRectF getBoundingBox() const override;
 
     //методы для установки глобальных единиц измерения углов
     static void setAngleUnit(AngleUnit unit);

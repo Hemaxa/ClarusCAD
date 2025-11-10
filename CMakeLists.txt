@@ -60,6 +60,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/MainWindow.cpp
     ${SRC_DIR}/view/SettingsWindow.h
     ${SRC_DIR}/view/SettingsWindow.cpp
+    ${SRC_DIR}/view/ViewportCamera.h
+    ${SRC_DIR}/view/ViewportCamera.cpp
 
     ${SRC_DIR}/view/managers/AnimationManager.h
     ${SRC_DIR}/view/managers/AnimationManager.cpp

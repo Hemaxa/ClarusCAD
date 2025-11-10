@@ -17,3 +17,12 @@ const PointPrimitive& SegmentPrimitive::getEnd() const {
 void SegmentPrimitive::setEnd(const PointPrimitive& point) {
     m_end = point;
 }
+
+QRectF SegmentPrimitive::getBoundingBox() const
+{
+    qreal minX = std::min(m_start.getX(), m_end.getX());
+    qreal maxX = std::max(m_start.getX(), m_end.getX());
+    qreal minY = std::min(m_start.getY(), m_end.getY());
+    qreal maxY = std::max(m_start.getY(), m_end.getY());
+    return QRectF(QPointF(minX, minY), QPointF(maxX, maxY));
+}

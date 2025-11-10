@@ -5,6 +5,8 @@
 #include "BasePrimitive.h"
 #include "PointPrimitive.h"
 
+#include <QRectF>
+
 class SegmentPrimitive : public BasePrimitive
 {
 
@@ -15,6 +17,9 @@ public:
     //переопределение методов получения типа для объекта "Отрезок"
     PrimitiveType getType() const override { return PrimitiveType::Segment; };
     QString getTypeName() const override { return "Отрезок"; }
+
+    //переопределение метода получения габаритов объекта "Отрезок"
+    QRectF getBoundingBox() const override;
 
     //геттер и сеттер начальной точки
     const PointPrimitive& getStart() const;

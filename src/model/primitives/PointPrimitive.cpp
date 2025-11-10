@@ -67,3 +67,9 @@ void PointPrimitive::setPolar(double radius, double angle)
     m_x = radius * std::cos(angleRad);
     m_y = radius * std::sin(angleRad);
 }
+
+QRectF PointPrimitive::getBoundingBox() const
+{
+    //имеет позицию, но не имеет размера
+    return QRectF(m_x, m_y, 0, 0);
+}
