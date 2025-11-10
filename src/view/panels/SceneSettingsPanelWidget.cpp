@@ -29,11 +29,6 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     m_polarBtn = new AnimationManager(":/icons/icons/scene/polar.svg", "Полярные координаты [P]", Qt::Key_P, true);
     m_cartesianBtn->setChecked(true);
 
-    m_zoomInBtn = new AnimationManager(":/icons/icons/scene/zoom-in.svg", "Приблизить [Ctrl+]", QKeySequence::ZoomIn, false);
-    m_zoomOutBtn = new AnimationManager(":/icons/icons/scene/zoom-out.svg", "Отдалить [Ctrl-]", QKeySequence::ZoomOut, false);
-
-    m_zoomExtentsBtn = new AnimationManager(":/icons/icons/scene/zoom-extents.svg", "Вписать все [F]", Qt::Key_F, false);
-
     //добавление кнопок систем координат в их группу
     coordSystemGroup->addButton(m_cartesianBtn);
     coordSystemGroup->addButton(m_polarBtn);
@@ -43,9 +38,6 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     layout->addWidget(m_primitiveSnapBtn, 1, 0, Qt::AlignLeft);
     layout->addWidget(m_cartesianBtn, 2, 0, Qt::AlignLeft);
     layout->addWidget(m_polarBtn, 3, 0, Qt::AlignLeft);
-    layout->addWidget(m_zoomInBtn, 0, 1, Qt::AlignLeft);
-    layout->addWidget(m_zoomOutBtn, 1, 1, Qt::AlignLeft);
-    layout->addWidget(m_zoomExtentsBtn, 2, 1, Qt::AlignLeft);
 
     //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(2, 1);
@@ -58,9 +50,6 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     connect(m_primitiveSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::primitiveSnapToggled);
     connect(m_cartesianBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Cartesian); });
     connect(m_polarBtn, &QToolButton::clicked, this, [this]() { emit coordinateSystemChanged(CoordinateSystemType::Polar); });
-    connect(m_zoomInBtn, &QToolButton::clicked, this, &SceneSettingsPanelWidget::zoomInClicked);
-    connect(m_zoomOutBtn, &QToolButton::clicked, this, &SceneSettingsPanelWidget::zoomOutClicked);
-    connect(m_zoomExtentsBtn, &QToolButton::clicked, this, &SceneSettingsPanelWidget::zoomExtentsClicked);
 
     //минимальная ширина окна
     setMinimumWidth(200);

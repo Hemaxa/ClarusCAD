@@ -44,7 +44,8 @@ public:
 
 public slots:
     void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
-    void rotateScene();
+    void rotateSceneLeft();
+    void rotateSceneRight();
 
     //методы для зумирования
     void zoomIn(); //зум к центру

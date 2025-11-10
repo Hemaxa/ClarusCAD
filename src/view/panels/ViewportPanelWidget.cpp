@@ -83,7 +83,7 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             // --- НОВЫЙ КОД ---
             // Проверка нажатия на гизмо
             if (getGizmoRect().contains(mouseEvent->pos())) {
-                m_camera->rotate();
+                m_camera->rotateLeft();
                 return true; // Поглощаем событие
             }
             // --- КОНЕЦ НОВОГО КОДА ---
@@ -417,9 +417,14 @@ QRect ViewportPanelWidget::getGizmoRect() const
 }
 
 // НОВЫЙ МЕТОД: СЛОТ ДЛЯ ЗАПУСКА АНИМАЦИИ
-void ViewportPanelWidget::rotateScene()
+void ViewportPanelWidget::rotateSceneLeft()
 {
-    m_camera->rotate();
+    m_camera->rotateLeft();
+}
+
+void ViewportPanelWidget::rotateSceneRight()
+{
+    m_camera->rotateRight();
 }
 
 void ViewportPanelWidget::zoomToExtents()

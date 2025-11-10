@@ -21,7 +21,8 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 
 #создание исполняемого файла
-add_executable(ClarusCAD)
+add_executable(ClarusCAD
+    src/view/panels/NavigationPanelWidget.h src/view/panels/NavigationPanelWidget.cpp)
 
 #обозначение исходных файлов
 target_sources (ClarusCAD PRIVATE

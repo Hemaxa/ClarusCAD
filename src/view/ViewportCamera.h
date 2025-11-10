@@ -1,4 +1,4 @@
-// src/view/ViewportCamera.h
+//ViewportCamera - класс камеры для ViewportPanelWidget
 
 #pragma once
 
@@ -21,7 +21,8 @@ public:
     void pan(const QPointF& screenDelta);
     void panWorld(const QPointF& worldDelta);
     void applyZoom(double factor, const QPoint& anchorPoint);
-    void rotate();
+    void rotateLeft();
+    void rotateRight();
     void fitBounds(const QRectF& worldBounds);
 
     // --- Геттеры ---

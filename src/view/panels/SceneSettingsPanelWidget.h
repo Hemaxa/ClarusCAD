@@ -22,9 +22,6 @@ signals:
     void gridSnapToggled(bool enabled);
     void primitiveSnapToggled(bool enabled);
     void coordinateSystemChanged(CoordinateSystemType type);
-    void zoomInClicked();
-    void zoomOutClicked();
-    void zoomExtentsClicked();
 
 private:
     //указатели на соответствующие кнопки
@@ -32,7 +29,4 @@ private:
     QToolButton* m_primitiveSnapBtn;
     QToolButton* m_cartesianBtn;
     QToolButton* m_polarBtn;
-    QToolButton* m_zoomInBtn;
-    QToolButton* m_zoomOutBtn;
-    QToolButton* m_zoomExtentsBtn;
 };

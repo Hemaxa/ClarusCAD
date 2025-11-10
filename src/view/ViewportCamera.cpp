@@ -97,9 +97,20 @@ void ViewportCamera::applyZoom(double factor, const QPoint& anchorPoint)
     emit updated();
 }
 
-void ViewportCamera::rotate()
+void ViewportCamera::rotateLeft()
 {
     m_targetRotationStep = (m_targetRotationStep + 1);
+    qreal targetAngle = m_targetRotationStep * 90.0;
+
+    m_rotationAnimation->stop();
+    m_rotationAnimation->setEndValue(targetAngle);
+    m_rotationAnimation->start();
+}
+
+// НОВЫЙ МЕТОД
+void ViewportCamera::rotateRight()
+{
+    m_targetRotationStep = (m_targetRotationStep - 1); // <-- ГЛАВНОЕ ИЗМЕНЕНИЕ
     qreal targetAngle = m_targetRotationStep * 90.0;
 
     m_rotationAnimation->stop();
