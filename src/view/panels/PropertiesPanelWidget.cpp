@@ -19,6 +19,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_circleProperties = new CirclePropertiesWidget();
     m_rectProperties = new RectanglePropertiesWidget();
     m_arcProperties = new ArcPropertiesWidget();
+    m_ellipseProperties = new EllipsePropertiesWidget();
 
     //добавление содержимого в панель
     m_stack->addWidget(m_emptyWidget);
@@ -26,6 +27,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_stack->addWidget(m_circleProperties);
     m_stack->addWidget(m_rectProperties);
     m_stack->addWidget(m_arcProperties);
+    m_stack->addWidget(m_ellipseProperties);
 
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
     layout->setContentsMargins(0, 0, 0, 0); //убирает отступы, чтобы занять всю допустимую область панели
@@ -49,6 +51,11 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_arcProperties, &ArcPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::arcPropertiesApplied);
     connect(m_arcProperties, &ArcPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_arcProperties, &ArcPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+
+    // --- Коннекты ЭЛЛИПСА ---
+    connect(m_ellipseProperties, &EllipsePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::ellipsePropertiesApplied);
+    connect(m_ellipseProperties, &EllipsePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
+    connect(m_ellipseProperties, &EllipsePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
 
     //минимальная высота окна
     setMinimumHeight(200);
@@ -86,6 +93,10 @@ void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primi
             m_arcProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_arcProperties);
         }
+        else if (firstType == PrimitiveType::Ellipse) { // <--- Добавили обработку
+            m_ellipseProperties->setPrimitives(primitives);
+            m_stack->setCurrentWidget(m_ellipseProperties);
+        }
         else {
             m_stack->setCurrentWidget(m_emptyWidget);
         }
@@ -113,6 +124,10 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
         m_arcProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_arcProperties);
     }
+    else if (type == PrimitiveType::Ellipse) { // <--- Добавили обработку
+        m_ellipseProperties->setPrimitives({});
+        m_stack->setCurrentWidget(m_ellipseProperties);
+    }
     else {
         m_stack->setCurrentWidget(m_emptyWidget);
     }
@@ -134,4 +149,5 @@ void PropertiesPanelWidget::updateColors()
     m_circleProperties->updateColors();
     m_rectProperties->updateColors();
     m_arcProperties->updateColors();
+    m_ellipseProperties->updateColors();
 }

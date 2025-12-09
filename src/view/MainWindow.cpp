@@ -96,6 +96,7 @@ void MainWindow::createPanelWindows()
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
     m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
+    m_ellipseCreationTool = new EllipseCreationTool(this);
 
     //установка имен панелей для оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
@@ -186,16 +187,31 @@ void MainWindow::createConnections()
         addPrimitiveToScene(circle);
     });
     connect(m_rectCreationTool, &RectangleCreationTool::rectangleDataReady, this, [this](const PointPrimitive& center, double w, double h, double rot){
-        // Внимание: RectangleCreationTool шлёт сигнал rectangleDataReady
-        // Нужно проверить сигнатуру в RectangleCreationTool.h
-        // Если там создается примитив напрямую в сцену -> сигнал не нужен или пустой.
-        // В присланном вами коде RectangleCreationTool сам добавляет в сцену.
-        // Значит здесь просто emit sceneChanged(m_scene);
-        emit sceneChanged(m_scene);
+        // Создаем примитив! Раньше тут было пусто.
+        auto* rect = new RectanglePrimitive(center, w, h, rot);
+        rect->setColor(m_rectCreationTool->getColor());
+        rect->setLineType((int)m_rectCreationTool->getLineType());
+        addPrimitiveToScene(rect);
     });
+
+    // Коннект для ДУГИ (оставляем, он был верным)
     connect(m_arcCreationTool, &ArcCreationTool::arcDataReady, this, [this](ArcPrimitive* arc){
         addPrimitiveToScene(arc);
     });
+
+    // Коннект для ЭЛЛИПСА (НОВЫЙ)
+    connect(m_ellipseCreationTool, &EllipseCreationTool::ellipseDataReady, this, [this](const PointPrimitive& center, double rx, double ry, double rot){
+        auto* ell = new EllipsePrimitive(center, rx, ry, rot);
+        ell->setColor(m_ellipseCreationTool->getColor());
+        ell->setLineType((int)m_ellipseCreationTool->getLineType());
+        addPrimitiveToScene(ell);
+    });
+
+    // Связь кнопки на панели инструментов с активацией эллипса
+    connect(m_toolbarPanel, &ToolbarPanelWidget::ellipseToolActivated, this, &MainWindow::activateEllipseTool);
+
+    // Связь панели свойств с методом применения изменений эллипса
+    connect(m_propertiesPanel, &PropertiesPanelWidget::ellipsePropertiesApplied, this, &MainWindow::applyEllipseChanges);
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
@@ -381,6 +397,14 @@ void MainWindow::activateArcTool() {
     m_toolbarPanel->getCreateArcButton()->setChecked(true);
 }
 
+void MainWindow::activateEllipseTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_ellipseCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::Ellipse);
+    m_toolbarPanel->getCreateEllipseButton()->setChecked(true);
+}
+
 void MainWindow::deactivateCurrentTool()
 {
     //если какой-либо инструмент активен
@@ -527,6 +551,37 @@ void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center
     arc->setSpanAngle(span);
     arc->setColor(color);
     arc->setLineType((int)type);
+    emit sceneChanged(m_scene);
+}
+
+void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t) {
+    if(!ell) {
+        // Создание через панель свойств (если поддерживается)
+        auto* newEll = new EllipsePrimitive(center, rx, ry, rot);
+        newEll->setColor(c);
+        newEll->setLineType((int)t);
+        addPrimitiveToScene(newEll);
+        return;
+    }
+    // Редактирование
+    if (m_selectedPrimitives.contains(ell) && m_selectedPrimitives.size() > 1) {
+        for (auto* prim : m_selectedPrimitives) {
+            prim->setColor(c);
+            prim->setLineType((int)t);
+        }
+        // Геометрию меняем только у главного
+        ell->setCenter(center);
+        ell->setRadiusX(rx);
+        ell->setRadiusY(ry);
+        ell->setRotation(rot);
+    } else {
+        ell->setCenter(center);
+        ell->setRadiusX(rx);
+        ell->setRadiusY(ry);
+        ell->setRotation(rot);
+        ell->setColor(c);
+        ell->setLineType((int)t);
+    }
     emit sceneChanged(m_scene);
 }
 

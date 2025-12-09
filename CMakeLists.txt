@@ -32,7 +32,8 @@ add_executable(ClarusCAD
     src/view/properties/ArcPropertiesWidget.h src/view/properties/ArcPropertiesWidget.cpp
     src/model/primitives/EllipsePrimitive.h src/model/primitives/EllipsePrimitive.cpp
     src/view/drawing/EllipseDrawingTool.h src/view/drawing/EllipseDrawingTool.cpp
-    src/controller/tools/EllipseCreationTool.h src/controller/tools/EllipseCreationTool.cpp)
+    src/controller/tools/EllipseCreationTool.h src/controller/tools/EllipseCreationTool.cpp
+    src/view/properties/EllipsePropertiesWidget.h src/view/properties/EllipsePropertiesWidget.cpp)
 
 #обозначение исходных файлов
 target_sources (ClarusCAD PRIVATE

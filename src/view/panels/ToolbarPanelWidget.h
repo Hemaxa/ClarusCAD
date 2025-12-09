@@ -27,6 +27,7 @@ public:
     QToolButton* getCreateCircleButton() const;
     QToolButton* getCreateRectangleButton() const;
     QToolButton* getCreateArcButton() const;
+    QToolButton* getCreateEllipseButton() const;
 
 signals:
     //сигналы нажатия соответствующих кнопок
@@ -36,6 +37,7 @@ signals:
     void circleToolActivated(CircleCreationMode mode);
     void rectangleToolActivated();
     void arcToolActivated();
+    void ellipseToolActivated();
 
 private:
     //группа для кнопок на панели инструментов
@@ -48,4 +50,5 @@ private:
     QToolButton* m_createCircleBtn;
     QToolButton* m_createRectBtn;
     QToolButton* m_createArcBtn;
+    QToolButton* m_createEllipseBtn;
 };

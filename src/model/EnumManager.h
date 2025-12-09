@@ -6,11 +6,11 @@ enum class PrimitiveType {
     Point,
     Segment,
     Circle,
-    Arc,
-    Rectangle,
-    Ellipse,
-    Polygon,
-    Spline
+    Arc,        // Новое
+    Rectangle,  // Новое
+    Ellipse,    // Новое
+    Polygon,    // Новое
+    Spline      // Новое
 };
 
 // Режимы построения окружности

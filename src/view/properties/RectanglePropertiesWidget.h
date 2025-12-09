@@ -1,7 +1,6 @@
 #pragma once
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"
-
 #include <QLineEdit>
 
 class RectanglePrimitive;
@@ -14,6 +13,7 @@ public:
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
+    // Сигнал передает все параметры прямоугольника
     void propertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double rotation, const QColor& color, LineType type);
 
 private slots:
@@ -24,8 +24,15 @@ private:
 
     RectanglePrimitive* m_currentRect = nullptr;
 
+    // Поля Декартовой системы (Cartesian)
     QLineEdit* m_centerX;
     QLineEdit* m_centerY;
+
+    // Поля Полярной системы (Polar)
+    QLineEdit* m_centerRadius;
+    QLineEdit* m_centerAngle;
+
+    // Общие поля (размеры и поворот не зависят от системы координат положения)
     QLineEdit* m_width;
     QLineEdit* m_height;
     QLineEdit* m_rotation;

@@ -11,6 +11,9 @@
 #include "PointPrimitive.h"
 #include "SegmentPrimitive.h"
 #include "CirclePrimitive.h"
+#include "RectangleDrawingTool.h"
+#include "ArcDrawingTool.h"
+#include "EllipseDrawingTool.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -331,6 +334,9 @@ void ViewportPanelWidget::createDrawingTools()
 {
     m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
     m_drawingTools[PrimitiveType::Circle] = std::make_unique<CircleDrawingTool>();
+    m_drawingTools[PrimitiveType::Rectangle] = std::make_unique<RectangleDrawingTool>();
+    m_drawingTools[PrimitiveType::Arc] = std::make_unique<ArcDrawingTool>();
+    m_drawingTools[PrimitiveType::Ellipse] = std::make_unique<EllipseDrawingTool>();
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)

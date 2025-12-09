@@ -22,9 +22,10 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X, true);
     m_moveBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Перемещение [M]", Qt::Key_M, true);
     m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S, true);
-    m_createCircleBtn = new AnimationManager(":/icons/icons/tools/circle.svg", "Окружность [C]", Qt::Key_C, true);
+    m_createCircleBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Окружность [C]", Qt::Key_C, true);
     m_createRectBtn = new AnimationManager(":/icons/icons/tools/rectangle.svg", "Прямоугольник [R]", Qt::Key_R, true);
     m_createArcBtn = new AnimationManager(":/icons/icons/tools/arc.svg", "Дуга [A]", Qt::Key_A, true);
+    m_createEllipseBtn = new AnimationManager(":/icons/icons/tools/ellipse.svg", "Эллипс [E]", Qt::Key_E, true);
 
     //настройка выпадающих меню
     //кнопка построения окружности
@@ -43,6 +44,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->addButton(m_createCircleBtn);
     m_buttonGroup->addButton(m_createRectBtn);
     m_buttonGroup->addButton(m_createArcBtn);
+    m_buttonGroup->addButton(m_createEllipseBtn);
 
     //добавление кнопок в шаблон
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
@@ -51,12 +53,13 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->addWidget(m_createCircleBtn, 3, 0, Qt::AlignLeft);
     layout->addWidget(m_createRectBtn, 4, 0, Qt::AlignLeft);
     layout->addWidget(m_createArcBtn, 5, 0, Qt::AlignLeft);
+    layout->addWidget(m_createEllipseBtn, 6, 0, Qt::AlignLeft);
 
     //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(1, 1);
 
     //последняя путсая строка должна растягиваться, прижимая кнопки вверх
-    layout->setRowStretch(6, 1);
+    layout->setRowStretch(7, 1);
 
     //подключение сигналов от кнопок
     connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
@@ -64,6 +67,8 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     connect(m_createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
     connect(m_createRectBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::rectangleToolActivated);
     connect(m_createArcBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::arcToolActivated);
+    connect(m_createArcBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::arcToolActivated);
+    connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated); // <---
 
     // Логика кнопки окружности:
     // По умолчанию (клик по иконке) - Центр, Радиус
@@ -111,3 +116,4 @@ QToolButton* ToolbarPanelWidget::getCreateSegmentButton() const { return m_creat
 QToolButton* ToolbarPanelWidget::getCreateCircleButton() const { return m_createCircleBtn; }
 QToolButton* ToolbarPanelWidget::getCreateRectangleButton() const { return m_createRectBtn; }
 QToolButton* ToolbarPanelWidget::getCreateArcButton() const { return m_createArcBtn; }
+QToolButton* ToolbarPanelWidget::getCreateEllipseButton() const { return m_createEllipseBtn; }

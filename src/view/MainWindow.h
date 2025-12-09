@@ -6,8 +6,10 @@
 #include "PointPrimitive.h"
 #include "RectangleCreationTool.h"
 #include "ArcCreationTool.h"
+#include "EllipseCreationTool.h" // <--- Добавили инклуд
 #include "RectanglePrimitive.h"
 #include "ArcPrimitive.h"
+#include "EllipsePrimitive.h"
 
 #include <QMainWindow>
 #include <QShowEvent>
@@ -19,6 +21,7 @@ class Scene;
 class PointPrimitive;
 class SegmentPrimitive;
 class CirclePrimitive;
+class EllipsePrimitive;
 
 class BaseCreationTool;
 class BaseDrawingTool;
@@ -26,6 +29,9 @@ class DeleteTool;
 class MoveTool;
 class SegmentCreationTool;
 class CircleCreationTool;
+class RectangleCreationTool;
+class ArcCreationTool;
+class EllipseCreationTool;
 
 class ConsolePanelWidget;
 class NavigationPanelWidget;
@@ -56,6 +62,7 @@ private slots:
     void activateCircleCreationTool(CircleCreationMode mode);
     void activateRectangleTool();
     void activateArcTool();
+    void activateEllipseTool();
 
     //слот установки цвета для инструмента
     void onColorChanged(const QColor& color);
@@ -83,6 +90,7 @@ private slots:
     void applyCircleChanges(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType); // <---
     void applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
     void applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
+    void applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t); // <--- Добавили
 
 
     //слот удаления объекта
@@ -130,6 +138,7 @@ private:
     CircleCreationTool* m_circleCreationTool;
     RectangleCreationTool* m_rectCreationTool;
     ArcCreationTool* m_arcCreationTool;
+    EllipseCreationTool* m_ellipseCreationTool;
 
     //интерфейсные панели
     ViewportPanelWidget* m_viewportPanel;

@@ -8,6 +8,8 @@
 #include "ArcPropertiesWidget.h"
 #include "RectanglePrimitive.h"
 #include "ArcPrimitive.h"
+#include "EllipsePropertiesWidget.h"
+#include "EllipsePrimitive.h"
 
 #include <QColor>
 #include <QList>
@@ -57,6 +59,7 @@ signals:
     void circlePropertiesApplied(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType);
     void rectanglePropertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
     void arcPropertiesApplied(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
+    void ellipsePropertiesApplied(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого
@@ -65,4 +68,5 @@ private:
     CirclePropertiesWidget* m_circleProperties; //виджет свойств объекта "Окружность"
     RectanglePropertiesWidget* m_rectProperties;
     ArcPropertiesWidget* m_arcProperties;
+    EllipsePropertiesWidget* m_ellipseProperties;
 };
