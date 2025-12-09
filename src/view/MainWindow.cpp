@@ -41,8 +41,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     //применение выбранной темы
     ThemeManager::instance().applyTheme(SettingsManager::instance().getThemeName());
 
-    //применение выбранной толщины линий
+    //применение выбранной толщины линий и параметров штриховки
     LineStyleManager::instance().setBaseLineThickness(SettingsManager::instance().getBaseLineThickness());
+    LineStyleManager::instance().setDashLength(SettingsManager::instance().getDashLength());
+    LineStyleManager::instance().setDashSpace(SettingsManager::instance().getDashSpace());
 
     //создание экземпляра сцены
     m_scene = new Scene();
@@ -60,7 +62,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
     PointPrimitive::setAngleUnit(SettingsManager::instance().getAngleUnit());
 
     //пустой виджет панели параметров объекта
-    m_propertiesPanel->showPropertiesFor(nullptr);
+    m_propertiesPanel->showPropertiesFor(QList<BasePrimitive*>());
 }
 
 MainWindow::~MainWindow()
@@ -140,13 +142,11 @@ void MainWindow::createConnections()
     connect(m_propertiesPanel, &PropertiesPanelWidget::lineTypeChanged, this, &MainWindow::onLineTypeChanged);
 
     //- ToolbarPanelWidget -
-    //панель инструментов сообщает о нажатии кнопки -> в главном окне активируется соответствующий инструмент
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
     //- NavigationPanelWidget -
-    //панель навигации сообщает о нажатии кнопки -> окно просмтора или главное окно активируют соответствующие метод
     connect(m_navigationPanel, &NavigationPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
     connect(m_navigationPanel, &NavigationPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
     connect(m_navigationPanel, &NavigationPanelWidget::zoomExtentsClicked, this, &MainWindow::onZoomExtents);
@@ -154,30 +154,21 @@ void MainWindow::createConnections()
     connect(m_navigationPanel, &NavigationPanelWidget::rotateCCWClicked, this, &MainWindow::onRotateRight);
 
     //- SceneSettingsPanelWidget -
-    //панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::primitiveSnapToggled, m_viewportPanel, &ViewportPanelWidget::setPrimitiveSnapEnabled);
 
-    //панель параметров сцены сообщает об изменении системы координат -> панель свойств и окна просмотра меняют содержимое
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
 
     //- SceneObjectsPanelWidget -
-    //панель объектов сцены сообщает, что пользователь выбрал примитив -> в главном окне вызывается слот изменения выбранного примитива
     connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitivesSelected, this, &MainWindow::onSelectionChanged);
 
     //- ConsolePanelWidget -
-    //панель консольного ввода сообщает о вводе команды -> главное окно вызывает слот обработки консольной команды
     connect(m_consolePanel, &ConsolePanelWidget::commandParsed, this, &MainWindow::onConsoleCommandParsed);
 
     //- Tools -
-    //инструмент создания сообщает данные -> в главном окне вызывается слот создания соответствующего примитива
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
-
-    //инструмент удаления сообщает о примитиве, который необходимо удалить -> в главном окне вызывается слот удаления соответствующего объекта
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
-
-    //панель просмотра сцены сообщает о движении мыши -> инструмент перемещения обновляет свою позицию
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
 
     //- ViewportPanelWidget -
@@ -190,6 +181,10 @@ void MainWindow::createConnections()
     connect(&SettingsManager::instance(), &SettingsManager::angleUnitChanged, &PointPrimitive::setAngleUnit);
     connect(&SettingsManager::instance(), &SettingsManager::themeNameChanged, &ThemeManager::instance(), &ThemeManager::applyTheme);
     connect(&SettingsManager::instance(), &SettingsManager::baseLineThicknessChanged, &LineStyleManager::instance(), &LineStyleManager::setBaseLineThickness);
+
+    // Новые подключения для параметров штриховки
+    connect(&SettingsManager::instance(), &SettingsManager::dashLengthChanged, &LineStyleManager::instance(), &LineStyleManager::setDashLength);
+    connect(&SettingsManager::instance(), &SettingsManager::dashSpaceChanged, &LineStyleManager::instance(), &LineStyleManager::setDashSpace);
 
     //менеджер линий сообщает об изменении стиля линий -> компоненты обновляются
     connect(&LineStyleManager::instance(), &LineStyleManager::stylesChanged, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
@@ -261,12 +256,11 @@ void MainWindow::onSelectionChanged(const QList<BasePrimitive*>& primitives)
 
     // Обновляем панель свойств
     if (primitives.isEmpty()) {
-        m_propertiesPanel->showPropertiesFor(nullptr);
+        m_propertiesPanel->showPropertiesFor(QList<BasePrimitive*>());
     }
     else {
-        // Если выбрано несколько, показываем свойства ПОСЛЕДНЕГО выбранного
-        // (Это стандартное поведение: показываем свойства одного, но меняем у всех)
-        m_propertiesPanel->showPropertiesFor(primitives.last());
+        // Передаем весь список, PropertiesPanelWidget сам разберется, как их отобразить
+        m_propertiesPanel->showPropertiesFor(primitives);
     }
 }
 
@@ -335,7 +329,7 @@ void MainWindow::deactivateCurrentTool()
         m_currentTool->reset(); //сбрасывается состояние инструмента
         m_currentTool = nullptr; //сбрасывается указатель на инструмент
         m_toolbarPanel->clearSelection(); //кнопка на панели инструментов "отжимается"
-        m_propertiesPanel->showPropertiesFor(nullptr); //сброс панель свойств
+        m_propertiesPanel->showPropertiesFor(QList<BasePrimitive*>()); //сброс панель свойств
         m_viewportPanel->setActiveTool(nullptr); //сброс активного инструмента в окне просмотра
         m_viewportPanel->getCanvas()->setCursor(Qt::ArrowCursor); //установка стандартного курсора
         m_viewportPanel->update(); //обновление окна просмотра
@@ -351,7 +345,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
     if (!segment) {
         auto* newSegment = new SegmentPrimitive(start, end);
         newSegment->setColor(color);
-        newSegment->setLineType(lineType);
+        newSegment->setLineType(static_cast<int>(lineType)); // Приведение к int
         addPrimitiveToScene(newSegment);
         return;
     }
@@ -362,8 +356,15 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
     if (m_selectedPrimitives.contains(segment) && m_selectedPrimitives.size() > 1) {
         for (auto* prim : m_selectedPrimitives) {
             // Применяем общие визуальные свойства
+            // Для корректной работы с разными цветами: если пришел Qt::white (наш "смешанный" флаг),
+            // но мы не должны его сбрасывать? Нет, логика в PropertiesWidget посылает конкретный цвет,
+            // если пользователь его выбрал. Если пользователь не трогал цвет, Widget должен прислать
+            // либо старый цвет segment-а, либо флаг. В текущей реализации Widget шлет m_selectedColor.
+            // Если он был смешанный, там Qt::white. Это может быть проблемой (сброс в белый).
+            // Но пока оставим простую логику: что пришло, то и ставим.
+
             prim->setColor(color);
-            prim->setLineType(lineType);
+            prim->setLineType(static_cast<int>(lineType));
 
             // Геометрию (start/end) обычно при массовом редактировании не трогают,
             // либо меняют только у "главного". В данном случае меняем только у segment.
@@ -378,7 +379,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         segment->setStart(start);
         segment->setEnd(end);
         segment->setColor(color);
-        segment->setLineType(lineType);
+        segment->setLineType(static_cast<int>(lineType));
     }
 
     // Сигнал об изменении сцены обновит список объектов
@@ -564,20 +565,20 @@ void MainWindow::showEvent(QShowEvent* event)
 
         //настройка вертикальных пропорций
         //левая колонка
-        int toolbarHeight = static_cast<int>(totalHeight * 0.35);
-        int navHeight = static_cast<int>(totalHeight * 0.35);
+        int toolbarHeight = static_cast<int>(totalHeight * 0.4);
+        int navHeight = static_cast<int>(totalHeight * 0.36);
         int consoleHeight = totalHeight - toolbarHeight - navHeight;
 
         resizeDocks({m_toolbarPanel, m_navigationPanel, m_consolePanel}, {toolbarHeight, navHeight, consoleHeight}, Qt::Vertical);
 
         //центральная колонка
-        int viewportHeight = static_cast<int>(totalHeight * 0.7);
+        int viewportHeight = static_cast<int>(totalHeight * 0.8);
         int propertiesHeight = totalHeight - viewportHeight;
 
         resizeDocks({m_viewportPanel, m_propertiesPanel}, {viewportHeight, propertiesHeight}, Qt::Vertical);
 
         //правая колонка
-        int sceneObjectsHeight = static_cast<int>(totalHeight * 0.7);
+        int sceneObjectsHeight = static_cast<int>(totalHeight * 0.76);
         int sceneSettingsHeight = totalHeight - sceneObjectsHeight;
 
         resizeDocks({m_sceneObjectsPanel, m_sceneSettingsPanel}, {sceneObjectsHeight, sceneSettingsHeight}, Qt::Vertical);

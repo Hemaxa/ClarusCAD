@@ -18,7 +18,7 @@ SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* 
     layout->addWidget(m_listWidget); //добавление содержимого панели в canvas
 
     //сигнал о смене выбранного объекта
-    connect(m_listWidget, &QListWidget::currentItemChanged, this, &SceneObjectsPanelWidget::onSelectionChanged);
+    connect(m_listWidget, &QListWidget::itemSelectionChanged, this, &SceneObjectsPanelWidget::onSelectionChanged);
 
     //минимальная ширина окна
     setMinimumWidth(200);
@@ -32,24 +32,32 @@ void SceneObjectsPanelWidget::update(const Scene* scene)
     //сохранение указателя на сцену
     m_currentScene = scene;
 
-    // 1. ЗАПОМИНАЕМ ТЕКУЩИЕ ВЫДЕЛЕННЫЕ ИМЕНА
-    QList<QString> selectedNames;
+    // 1. ЗАПОМИНАЕМ ТЕКУЩИЕ ВЫДЕЛЕННЫЕ ОБЪЕКТЫ (ПО УКАЗАТЕЛЯМ, А НЕ ИМЕНАМ)
+    QList<quintptr> selectedPtrs;
     for (auto* item : m_listWidget->selectedItems()) {
-        selectedNames.append(item->text());
+        selectedPtrs.append(item->data(Qt::UserRole).value<quintptr>());
     }
 
     m_listWidget->blockSignals(true);
     m_listWidget->clear();
 
     const auto& primitives = scene->getPrimitives();
-    for (int i = 0; i < primitives.size(); ++i) {
-        m_listWidget->addItem(primitives[i]->getName());
+    for (const auto& prim : primitives) {
+        auto* item = new QListWidgetItem(prim->getName());
+
+        // Храним указатель на объект внутри элемента списка
+        // reinterpret_cast нужен для преобразования указателя в число
+        item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<quintptr>(prim.get())));
+
+        m_listWidget->addItem(item);
     }
 
-    // 2. ВОССТАНАВЛИВАЕМ ВЫДЕЛЕНИЕ
+    // 2. ВОССТАНАВЛИВАЕМ ВЫДЕЛЕНИЕ (Сравниваем указатели)
     for (int i = 0; i < m_listWidget->count(); ++i) {
         QListWidgetItem* item = m_listWidget->item(i);
-        if (selectedNames.contains(item->text())) {
+        quintptr itemPtr = item->data(Qt::UserRole).value<quintptr>();
+
+        if (selectedPtrs.contains(itemPtr)) {
             item->setSelected(true);
         }
     }
@@ -61,18 +69,16 @@ void SceneObjectsPanelWidget::onSelectionChanged()
 {
     if (!m_currentScene) return;
 
-    // Собираем список всех выбранных примитивов
     QList<BasePrimitive*> selectedPrimitives;
-    const auto& primitives = m_currentScene->getPrimitives();
 
-    for (int i = 0; i < m_listWidget->count(); ++i) {
-        if (m_listWidget->item(i)->isSelected()) {
-            if (i >= 0 && i < primitives.size()) {
-                selectedPrimitives.append(primitives[i].get());
-            }
+    // Проходим по выбранным элементам UI и достаем из них указатели на реальные объекты
+    for (auto* item : m_listWidget->selectedItems()) {
+        quintptr ptrVal = item->data(Qt::UserRole).value<quintptr>();
+        BasePrimitive* prim = reinterpret_cast<BasePrimitive*>(ptrVal);
+        if (prim) {
+            selectedPrimitives.append(prim);
         }
     }
 
-    // Отправляем список (сигнатуру сигнала нужно изменить в .h)
     emit primitivesSelected(selectedPrimitives);
 }

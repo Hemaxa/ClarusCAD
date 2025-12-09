@@ -6,6 +6,7 @@
 #include "PointPrimitive.h"
 
 #include <QColor>
+#include <QList>
 
 class QStackedWidget;
 class SegmentPropertiesWidget;
@@ -24,7 +25,8 @@ public:
 public slots:
     //перегрузка слота showPropertiesFor
     //слот, определяющий параметры какого объекта необходимо показать
-    void showPropertiesFor(BasePrimitive* primitive);
+    //Теперь принимает СПИСОК
+    void showPropertiesFor(const QList<BasePrimitive*>& primitives);
 
     //слот, показывающий пустые параметры при создании нового объекта (при активации инструмента создания объекта)
     void showPropertiesFor(PrimitiveType type);

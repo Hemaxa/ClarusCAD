@@ -5,7 +5,7 @@
 #include "EnumManager.h"
 
 #include <QObject>
-#include <QSettings> //класс Qt для работы с настройками (умеет сохранять настройки в файл или реестр)
+#include <QSettings> //класс Qt для работы с настроками (умеет сохранять настройки в файл или реестр)
 #include <QString>
 
 class SettingsManager : public QObject
@@ -41,6 +41,14 @@ public:
     void setBaseLineThickness(double val);
     double getBaseLineThickness() const;
 
+    //длина штриха
+    void setDashLength(double val);
+    double getDashLength() const;
+
+    //расстояние между штрихами
+    void setDashSpace(double val);
+    double getDashSpace() const;
+
 signals:
     //сигналы об изменении настроек
     void themeNameChanged(const QString& themeName);
@@ -48,6 +56,8 @@ signals:
     void zoomStepChanged(double step);
     void angleUnitChanged(AngleUnit unit);
     void baseLineThicknessChanged(double thickness);
+    void dashLengthChanged(double length);
+    void dashSpaceChanged(double space);
 
 private:
     //конструктор
@@ -66,4 +76,6 @@ private:
     double m_zoomStep;
     AngleUnit m_angleUnit;
     double m_baseLineThickness;
+    double m_dashLength;
+    double m_dashSpace;
 };

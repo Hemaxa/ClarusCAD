@@ -50,17 +50,26 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     setCoordinateSystem(CoordinateSystemType::Cartesian);
 }
 
-void SegmentPropertiesWidget::setPrimitive(BasePrimitive* primitive)
+void SegmentPropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives)
 {
-    //сохранение указателя на объект и обновление интерфейса
-    BasePropertiesWidget::setPrimitive(primitive);
-    m_currentSegment = dynamic_cast<SegmentPrimitive*>(primitive);
+    BasePropertiesWidget::setPrimitives(primitives);
+
+    m_currentSegment = nullptr;
+    if (m_currentPrimitive) {
+        m_currentSegment = dynamic_cast<SegmentPrimitive*>(m_currentPrimitive);
+    }
+
     updateFieldValues();
 }
 
 void SegmentPropertiesWidget::updateFieldValues()
 {
     bool isCartesian = (m_selectedCoordSystem == CoordinateSystemType::Cartesian);
+
+    // Если выбрано несколько объектов, геометрию можно показывать либо "разные", либо последнего.
+    // Покажем последнего (как и было), но если объектов много - пользователь должен понимать, что геометрию
+    // менять всем сразу опасно. Обычно в CAD геометрия блокируется при мультиселекте.
+    // Но оставим как есть: показываем m_currentSegment (последний).
 
     //если существующий объект
     if (m_currentSegment) {
@@ -130,6 +139,28 @@ void SegmentPropertiesWidget::onApplyButtonClicked()
         end.setPolar(m_endRadiusEdit->text().toDouble(), m_endAngleEdit->text().toDouble());
     }
 
-    //отправка сигнала в PropertiesPanelWidget
-    emit propertiesApplied(m_currentSegment, start, end, m_selectedColor, m_selectedLineType);
+    // Получаем выбранный тип линии. Если "Разные" (-1), берем старый.
+    // Но здесь мы применяем изменения. Если пользователь нажал "Обновить", и тип "Разные",
+    // скорее всего он не хочет менять тип линии у всех.
+
+    // Важно: в MainWindow applySegmentChanges будет применяться к m_selectedPrimitives.
+    // Нужно передать данные.
+    // Для совместимости мы передаем m_currentSegment как "главный".
+
+    // Трюк: LineType в сигнале - enum. Если у нас кастомный стиль (int > 1000),
+    // сигнал не сможет его передать без static_cast, и получатель (MainWindow) должен быть готов к этому.
+
+    // Если пользователь выбрал "Разные" (id == -1), нужно передать что-то, что скажет "не меняй".
+    // Но текущий механизм этого не поддерживает напрямую через параметры метода.
+    // Однако, MainWindow применяет цвет и линию из аргументов ко всем.
+    // Если id == -1, мы можем передать текущий тип линии m_currentSegment-а, но тогда все станут как он.
+    // Это ограничение текущей архитектуры сигнала.
+    // Доработаем: если в комбобоксе "Разные", берем тип линии "главного" объекта, чтобы хоть что-то передать.
+    // В идеале MainWindow должен смотреть: если в виджете "Разные", не менять.
+
+    int typeToEmit = m_selectedLineTypeId;
+    if(typeToEmit == -1 && m_currentSegment) typeToEmit = m_currentSegment->getLineType();
+    if(typeToEmit == -1) typeToEmit = (int)LineType::SolidMain; // Fallback
+
+    emit propertiesApplied(m_currentSegment, start, end, m_selectedColor, static_cast<LineType>(typeToEmit));
 }

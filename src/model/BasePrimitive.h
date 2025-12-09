@@ -30,11 +30,14 @@ public:
     virtual QColor getColor() const { return m_color; }
 
     //виртуальные методы задания и получения типа линии примитива
-    virtual void setLineType(LineType type) { m_lineType = type; }
-    virtual LineType getLineType() const { return m_lineType; }
+    virtual void setLineType(int typeId) { m_lineTypeId = typeId; }
+    virtual int getLineType() const { return m_lineTypeId; }
+
+    //перегрузка метода задания типа линии для пользовательских стилей
+    void setLineType(LineType type) { m_lineTypeId = static_cast<int>(type); }
 
 private:
     QString m_name; //имя примитива
     QColor m_color = Qt::white; //цвет примитива
-    LineType m_lineType = LineType::SolidThin; //тип линии примитва
+    int m_lineTypeId = static_cast<int>(LineType::SolidThin); //тип линии примитва
 };

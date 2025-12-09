@@ -73,9 +73,9 @@ void SegmentCreationTool::onPaint(QPainter& painter)
             painter,
             QPointF(m_firstPoint.getX(), m_firstPoint.getY()),
             QPointF(m_currentMousePos.getX(), m_currentMousePos.getY()),
-            m_currentLineType,
+            static_cast<int>(m_currentLineType), // <--- ИСПРАВЛЕНИЕ ЗДЕСЬ
             previewColor
-        );
+            );
     }
 }
 

@@ -6,6 +6,7 @@
 
 #include <QWidget>
 #include <QColor>
+#include <QList>
 
 class BasePrimitive;
 class QPushButton;
@@ -25,24 +26,24 @@ public:
     //virtual означает, что деструктор создается автоматически из унаследованного класса
     virtual ~BasePropertiesWidget() = default;
 
-    //установка указателя на примитив, свойтва которого необходимо отображать
-    virtual void setPrimitive(BasePrimitive* primitive);
+    //установка списка примитивов для редактирования (множественное выделение)
+    virtual void setPrimitives(const QList<BasePrimitive*>& primitives);
 
     //установка типа системы координат
     virtual void setCoordinateSystem(CoordinateSystemType type);
 
     //метод обновления цвета
-    void updateColor(const QColor& color);
+    void updateColor(const QColor& color, bool isMixed = false);
 
     //метод обновления типа линии
-    void updateLineType(LineType type);
+    void updateLineType(int typeId, bool isMixed = false);
 
 signals:
     //сигнал, информирующий о выборе цвета для примитва
     void colorChanged(const QColor& color);
 
     //сигнал, информирующий о выборе типа линии для примитва
-    void lineTypeChanged(LineType type);
+    void lineTypeChanged(LineType type); //Оставляем LineType для обратной совместимости сигналов
 
 public slots:
     //слот, вызываемый при смене темы для перекраски всех иконок
@@ -65,10 +66,13 @@ protected:
     //метод заполнения вкладки с типами линий
     void populateLineTypeComboBox();
 
-    BasePrimitive* m_currentPrimitive = nullptr;
+    //список редактируемых объектов
+    QList<BasePrimitive*> m_selectedPrimitives;
+    BasePrimitive* m_currentPrimitive = nullptr; //Указатель на "главный" объект (обычно последний) для чтения геометрии
+
     CoordinateSystemType m_selectedCoordSystem;
     QColor m_selectedColor;
-    LineType m_selectedLineType;
+    int m_selectedLineTypeId; //int для поддержки custom styles
 
     //виджеты для колонок
     QLabel* m_leftColumn; //левая колонка

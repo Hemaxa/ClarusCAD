@@ -63,7 +63,6 @@ void ViewportPanelWidget::onCameraUpdated()
 
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
-    //проверка, что событие пришло именно от холста (canvas)
     if (obj == canvas()) {
         switch (event->type()) {
         case QEvent::Resize:
@@ -77,22 +76,19 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
         case QEvent::MouseButtonPress: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
 
-            // Проверка нажатия на гизмо
             if (getGizmoRect().contains(mouseEvent->pos())) {
                 m_camera->rotateLeft();
                 return true;
             }
 
-            // ЛКМ: Начало выделения рамкой (если нет активного инструмента)
             if (mouseEvent->button() == Qt::LeftButton && !m_activeTool) {
                 m_isSelecting = true;
                 m_selectionStartPos = mouseEvent->pos();
                 m_currentMousePosScreen = mouseEvent->pos();
-                canvas()->setCursor(Qt::CrossCursor); // Курсор крестиком для выделения
+                canvas()->setCursor(Qt::CrossCursor);
                 return true;
             }
 
-            // СКМ (Колесо мыши): Панорамирование
             if (mouseEvent->button() == Qt::MiddleButton && !m_activeTool) {
                 m_isPanning = true;
                 m_lastPanPos = mouseEvent->pos();
@@ -100,7 +96,6 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 return true;
             }
 
-            // Активный инструмент (например, создание отрезка)
             if (m_activeTool) {
                 QPointF worldPos = screenToWorld(mouseEvent->pos());
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
@@ -111,9 +106,8 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 
         case QEvent::MouseMove: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
-            m_currentMousePosScreen = mouseEvent->pos(); // Обновляем позицию для рамки
+            m_currentMousePosScreen = mouseEvent->pos();
 
-            // Проверка наведения на гизмо для смены курсора
             if (getGizmoRect().contains(mouseEvent->pos())) {
                 canvas()->setCursor(Qt::PointingHandCursor);
             }
@@ -122,22 +116,17 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             }
 
             emit mouseMoved(mouseEvent->pos());
-
-            //обновление координат в info-панели
             m_currentMouseWorldPos = screenToWorld(mouseEvent->pos());
             updateInfoLabel();
 
-            // Панорамирование (СКМ)
             if (m_isPanning) {
                 QPointF delta = mouseEvent->pos() - m_lastPanPos;
                 m_lastPanPos = mouseEvent->pos();
                 m_camera->pan(delta);
             }
-            // Выделение рамкой (ЛКМ)
             else if (m_isSelecting) {
-                update(); // Просто перерисовываем, чтобы отрисовалась рамка
+                update();
             }
-            // Активный инструмент
             else if (m_activeTool) {
                 QPointF worldPos = screenToWorld(mouseEvent->pos());
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
@@ -155,40 +144,71 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 m_isSelecting = false;
                 canvas()->setCursor(Qt::ArrowCursor);
 
-                // Формируем прямоугольник выделения
                 QRect selectionRect = QRect(m_selectionStartPos, mouseEvent->pos()).normalized();
-
                 QList<BasePrimitive*> newSelection;
 
                 // Если клик был точечным (рамка очень мала)
                 if (selectionRect.width() < 3 && selectionRect.height() < 3) {
-                    // Простой поиск ближайшего объекта по bounding box (упрощенно)
                     QPointF worldClick = screenToWorld(mouseEvent->pos());
-                    double minDistance = 10.0 / getZoomFactor();
+
+                    // Расстояние для клика (в пикселях, переведенное в мировые единицы)
+                    double clickThreshold = 10.0 / getZoomFactor();
+                    double minDistance = clickThreshold;
+                    BasePrimitive* bestCandidate = nullptr;
 
                     if (m_scene) {
                         for(const auto& prim : m_scene->getPrimitives()) {
-                            // Простая проверка: клик внутри BoundingBox
-                            // (Для идеальной точности тут нужен полноценный HitTest, как в DeleteTool)
-                            QRectF bb = prim->getBoundingBox();
-                            // Расширяем BB для удобства клика
-                            if (bb.adjusted(-minDistance, -minDistance, minDistance, minDistance).contains(worldClick)) {
-                                newSelection.append(prim.get());
-                                break; // Выбираем только один (верхний) при клике
+                            double dist = std::numeric_limits<double>::max();
+
+                            // 1. Проверка для Отрезков
+                            if (prim->getType() == PrimitiveType::Segment) {
+                                auto* seg = static_cast<SegmentPrimitive*>(prim.get());
+                                QPointF p1(seg->getStart().getX(), seg->getStart().getY());
+                                QPointF p2(seg->getEnd().getX(), seg->getEnd().getY());
+                                QLineF line(p1, p2);
+
+                                // Математика расстояния точки до отрезка
+                                QPointF vecLine = p2 - p1;
+                                QPointF vecPoint = worldClick - p1;
+                                double lineLen2 = QPointF::dotProduct(vecLine, vecLine);
+
+                                if (lineLen2 == 0.0) {
+                                    dist = QLineF(worldClick, p1).length();
+                                } else {
+                                    double t = QPointF::dotProduct(vecPoint, vecLine) / lineLen2;
+                                    if (t < 0.0) dist = QLineF(worldClick, p1).length();
+                                    else if (t > 1.0) dist = QLineF(worldClick, p2).length();
+                                    else {
+                                        QPointF projection = p1 + t * vecLine;
+                                        dist = QLineF(worldClick, projection).length();
+                                    }
+                                }
+                            }
+                            // 2. Проверка для Точек
+                            else if (prim->getType() == PrimitiveType::Point) {
+                                auto* pt = static_cast<PointPrimitive*>(prim.get());
+                                dist = QLineF(worldClick, QPointF(pt->getX(), pt->getY())).length();
+                            }
+
+                            // Если попали в допуск и это самый близкий объект
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                bestCandidate = prim.get();
                             }
                         }
                     }
+
+                    if (bestCandidate) {
+                        newSelection.append(bestCandidate);
+                    }
                 }
                 else {
-                    // ЛОГИКА РАМКИ
+                    // ЛОГИКА РАМКИ (оставляем как было, тут Bounding Box подходит лучше для скорости)
                     if (m_scene) {
-                        // Рамка справа налево (Crossing) или слева направо (Window)?
                         bool isCrossing = (mouseEvent->pos().x() < m_selectionStartPos.x());
-
                         for (const auto& prim : m_scene->getPrimitives()) {
                             if (prim->getType() == PrimitiveType::Segment) {
                                 auto* seg = static_cast<SegmentPrimitive*>(prim.get());
-                                // Проецируем точки на экран
                                 QPoint p1Screen = worldToScreen(QPointF(seg->getStart().getX(), seg->getStart().getY())).toPoint();
                                 QPoint p2Screen = worldToScreen(QPointF(seg->getEnd().getX(), seg->getEnd().getY())).toPoint();
 
@@ -196,35 +216,31 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                                 bool p2In = selectionRect.contains(p2Screen);
 
                                 if (isCrossing) {
-                                    // Пересекающая рамка: хотя бы одна точка внутри
                                     if (p1In || p2In) newSelection.append(prim.get());
                                 } else {
-                                    // Обычная рамка: обе точки строго внутри
                                     if (p1In && p2In) newSelection.append(prim.get());
                                 }
                             }
-                            // Добавьте else if для других типов (Точки и т.д.)
+                            // Можно добавить поддержку других типов
                         }
                     }
                 }
 
-                // Обработка Ctrl (добавление к выделению)
                 if (mouseEvent->modifiers() & Qt::ControlModifier) {
                     for(auto* p : newSelection) {
                         if (m_selectedPrimitives.contains(p))
-                            m_selectedPrimitives.removeAll(p); // Если был - убираем
+                            m_selectedPrimitives.removeAll(p);
                         else
-                            m_selectedPrimitives.append(p);    // Если не было - добавляем
+                            m_selectedPrimitives.append(p);
                     }
                 } else {
                     m_selectedPrimitives = newSelection;
                 }
 
-                emit selectionChanged(m_selectedPrimitives); // Сигнал в MainWindow
+                emit selectionChanged(m_selectedPrimitives);
                 update();
             }
 
-            // Завершение панорамирования (СКМ)
             if (mouseEvent->button() == Qt::MiddleButton && m_isPanning) {
                 m_isPanning = false;
                 canvas()->setCursor(Qt::ArrowCursor);

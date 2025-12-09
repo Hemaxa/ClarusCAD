@@ -19,8 +19,8 @@ public:
     //конструктор
     explicit SegmentPropertiesWidget(QWidget* parent = nullptr);
 
-    //реализация виртуального метода установки типа примитива из BasePropertiesWidget
-    void setPrimitive(BasePrimitive* primitive) override;
+    //переопределение метода установки объектов
+    void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
     //сигнал, для создания или обновления примитива "Отрезок"
@@ -37,7 +37,7 @@ private:
     //реализация виртуального метода обновления подсказки из BasePropertiesWidget
     void updatePrompt() override;
 
-    //указатель на текущий редактируемый объект "Отрезок"
+    //указатель на текущий редактируемый объект "Отрезок" (главный из выделенных)
     SegmentPrimitive* m_currentSegment = nullptr;
 
     //поля объекта "Отрезок"

@@ -31,23 +31,32 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     setMinimumHeight(200);
 }
 
-void PropertiesPanelWidget::showPropertiesFor(BasePrimitive* primitive)
+void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primitives)
 {
-    //если указатель nullptr, показывается пустой виджет
-    if (!primitive) {
+    //если список пуст, показывается пустой виджет
+    if (primitives.isEmpty()) {
         m_stack->setCurrentWidget(m_emptyWidget);
         return;
     }
 
-    //иначе параметры объекта, на который ссылается указатель
-    if (primitive->getType() == PrimitiveType::Segment) {
-        //указатель на объект передается в setPrimitive в SegmentPropertiesWidget
-        m_segmentProperties->setPrimitive(primitive);
-        //включается отображение параметров объекта
+    //Проверка: все ли объекты одного типа?
+    //Пока что у нас только "Отрезок", но на будущее
+    PrimitiveType firstType = primitives.first()->getType();
+    bool allSameType = true;
+    for(auto* p : primitives) {
+        if (p->getType() != firstType) {
+            allSameType = false;
+            break;
+        }
+    }
+
+    if (allSameType && firstType == PrimitiveType::Segment) {
+        //Передаем весь список
+        m_segmentProperties->setPrimitives(primitives);
         m_stack->setCurrentWidget(m_segmentProperties);
     }
     else {
-        //для других типов объектов показывается пустрой виджет
+        //Если типы разные или не поддерживаются - пустой виджет
         m_stack->setCurrentWidget(m_emptyWidget);
     }
 }
@@ -55,8 +64,8 @@ void PropertiesPanelWidget::showPropertiesFor(BasePrimitive* primitive)
 void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
 {
     if (type == PrimitiveType::Segment) {
-        //пустой указатель на объект передается в setPrimitive в SegmentPropertiesWidget (для создания нового объекта)
-        m_segmentProperties->setPrimitive(nullptr);
+        //Передаем пустой список (вместо nullptr) для режима создания
+        m_segmentProperties->setPrimitives({});
         //включается отображение параметров объекта
         m_stack->setCurrentWidget(m_segmentProperties);
     }
