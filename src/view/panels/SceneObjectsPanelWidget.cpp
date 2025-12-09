@@ -10,6 +10,9 @@ SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* 
     //создание экземпляра QListWidget для списка
     m_listWidget = new QListWidget();
 
+    //включение множественного выделения
+    m_listWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
     layout->setContentsMargins(0, 0, 0, 0); //убирает отступы, чтобы занять всю допустимую область панели
     layout->addWidget(m_listWidget); //добавление содержимого панели в canvas
@@ -29,38 +32,47 @@ void SceneObjectsPanelWidget::update(const Scene* scene)
     //сохранение указателя на сцену
     m_currentScene = scene;
 
-    //блокировка сигналов на время очистки и заполнения
-    m_listWidget->blockSignals(true);
+    // 1. ЗАПОМИНАЕМ ТЕКУЩИЕ ВЫДЕЛЕННЫЕ ИМЕНА
+    QList<QString> selectedNames;
+    for (auto* item : m_listWidget->selectedItems()) {
+        selectedNames.append(item->text());
+    }
 
-    //удаление старых объектов списка
+    m_listWidget->blockSignals(true);
     m_listWidget->clear();
 
-    //получение из класса Scene ссылки на все объекты сцены
     const auto& primitives = scene->getPrimitives();
-
-    //цикл прохода по всем примитивам в векторе, полученном из класса Scene
     for (int i = 0; i < primitives.size(); ++i) {
         m_listWidget->addItem(primitives[i]->getName());
     }
 
-    //разблокировка сигналов
+    // 2. ВОССТАНАВЛИВАЕМ ВЫДЕЛЕНИЕ
+    for (int i = 0; i < m_listWidget->count(); ++i) {
+        QListWidgetItem* item = m_listWidget->item(i);
+        if (selectedNames.contains(item->text())) {
+            item->setSelected(true);
+        }
+    }
+
     m_listWidget->blockSignals(false);
 }
 
 void SceneObjectsPanelWidget::onSelectionChanged()
 {
-    //если нет указателя на сохраненную сцену, функция не отрабатывает
     if (!m_currentScene) return;
 
-    int index = m_listWidget->currentRow(); //получение индекса выбранной строки
+    // Собираем список всех выбранных примитивов
+    QList<BasePrimitive*> selectedPrimitives;
     const auto& primitives = m_currentScene->getPrimitives();
 
-    //проверка, что индекс корректен
-    if (index >= 0 && index < primitives.size()) {
-        //получение указателя на примитив из сцены по этому индексу
-        BasePrimitive* selectedPrimitive = primitives[index].get();
-
-        //отправка сигнала в MainWindow, что примитив выбран
-        emit primitiveSelected(selectedPrimitive);
+    for (int i = 0; i < m_listWidget->count(); ++i) {
+        if (m_listWidget->item(i)->isSelected()) {
+            if (i >= 0 && i < primitives.size()) {
+                selectedPrimitives.append(primitives[i].get());
+            }
+        }
     }
+
+    // Отправляем список (сигнатуру сигнала нужно изменить в .h)
+    emit primitivesSelected(selectedPrimitives);
 }

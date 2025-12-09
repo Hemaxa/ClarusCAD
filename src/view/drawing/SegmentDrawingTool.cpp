@@ -1,117 +1,22 @@
 #include "SegmentDrawingTool.h"
 #include "SegmentPrimitive.h"
+#include "LineStyleManager.h" // Подключаем менеджер
 
 #include <QPainter>
-#include <QPen>
 
-// void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive) const
-// {
-//     //приведение базового типа к конкретному
-//     auto* segment = static_cast<SegmentPrimitive*>(primitive);
-
-//     //если приведение не удалось или пришел nullptr, прекращается выполнение
-//     if (!segment) return;
-
-//     //устанавливается перо для рисования необходимого цвета
-//     painter.setPen(segment->getColor());
-
-//     //реализация алгоритма Брезенхема
-//     //1) получение координат и приведение их к целым числам
-//     int x1 = static_cast<int>(segment->getStart().getX());
-//     int y1 = static_cast<int>(segment->getStart().getY());
-//     int x2 = static_cast<int>(segment->getEnd().getX());
-//     int y2 = static_cast<int>(segment->getEnd().getY());
-
-//     //2) вычисление "размаха" линии по осям
-//     const int deltaX = abs(x2 - x1);
-//     const int deltaY = abs(y2 - y1);
-
-//     //3) определение направления рисования
-//     const int signX = x1 < x2 ? 1 : -1;
-//     const int signY = y1 < y2 ? 1 : -1;
-
-//     //4) инициализация "ошибки"
-//     //ключевая переменная, которая помогает алгоритму решить, когда нужно сдвинуться по оси
-//     int error = deltaX - deltaY;
-
-//     //5) основной цикл, который работает, пока текущая точка не достигнет конечной
-//     while (x1 != x2 || y1 != y2) {
-//         //рисуется пиксель в каждой точке
-//         painter.drawPoint(x1, y1);
-
-//         //ошибка удваивается для удобства сравнения
-//         int error2 = error * 2;
-
-//         //6) принимается решение о следующем шаге
-//         if (error2 > -deltaY) {
-//             error -= deltaY;
-//             x1 += signX;
-//         }
-//         if (error2 < deltaX) {
-//             error += deltaX;
-//             y1 += signY;
-//         }
-//     }
-//     //7) цикл `while` завершается, не нарисовав последнюю точку, поэтому она отрисовывается
-//     painter.drawPoint(x2, y2);
-// }
-
+// ВНИМАНИЕ: Это SegmentDrawingTool::draw, а НЕ SegmentCreationTool::onPaint
 void SegmentDrawingTool::draw(QPainter& painter, BasePrimitive* primitive, bool isSelected) const
 {
-    //приведение базового типа к конкретному
     auto* segment = static_cast<SegmentPrimitive*>(primitive);
-
-    //если приведение не удалось или пришел nullptr, прекращается выполнение
     if (!segment) return;
 
-    //создание пера
-    QPen pen;
-    pen.setColor(segment->getColor());
-
-    //настройка пера QPen в соответствии с LineType
-    LineType lineType = segment->getLineType();
-
-    switch (lineType)
-    {
-    case LineType::Solid:
-        pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(1.5); //тонкая
-        break;
-    case LineType::SolidThick:
-        pen.setStyle(Qt::SolidLine);
-        pen.setWidthF(3.0); //толстая
-        break;
-    case LineType::Dashed:
-        pen.setStyle(Qt::DashLine);
-        pen.setWidthF(1.5); //пунктирная
-        break;
-    case LineType::Dotted:
-        pen.setStyle(Qt::DotLine);
-        pen.setWidthF(1.5); //точечная
-        break;
-    case LineType::DashDot:
-        pen.setStyle(Qt::DashDotLine);
-        pen.setWidthF(1.5); //пунктир/точка
-        break;
-    case LineType::DashDotDot:
-        pen.setStyle(Qt::DashDotDotLine);
-        pen.setWidthF(1.5); //пунктир/пунктир/точка
-        break;
-    }
-
-    //настройка выбранного элемента
-    if (isSelected) {
-        pen.setColor(QColor(0, 255, 127));
-        pen.setWidthF(pen.widthF() + 1.5);
-        pen.setStyle(Qt::SolidLine);
-    }
-
-    //установка пера
-    painter.setPen(pen);
-
-    //отрисовка линии
-    painter.drawLine(
+    // Делегируем отрисовку менеджеру стилей
+    LineStyleManager::instance().drawLine(
+        painter,
         QPointF(segment->getStart().getX(), segment->getStart().getY()),
-        QPointF(segment->getEnd().getX(), segment->getEnd().getY())
-    );
+        QPointF(segment->getEnd().getX(), segment->getEnd().getY()),
+        segment->getLineType(), // Тип линии берем из примитива
+        segment->getColor(),
+        isSelected
+        );
 }

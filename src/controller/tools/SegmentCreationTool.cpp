@@ -1,5 +1,6 @@
 #include "SegmentCreationTool.h"
 #include "ViewportPanelWidget.h"
+#include "LineStyleManager.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -62,9 +63,19 @@ void SegmentCreationTool::onPaint(QPainter& painter)
 {
     //если запущен процесс создания отрезка
     if (m_currentState == State::WaitingForSecondPoint) {
-        //рисуется вспомогательная пунктирная линия
-        painter.setPen(QPen(QColor(0, 160, 64, 150), 1.5, Qt::DashLine));
-        painter.drawLine(QPointF(m_firstPoint.getX(), m_firstPoint.getY()), QPointF(m_currentMousePos.getX(), m_currentMousePos.getY()));
+
+        //формируем полупрозрачный цвет для предпросмотра
+        QColor previewColor = m_currentColor;
+        previewColor.setAlpha(150);
+
+        //используем менеджер стилей для отрисовки того типа линии, который выбран
+        LineStyleManager::instance().drawLine(
+            painter,
+            QPointF(m_firstPoint.getX(), m_firstPoint.getY()),
+            QPointF(m_currentMousePos.getX(), m_currentMousePos.getY()),
+            m_currentLineType,
+            previewColor
+        );
     }
 }
 

@@ -53,5 +53,5 @@ private:
     PointPrimitive m_firstPoint; //переменная хранения координат первой точки
     PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
     QColor m_currentColor = Qt::white; //переменная хранения цвета
-    LineType m_currentLineType = LineType::Solid; //переменная хранения типа линии
+    LineType m_currentLineType = LineType::SolidMain; //переменная хранения типа линии
 };

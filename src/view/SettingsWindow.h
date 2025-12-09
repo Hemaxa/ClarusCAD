@@ -23,12 +23,14 @@ public:
     void setGridStep(int step);
     void setZoomStep(double step);
     void setAngleUnit(AngleUnit unit);
+    void setBaseLineThickness(double thickness);
 
     //методы получения выбранных значений
     QString getCurrentTheme() const;
     int getGridStep() const;
     double getZoomStep() const;
     AngleUnit getAngleUnit() const;
+    double getBaseLineThickness() const;
 
 private slots:
     //слот применения настроек
@@ -43,4 +45,5 @@ private:
     QSpinBox* m_gridStepSpinBox;
     QDoubleSpinBox* m_zoomStepSpinBox;
     QComboBox* m_angleUnitComboBox;
+    QDoubleSpinBox* m_lineThicknessSpinBox;
 };

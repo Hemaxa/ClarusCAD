@@ -8,6 +8,7 @@
 #include "SegmentPrimitive.h"
 
 #include "ConsolePanelWidget.h"
+#include "NavigationPanelWidget.h"
 #include "PropertiesPanelWidget.h"
 #include "SceneObjectsPanelWidget.h"
 #include "SceneSettingsPanelWidget.h"
@@ -15,6 +16,7 @@
 #include "ViewportPanelWidget.h"
 
 #include "SettingsWindow.h"
+#include "LineStyleManager.h"
 #include "ThemeManager.h"
 #include "SettingsManager.h"
 
@@ -38,6 +40,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
 
     //применение выбранной темы
     ThemeManager::instance().applyTheme(SettingsManager::instance().getThemeName());
+
+    //применение выбранной толщины линий
+    LineStyleManager::instance().setBaseLineThickness(SettingsManager::instance().getBaseLineThickness());
 
     //создание экземпляра сцены
     m_scene = new Scene();
@@ -79,6 +84,7 @@ void MainWindow::createPanelWindows()
     //создание интерфейсных панелей
     m_viewportPanel = new ViewportPanelWidget("Рабочая область", this);
     m_toolbarPanel = new ToolbarPanelWidget("Инструменты", this);
+    m_navigationPanel = new NavigationPanelWidget("Навигация", this);
     m_propertiesPanel = new PropertiesPanelWidget("Свойства объекта", this);
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
@@ -87,6 +93,7 @@ void MainWindow::createPanelWindows()
     //установка имен панелей для оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
     m_toolbarPanel->setProperty("class", "ToolbarPanel");
+    m_navigationPanel->setProperty("class", "NavigationPanel");
     m_propertiesPanel->setProperty("class", "PropertiesPanel");
     m_sceneObjectsPanel->setProperty("class", "SceneObjectsPanel");
     m_sceneSettingsPanel->setProperty("class", "SceneSettingsPanel");
@@ -96,25 +103,20 @@ void MainWindow::createPanelWindows()
     m_viewportPanel->setScene(m_scene);
 
     //расстановка панелей интерфейса
-    //левая колонка
+    //распределение столбцов
     addDockWidget(Qt::LeftDockWidgetArea, m_toolbarPanel);
-    addDockWidget(Qt::LeftDockWidgetArea, m_propertiesPanel);
-    addDockWidget(Qt::LeftDockWidgetArea, m_consolePanel);
-    splitDockWidget(m_toolbarPanel, m_propertiesPanel, Qt::Vertical);
-    splitDockWidget(m_propertiesPanel, m_consolePanel, Qt::Vertical);
-
-    //правая колонка
     addDockWidget(Qt::RightDockWidgetArea, m_sceneObjectsPanel);
-    addDockWidget(Qt::RightDockWidgetArea, m_sceneSettingsPanel);
-    splitDockWidget(m_sceneObjectsPanel, m_sceneSettingsPanel, Qt::Vertical);
 
-    //верхняя строка
     splitDockWidget(m_toolbarPanel, m_viewportPanel, Qt::Horizontal);
     splitDockWidget(m_viewportPanel, m_sceneObjectsPanel, Qt::Horizontal);
 
-    //нижняя строка
-    splitDockWidget(m_consolePanel, m_propertiesPanel, Qt::Horizontal);
-    splitDockWidget(m_propertiesPanel, m_sceneSettingsPanel, Qt::Horizontal);
+    //распределение строк
+    splitDockWidget(m_viewportPanel, m_propertiesPanel, Qt::Vertical);
+
+    splitDockWidget(m_toolbarPanel, m_navigationPanel, Qt::Vertical);
+    splitDockWidget(m_navigationPanel, m_consolePanel, Qt::Vertical);
+
+    splitDockWidget(m_sceneObjectsPanel, m_sceneSettingsPanel, Qt::Vertical);
 }
 
 void MainWindow::createConnections()
@@ -143,17 +145,18 @@ void MainWindow::createConnections()
     connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
 
+    //- NavigationPanelWidget -
+    //панель навигации сообщает о нажатии кнопки -> окно просмтора или главное окно активируют соответствующие метод
+    connect(m_navigationPanel, &NavigationPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
+    connect(m_navigationPanel, &NavigationPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
+    connect(m_navigationPanel, &NavigationPanelWidget::zoomExtentsClicked, this, &MainWindow::onZoomExtents);
+    connect(m_navigationPanel, &NavigationPanelWidget::rotateCWClicked, this, &MainWindow::onRotateLeft);
+    connect(m_navigationPanel, &NavigationPanelWidget::rotateCCWClicked, this, &MainWindow::onRotateRight);
+
     //- SceneSettingsPanelWidget -
     //панель параметров сцены сообщает об изменении настройки -> окно просмтора активирует соответствующий метод
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::primitiveSnapToggled, m_viewportPanel, &ViewportPanelWidget::setPrimitiveSnapEnabled);
-
-    //панель параметров сцены сообщает о нажатии кнопки -> окно просмтора активирует соответствующий метод
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomOutClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomOut));
-
-    //панель параметров сцены сообщает о нажатии кнопки -> в главном окне активируется соответствующий метод
-    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::zoomExtentsClicked, this, &MainWindow::onZoomExtents);
 
     //панель параметров сцены сообщает об изменении системы координат -> панель свойств и окна просмотра меняют содержимое
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
@@ -161,7 +164,7 @@ void MainWindow::createConnections()
 
     //- SceneObjectsPanelWidget -
     //панель объектов сцены сообщает, что пользователь выбрал примитив -> в главном окне вызывается слот изменения выбранного примитива
-    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitiveSelected, this, &MainWindow::onSelectionChanged);
+    connect(m_sceneObjectsPanel, &SceneObjectsPanelWidget::primitivesSelected, this, &MainWindow::onSelectionChanged);
 
     //- ConsolePanelWidget -
     //панель консольного ввода сообщает о вводе команды -> главное окно вызывает слот обработки консольной команды
@@ -177,12 +180,19 @@ void MainWindow::createConnections()
     //панель просмотра сцены сообщает о движении мыши -> инструмент перемещения обновляет свою позицию
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
 
+    //- ViewportPanelWidget -
+    connect(m_viewportPanel, &ViewportPanelWidget::selectionChanged, this, &MainWindow::onSelectionChanged);
+
     //- Managers -
     //менеджер настроек сообщает об изменении настройки -> компоненты обновляются
     connect(&SettingsManager::instance(), &SettingsManager::gridStepChanged, m_viewportPanel, &ViewportPanelWidget::setGridStep);
     connect(&SettingsManager::instance(), &SettingsManager::zoomStepChanged, m_viewportPanel, &ViewportPanelWidget::setZoomStep);
     connect(&SettingsManager::instance(), &SettingsManager::angleUnitChanged, &PointPrimitive::setAngleUnit);
     connect(&SettingsManager::instance(), &SettingsManager::themeNameChanged, &ThemeManager::instance(), &ThemeManager::applyTheme);
+    connect(&SettingsManager::instance(), &SettingsManager::baseLineThicknessChanged, &LineStyleManager::instance(), &LineStyleManager::setBaseLineThickness);
+
+    //менеджер линий сообщает об изменении стиля линий -> компоненты обновляются
+    connect(&LineStyleManager::instance(), &LineStyleManager::stylesChanged, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
 
     //менеджер тем сообщает об изменении темы -> панели обновляются
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_toolbarPanel, &ToolbarPanelWidget::updateColors);
@@ -230,12 +240,34 @@ void MainWindow::onZoomExtents()
     m_viewportPanel->zoomToExtents();
 }
 
-void MainWindow::onSelectionChanged(BasePrimitive* primitive)
+void MainWindow::onRotateLeft()
 {
-    //меняется указатель на примитив и вызываются методы в необходимых панелях
-    m_selectedPrimitive = primitive;
-    m_propertiesPanel->showPropertiesFor(primitive);
-    m_viewportPanel->setSelectedPrimitive(primitive);
+    m_viewportPanel->rotateSceneLeft();
+}
+
+void MainWindow::onRotateRight()
+{
+    m_viewportPanel->rotateSceneRight();
+}
+
+void MainWindow::onSelectionChanged(const QList<BasePrimitive*>& primitives)
+{
+    // Сохраняем список выделенного
+    m_selectedPrimitives = primitives;
+
+    // Передаем список обратно во вьюпорт (чтобы он подсветил их зеленым)
+    // Это важно, если выделение пришло из списка объектов, а не из вьюпорта
+    m_viewportPanel->setSelectedPrimitives(primitives);
+
+    // Обновляем панель свойств
+    if (primitives.isEmpty()) {
+        m_propertiesPanel->showPropertiesFor(nullptr);
+    }
+    else {
+        // Если выбрано несколько, показываем свойства ПОСЛЕДНЕГО выбранного
+        // (Это стандартное поведение: показываем свойства одного, но меняем у всех)
+        m_propertiesPanel->showPropertiesFor(primitives.last());
+    }
 }
 
 void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)
@@ -244,7 +276,7 @@ void MainWindow::onConsoleCommandParsed(const ParsedCommand& command)
     if (command.name == "segment" && command.args.size() == 4) {
         PointPrimitive start(command.args[0], command.args[1]);
         PointPrimitive end(command.args[2], command.args[3]);
-        applySegmentChanges(nullptr, start, end, command.color, LineType::Solid); //команды из консоли пока будут сплошными линиями
+        applySegmentChanges(nullptr, start, end, command.color, LineType::SolidMain); //команды из консоли пока будут сплошными линиями
     }
     else {
         qDebug("Неизвестная команда или неверное количество аргументов.");
@@ -315,53 +347,83 @@ void MainWindow::deactivateCurrentTool()
 //--- МЕТОДЫ ВЗАИМОДЕЙСТВИЯ С ОБЪЕКТАМИ ---
 void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType)
 {
-    //режим редактирования
-    if (segment) {
-        //обновляется существующий объект
+    // Режим создания нового (segment == nullptr)
+    if (!segment) {
+        auto* newSegment = new SegmentPrimitive(start, end);
+        newSegment->setColor(color);
+        newSegment->setLineType(lineType);
+        addPrimitiveToScene(newSegment);
+        return;
+    }
+
+    // Режим редактирования (segment != nullptr)
+
+    // Если редактируемый объект входит в группу выделенных, применяем общие свойства ко всем
+    if (m_selectedPrimitives.contains(segment) && m_selectedPrimitives.size() > 1) {
+        for (auto* prim : m_selectedPrimitives) {
+            // Применяем общие визуальные свойства
+            prim->setColor(color);
+            prim->setLineType(lineType);
+
+            // Геометрию (start/end) обычно при массовом редактировании не трогают,
+            // либо меняют только у "главного". В данном случае меняем только у segment.
+        }
+
+        // Главному (отображаемому в панели) меняем всё
+        segment->setStart(start);
+        segment->setEnd(end);
+    }
+    else {
+        // Одиночное редактирование
         segment->setStart(start);
         segment->setEnd(end);
         segment->setColor(color);
         segment->setLineType(lineType);
+    }
 
-        emit sceneChanged(m_scene); //обновит список, но не изменит выбор
-    }
-    //режим создания
-    else {
-        //создается новый объект
-        auto* newSegment = new SegmentPrimitive(start, end);
-        newSegment->setColor(color);
-        newSegment->setLineType(lineType);
-        addPrimitiveToScene(newSegment); //добавит объект и сделает его выбранным
-    }
+    // Сигнал об изменении сцены обновит список объектов
+    emit sceneChanged(m_scene);
+
+    // Примечание: Мы не сбрасываем m_selectedPrimitives здесь,
+    // чтобы выделение осталось после перерисовки.
 }
 
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
 {
     if (primitive) {
-        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive)); //добавление примитива в вектор сцены
+        m_scene->addPrimitive(std::unique_ptr<BasePrimitive>(primitive));
 
-        emit sceneChanged(m_scene); //посылается сигнал, что сцена изменилась
-        onSelectionChanged(primitive); //посылается сигнал, о выбранном объекте
+        // При создании нового объекта выделяем только его
+        QList<BasePrimitive*> newSelection;
+        newSelection.append(primitive);
+
+        emit sceneChanged(m_scene); // Обновляет список и вьюпорт
+
+        // Принудительно устанавливаем выделение нового объекта
+        onSelectionChanged(newSelection);
     }
 }
 
 void MainWindow::deletePrimitive(BasePrimitive* primitive)
 {
-    //если не переан объект для удаления, ничего не удаляется
-    if (!primitive) {
+    // Если есть выделенные объекты (удаление по кнопке Del или через меню)
+    if (!m_selectedPrimitives.isEmpty()) {
+        for (auto* prim : m_selectedPrimitives) {
+            m_scene->removePrimitive(prim);
+        }
+        m_selectedPrimitives.clear();
+
+        // Сбрасываем выделение в UI
+        onSelectionChanged(m_selectedPrimitives);
+        emit sceneChanged(m_scene);
         return;
     }
 
-    //удаляется объект из сцены
-    m_scene->removePrimitive(primitive);
-
-    //если удаленный объект был тем, который выбран в списке, то информация о нем забывается
-    if (m_selectedPrimitive == primitive) {
-        onSelectionChanged(nullptr);
+    // Если удаляем конкретный примитив (например, инструментом Ластик)
+    if (primitive) {
+        m_scene->removePrimitive(primitive);
+        emit sceneChanged(m_scene);
     }
-
-    //обновление окна просмотра
-    emit sceneChanged(m_scene);
 }
 
 
@@ -390,8 +452,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
 
     //3) delete / backspace
-    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedPrimitive) {
-        deletePrimitive(m_selectedPrimitive);
+    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && !m_selectedPrimitives.isEmpty()) {
+        deletePrimitive(nullptr); // Вызываем без аргумента, чтобы сработала ветка удаления списка
         return;
     }
 
@@ -436,6 +498,50 @@ void MainWindow::openSettingsWindow()
     dialog.exec();
 }
 
+// void MainWindow::showEvent(QShowEvent* event)
+// {
+//     QMainWindow::showEvent(event);
+
+//     if (!m_isInitialResizeDone) {
+//         m_isInitialResizeDone = true;
+
+//         //определение размеров по ширине верхних и нижних колонок (процент от ширины экрана)
+//         //верхние колонки
+//         const double leftTopColumnPercentage = 0.20;
+//         const double rightTopColumnPercentage = 0.20;
+
+//         //нижние колонки
+//         const double leftDownColumnPercentage = 0.25;
+//         const double rightDownColumnPercentage = 0.25;
+
+//         //расчет
+//         int totalWidth = width();
+//         int leftTopWidth = static_cast<int>(totalWidth * leftTopColumnPercentage);
+//         int rightTopWidth = static_cast<int>(totalWidth * rightTopColumnPercentage);
+//         int middleTopWidth = totalWidth - leftTopWidth - rightTopWidth;
+
+//         int leftDownWidth = static_cast<int>(totalWidth * leftDownColumnPercentage);
+//         int rightDownWidth = static_cast<int>(totalWidth * rightDownColumnPercentage);
+//         int middleDownWidth = totalWidth - leftDownWidth - rightDownWidth;
+
+//         //применение размеров
+//         resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftTopWidth, middleTopWidth, rightTopWidth}, Qt::Horizontal);
+//         resizeDocks({m_consolePanel, m_propertiesPanel, m_sceneSettingsPanel}, {leftDownWidth, middleDownWidth,rightDownWidth}, Qt::Horizontal);
+
+//         //определение размеров по высоте (процент от высоты экрана)
+//         const double toolbarHeightPercentage = 0.75;
+//         const double propertiesHeightPercentage = 0.25;
+
+//         //расчет
+//         int totalHeight = height();
+//         int toolbarHeight = static_cast<int>(totalHeight * toolbarHeightPercentage);
+//         int propertiesHeight = static_cast<int>(totalHeight * propertiesHeightPercentage);
+
+//         //применение размеров
+//         resizeDocks({m_toolbarPanel, m_navigationPanel, m_propertiesPanel}, {toolbarHeight, propertiesHeight}, Qt::Vertical);
+//     }
+// }
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -443,39 +549,37 @@ void MainWindow::showEvent(QShowEvent* event)
     if (!m_isInitialResizeDone) {
         m_isInitialResizeDone = true;
 
-        //определение размеров по ширине верхних и нижних колонок (процент от ширины экрана)
-        //верхние колонки
-        const double leftTopColumnPercentage = 0.20;
-        const double rightTopColumnPercentage = 0.20;
-
-        //нижние колонки
-        const double leftDownColumnPercentage = 0.25;
-        const double rightDownColumnPercentage = 0.25;
-
-        //расчет
         int totalWidth = width();
-        int leftTopWidth = static_cast<int>(totalWidth * leftTopColumnPercentage);
-        int rightTopWidth = static_cast<int>(totalWidth * rightTopColumnPercentage);
-        int middleTopWidth = totalWidth - leftTopWidth - rightTopWidth;
-
-        int leftDownWidth = static_cast<int>(totalWidth * leftDownColumnPercentage);
-        int rightDownWidth = static_cast<int>(totalWidth * rightDownColumnPercentage);
-        int middleDownWidth = totalWidth - leftDownWidth - rightDownWidth;
-
-        //применение размеров
-        resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftTopWidth, middleTopWidth, rightTopWidth}, Qt::Horizontal);
-        resizeDocks({m_consolePanel, m_propertiesPanel, m_sceneSettingsPanel}, {leftDownWidth, middleDownWidth,rightDownWidth}, Qt::Horizontal);
-
-        //определение размеров по высоте (процент от высоты экрана)
-        const double toolbarHeightPercentage = 0.75;
-        const double propertiesHeightPercentage = 0.25;
-
-        //расчет
         int totalHeight = height();
-        int toolbarHeight = static_cast<int>(totalHeight * toolbarHeightPercentage);
-        int propertiesHeight = static_cast<int>(totalHeight * propertiesHeightPercentage);
 
-        //применение размеров
-        resizeDocks({m_toolbarPanel, m_propertiesPanel}, {toolbarHeight, propertiesHeight}, Qt::Vertical);
+        //настройка горизонтальных пропорций
+        const double leftColumnPercentage = 0.15;
+        const double rightColumnPercentage = 0.15;
+
+        int leftColWidth = static_cast<int>(totalWidth * leftColumnPercentage);
+        int rightColWidth = static_cast<int>(totalWidth * rightColumnPercentage);
+        int centerColWidth = totalWidth - leftColWidth - rightColWidth;
+
+        resizeDocks({m_toolbarPanel, m_viewportPanel, m_sceneObjectsPanel}, {leftColWidth, centerColWidth, rightColWidth}, Qt::Horizontal);
+
+        //настройка вертикальных пропорций
+        //левая колонка
+        int toolbarHeight = static_cast<int>(totalHeight * 0.35);
+        int navHeight = static_cast<int>(totalHeight * 0.35);
+        int consoleHeight = totalHeight - toolbarHeight - navHeight;
+
+        resizeDocks({m_toolbarPanel, m_navigationPanel, m_consolePanel}, {toolbarHeight, navHeight, consoleHeight}, Qt::Vertical);
+
+        //центральная колонка
+        int viewportHeight = static_cast<int>(totalHeight * 0.7);
+        int propertiesHeight = totalHeight - viewportHeight;
+
+        resizeDocks({m_viewportPanel, m_propertiesPanel}, {viewportHeight, propertiesHeight}, Qt::Vertical);
+
+        //правая колонка
+        int sceneObjectsHeight = static_cast<int>(totalHeight * 0.7);
+        int sceneSettingsHeight = totalHeight - sceneObjectsHeight;
+
+        resizeDocks({m_sceneObjectsPanel, m_sceneSettingsPanel}, {sceneObjectsHeight, sceneSettingsHeight}, Qt::Vertical);
     }
 }

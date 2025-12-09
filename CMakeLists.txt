@@ -21,8 +21,7 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 
 #создание исполняемого файла
-add_executable(ClarusCAD
-    src/view/panels/NavigationPanelWidget.h src/view/panels/NavigationPanelWidget.cpp)
+add_executable(ClarusCAD)
 
 #обозначение исходных файлов
 target_sources (ClarusCAD PRIVATE
@@ -66,6 +65,8 @@ target_sources (ClarusCAD PRIVATE
 
     ${SRC_DIR}/view/managers/AnimationManager.h
     ${SRC_DIR}/view/managers/AnimationManager.cpp
+    ${SRC_DIR}/view/managers/LineStyleManager.h
+    ${SRC_DIR}/view/managers/LineStyleManager.cpp
     ${SRC_DIR}/view/managers/SettingsManager.h
     ${SRC_DIR}/view/managers/SettingsManager.cpp
     ${SRC_DIR}/view/managers/ThemeManager.h
@@ -76,6 +77,8 @@ target_sources (ClarusCAD PRIVATE
 
     ${SRC_DIR}/view/panels/ConsolePanelWidget.h
     ${SRC_DIR}/view/panels/ConsolePanelWidget.cpp
+    ${SRC_DIR}/view/panels/NavigationPanelWidget.h
+    ${SRC_DIR}/view/panels/NavigationPanelWidget.cpp
     ${SRC_DIR}/view/panels/PropertiesPanelWidget.h
     ${SRC_DIR}/view/panels/PropertiesPanelWidget.cpp
     ${SRC_DIR}/view/panels/SceneObjectsPanelWidget.h

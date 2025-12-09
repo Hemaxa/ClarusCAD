@@ -7,6 +7,7 @@
 #include "EnumManager.h"
 
 #include <QPointF>
+#include <QList>
 
 class Scene;
 class ViewportCamera;
@@ -29,6 +30,8 @@ public:
     void setScene(Scene* scene); //метод установки сцены для отрисовки
     void setActiveTool(BaseCreationTool* tool); //метод установки активного элемента
     void setGridStep(int step); //метод установки шага сетки
+    void setSelectedPrimitives(const QList<BasePrimitive*>& primitives);
+    QList<BasePrimitive*> getSelectedPrimitives() const;
 
     int getGridStep() const; //геттер для шага сетки
     double getDynamicGridStep() const; //геттер для масштабируемого шага сетки
@@ -65,6 +68,9 @@ public slots:
 signals:
     //cигнал, который передает позицию мыши
     void mouseMoved(const QPoint& screenPos);
+
+    //сигнал, который передает список выбранных объектов
+    void selectionChanged(const QList<BasePrimitive*>& primitives);
 
 private slots:
     // НОВЫЙ СЛОТ для связи с камерой
@@ -104,4 +110,13 @@ private:
     void paintGizmo(QPainter& painter); //метод отрисовки гизмо
     void createDrawingTools(); //метод создание отрисовщиков
     void updateInfoLabel(); //метод обновления содержимого info-панели
+
+    QList<BasePrimitive*> m_selectedPrimitives;
+
+    // ... (другие поля)
+
+    // НОВЫЕ ПОЛЯ ДЛЯ РАМКИ
+    bool m_isSelecting = false; // Флаг выделения рамкой
+    QPoint m_selectionStartPos; // Точка начала выделения
+    QPoint m_currentMousePosScreen; // Текущая точка для отрисовки рамки
 };

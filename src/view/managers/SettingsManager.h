@@ -37,12 +37,17 @@ public:
     void setAngleUnit(AngleUnit unit);
     AngleUnit getAngleUnit() const;
 
+    //толщина линий
+    void setBaseLineThickness(double val);
+    double getBaseLineThickness() const;
+
 signals:
     //сигналы об изменении настроек
     void themeNameChanged(const QString& themeName);
     void gridStepChanged(int step);
     void zoomStepChanged(double step);
     void angleUnitChanged(AngleUnit unit);
+    void baseLineThicknessChanged(double thickness);
 
 private:
     //конструктор
@@ -60,4 +65,5 @@ private:
     int m_gridStep;
     double m_zoomStep;
     AngleUnit m_angleUnit;
+    double m_baseLineThickness;
 };

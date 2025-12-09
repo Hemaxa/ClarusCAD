@@ -101,7 +101,7 @@ void BasePropertiesWidget::setPrimitive(BasePrimitive* primitive)
     else
     {
         m_selectedColor = Qt::white;
-        m_selectedLineType = LineType::Solid;
+        m_selectedLineType = LineType::SolidMain;
         m_applyButton->setText("Создать");
     }
 
@@ -187,19 +187,36 @@ void BasePropertiesWidget::populateLineTypeComboBox()
 
     //карта <тип линии, путь к иконке>
     QMap<LineType, QString> lineTypeIcons;
-    lineTypeIcons[LineType::Solid] = ":/icons/icons/lines/solid.svg";
-    lineTypeIcons[LineType::SolidThick] = ":/icons/icons/lines/solid-thick.svg";
-    lineTypeIcons[LineType::Dashed] = ":/icons/icons/lines/dashed.svg";
-    lineTypeIcons[LineType::Dotted] = ":/icons/icons/lines/dotted.svg";
-    lineTypeIcons[LineType::DashDot] = ":/icons/icons/lines/dash-dot.svg";
-    lineTypeIcons[LineType::DashDotDot] = ":/icons/icons/lines/dash-dot-dot.svg";
+    lineTypeIcons[LineType::SolidMain]      = ":/icons/icons/lines/solid-thick.svg"; // Основная
+    lineTypeIcons[LineType::SolidThin]      = ":/icons/icons/lines/solid.svg";       // Тонкая
+    lineTypeIcons[LineType::SolidWave]      = ":/icons/icons/lines/wave.svg";        // Волнистая (NEW)
+    lineTypeIcons[LineType::SolidKink]      = ":/icons/icons/lines/zigzag.svg";      // С изломами (NEW)
+    lineTypeIcons[LineType::Dashed]         = ":/icons/icons/lines/dashed.svg";
+    lineTypeIcons[LineType::DashDotThick]   = ":/icons/icons/lines/dash-dot-thick.svg"; // Утолщенная (NEW)
+    lineTypeIcons[LineType::DashDotThin]    = ":/icons/icons/lines/dash-dot.svg";
+    lineTypeIcons[LineType::DashDotDot]     = ":/icons/icons/lines/dash-dot-dot.svg";
 
     for (auto it = lineTypeIcons.constBegin(); it != lineTypeIcons.constEnd(); ++it)
     {
         LineType type = it.key();
         QString path = it.value();
         QIcon icon = ThemeManager::colorizeSvg(path, iconColor);
-        m_lineTypeComboBox->addItem(icon, "-", static_cast<int>(type)); //сохраняем enum в UserData
+
+        // Получаем понятное имя для пользователя
+        QString name;
+        switch(type) {
+        case LineType::SolidMain: name = "Сплошная основная"; break;
+        case LineType::SolidThin: name = "Сплошная тонкая"; break;
+        case LineType::SolidWave: name = "Сплошная волнистая"; break;
+        case LineType::Dashed:    name = "Штриховая"; break;
+        case LineType::DashDotThick: name = "Штрихпунктирная (толстая)"; break;
+        case LineType::DashDotThin:  name = "Штрихпунктирная (тонкая)"; break;
+        case LineType::DashDotDot:   name = "С двумя точками"; break;
+        case LineType::SolidKink:    name = "С изломами"; break;
+        default: name = "Линия"; break;
+        }
+
+        m_lineTypeComboBox->addItem(icon, name, static_cast<int>(type));
     }
 }
 

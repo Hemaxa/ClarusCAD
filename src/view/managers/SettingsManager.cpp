@@ -16,6 +16,7 @@ void SettingsManager::loadSettings()
     m_gridStep = m_settings.value("grid/step", 50).toInt();
     m_zoomStep = m_settings.value("zoom/step", 1.25).toDouble();
     m_angleUnit = static_cast<AngleUnit>(m_settings.value("angle/unit", static_cast<int>(AngleUnit::Degrees)).toInt());
+    m_baseLineThickness = m_settings.value("line/base_thickness", 2.0).toDouble();
 }
 
 void SettingsManager::saveSettings()
@@ -25,6 +26,7 @@ void SettingsManager::saveSettings()
     m_settings.setValue("grid/step", m_gridStep);
     m_settings.setValue("zoom/step", m_zoomStep);
     m_settings.setValue("angle/unit", static_cast<int>(m_angleUnit));
+    m_settings.setValue("line/base_thickness", m_baseLineThickness);
 }
 
 void SettingsManager::setThemeName(const QString& themeName)
@@ -59,7 +61,16 @@ void SettingsManager::setAngleUnit(AngleUnit unit)
     }
 }
 
+void SettingsManager::setBaseLineThickness(double val)
+{
+    if (m_baseLineThickness != val) {
+        m_baseLineThickness = val;
+        emit baseLineThicknessChanged(val);
+    }
+}
+
 QString SettingsManager::getThemeName() const { return m_currentThemeName; }
 int SettingsManager::getGridStep() const { return m_gridStep; }
 double SettingsManager::getZoomStep() const { return m_zoomStep; }
 AngleUnit SettingsManager::getAngleUnit() const { return m_angleUnit; }
+double SettingsManager::getBaseLineThickness() const { return m_baseLineThickness; }

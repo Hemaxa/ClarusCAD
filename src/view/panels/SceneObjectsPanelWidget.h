@@ -22,8 +22,8 @@ public slots:
     void update(const Scene* scene);
 
 signals:
-    //сигнал, информирующий о выборе объекта в списке
-    void primitiveSelected(BasePrimitive* primitive);
+    //сигнал, информирующий о выборе объектов в списке
+    void primitivesSelected(const QList<BasePrimitive*>& primitives);
 
 private slots:
     //слот, реагирующий на изменение выбора в списке

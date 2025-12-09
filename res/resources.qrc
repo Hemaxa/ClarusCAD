@@ -15,6 +15,7 @@
         <file>icons/tools/move.svg</file>
         <file>icons/scene/zoom-in.svg</file>
         <file>icons/scene/zoom-out.svg</file>
+        <file>icons/navigation/zoom-extents.svg</file>
     </qresource>
     <qresource prefix="/promts">
         <file>promts/segment-promt.svg</file>

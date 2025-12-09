@@ -8,6 +8,7 @@
 #include <QMainWindow>
 #include <QShowEvent>
 #include <QKeyEvent>
+#include <QList>
 
 //предварительные объявления всех классов
 class Scene;
@@ -20,6 +21,7 @@ class MoveTool;
 class SegmentCreationTool;
 
 class ConsolePanelWidget;
+class NavigationPanelWidget;
 class PropertiesPanelWidget;
 class SceneObjectsPanelWidget;
 class SceneSettingsPanelWidget;
@@ -51,10 +53,14 @@ private slots:
     //слот установки типа линии для инструмента
     void onLineTypeChanged(LineType type);
 
+    void onRotateLeft();
+
+    void onRotateRight();
+
     void onZoomExtents();
 
     //слот установки выбранных объектов
-    void onSelectionChanged(BasePrimitive* primitive);
+    void onSelectionChanged(const QList<BasePrimitive*>& primitives);
 
     //слот обработки команды из консоли
     void onConsoleCommandParsed(const ParsedCommand& command);
@@ -102,7 +108,7 @@ private:
 
     bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
 
-    BasePrimitive* m_selectedPrimitive = nullptr; //указатель на выбранный объект
+    QList<BasePrimitive*> m_selectedPrimitives; //указатель на выбранные объекта
 
     QCursor m_previousCursor; //позиция курсора
 
@@ -113,6 +119,7 @@ private:
 
     //интерфейсные панели
     ViewportPanelWidget* m_viewportPanel;
+    NavigationPanelWidget* m_navigationPanel;
     ToolbarPanelWidget* m_toolbarPanel;
     PropertiesPanelWidget* m_propertiesPanel;
     SceneObjectsPanelWidget* m_sceneObjectsPanel;

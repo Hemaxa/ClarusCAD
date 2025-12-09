@@ -22,6 +22,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     m_gridStepSpinBox = new QSpinBox();
     m_zoomStepSpinBox = new QDoubleSpinBox();
     m_angleUnitComboBox = new QComboBox();
+    m_lineThicknessSpinBox = new QDoubleSpinBox();
 
     //настройка элементов интерфейса
     //настройка списка тем
@@ -46,11 +47,18 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     m_angleUnitComboBox->addItem("Радианы", static_cast<int>(AngleUnit::Radians));
     m_angleUnitComboBox->setFixedHeight(30);
 
-    //установка текущиех значений для полей
+    //настройка толщин линий
+    m_lineThicknessSpinBox->setRange(0.5, 10.0);
+    m_lineThicknessSpinBox->setSingleStep(0.5);
+    m_lineThicknessSpinBox->setSuffix(" px (S)");
+    m_lineThicknessSpinBox->setFixedHeight(30);
+
+    //установка текущих значений для полей
     setCurrentTheme(SettingsManager::instance().getThemeName());
     setGridStep(SettingsManager::instance().getGridStep());
     setZoomStep(SettingsManager::instance().getZoomStep());
     setAngleUnit(SettingsManager::instance().getAngleUnit());
+    setBaseLineThickness(SettingsManager::instance().getBaseLineThickness());
 
     //расположение элементов интерфейса
     auto* appearanceGroup = new QGroupBox("Оформление");
@@ -61,6 +69,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
     formLayout->addRow("Шаг увеличения/уменьшения:", m_zoomStepSpinBox);
     formLayout->addRow("Единицы измерения углов:", m_angleUnitComboBox);
+    formLayout->addRow("Базовая толщина линий:", m_lineThicknessSpinBox);
 
     appearanceGroup->setLayout(formLayout);
 
@@ -85,12 +94,14 @@ void SettingsWindow::applySettings()
     int newGridStep = getGridStep();
     double newZoomStep = getZoomStep();
     AngleUnit newAngleUnit = getAngleUnit();
+    double newThickness = getBaseLineThickness();
 
     //отправка значений в SettingsManager
     SettingsManager::instance().setThemeName(selectedTheme);
     SettingsManager::instance().setGridStep(newGridStep);
     SettingsManager::instance().setZoomStep(newZoomStep);
     SettingsManager::instance().setAngleUnit(newAngleUnit);
+    SettingsManager::instance().setBaseLineThickness(newThickness);
 
     //сохранение значений в SettingsManager
     SettingsManager::instance().saveSettings();
@@ -109,8 +120,10 @@ void SettingsWindow::setCurrentTheme(const QString& themeName) { int index = m_t
 void SettingsWindow::setGridStep(int step) { m_gridStepSpinBox->setValue(step); }
 void SettingsWindow::setZoomStep(double step) { m_zoomStepSpinBox->setValue(step); }
 void SettingsWindow::setAngleUnit(AngleUnit unit) { int index = m_angleUnitComboBox->findData(static_cast<int>(unit)); if (index != -1) { m_angleUnitComboBox->setCurrentIndex(index); } }
+void SettingsWindow::setBaseLineThickness(double thickness) { m_lineThicknessSpinBox->setValue(thickness); }
 
 QString SettingsWindow::getCurrentTheme() const { return m_themeComboBox->currentData().toString(); }
 int SettingsWindow::getGridStep() const { return m_gridStepSpinBox->value(); }
 double SettingsWindow::getZoomStep() const { return m_zoomStepSpinBox->value(); }
 AngleUnit SettingsWindow::getAngleUnit() const { return static_cast<AngleUnit>(m_angleUnitComboBox->currentData().toInt()); }
+double SettingsWindow::getBaseLineThickness() const { return m_lineThicknessSpinBox->value(); }

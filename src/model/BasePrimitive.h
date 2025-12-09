@@ -36,5 +36,5 @@ public:
 private:
     QString m_name; //имя примитива
     QColor m_color = Qt::white; //цвет примитива
-    LineType m_lineType = LineType::Solid; //тип линии примитва
+    LineType m_lineType = LineType::SolidThin; //тип линии примитва
 };
