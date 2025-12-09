@@ -4,6 +4,10 @@
 
 #include "BasePrimitive.h"
 #include "PointPrimitive.h"
+#include "RectangleCreationTool.h"
+#include "ArcCreationTool.h"
+#include "RectanglePrimitive.h"
+#include "ArcPrimitive.h"
 
 #include <QMainWindow>
 #include <QShowEvent>
@@ -14,11 +18,14 @@
 class Scene;
 class PointPrimitive;
 class SegmentPrimitive;
+class CirclePrimitive;
+
 class BaseCreationTool;
 class BaseDrawingTool;
 class DeleteTool;
 class MoveTool;
 class SegmentCreationTool;
+class CircleCreationTool;
 
 class ConsolePanelWidget;
 class NavigationPanelWidget;
@@ -46,6 +53,9 @@ private slots:
     void activateDeleteTool();
     void activateMoveTool();
     void activateSegmentCreationTool();
+    void activateCircleCreationTool(CircleCreationMode mode);
+    void activateRectangleTool();
+    void activateArcTool();
 
     //слот установки цвета для инструмента
     void onColorChanged(const QColor& color);
@@ -70,6 +80,10 @@ private slots:
 
     //слоты создания или обновления объектов
     void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
+    void applyCircleChanges(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType); // <---
+    void applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
+    void applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
+
 
     //слот удаления объекта
     void deletePrimitive(BasePrimitive* primitive);
@@ -105,17 +119,17 @@ private:
 
     Scene* m_scene; //указатель на объект сцены
     BaseCreationTool* m_currentTool; //указатель на выбранный инструмент
-
     bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
-
     QList<BasePrimitive*> m_selectedPrimitives; //указатель на выбранные объекта
-
     QCursor m_previousCursor; //позиция курсора
 
     //инструменты
     DeleteTool* m_deleteTool;
     MoveTool* m_moveTool;
     SegmentCreationTool* m_segmentCreationTool;
+    CircleCreationTool* m_circleCreationTool;
+    RectangleCreationTool* m_rectCreationTool;
+    ArcCreationTool* m_arcCreationTool;
 
     //интерфейсные панели
     ViewportPanelWidget* m_viewportPanel;

@@ -4,8 +4,10 @@
 #include "DeleteTool.h"
 #include "MoveTool.h"
 #include "SegmentCreationTool.h"
+#include "CircleCreationTool.h"
 
 #include "SegmentPrimitive.h"
+#include "CirclePrimitive.h"
 
 #include "ConsolePanelWidget.h"
 #include "NavigationPanelWidget.h"
@@ -79,6 +81,9 @@ void MainWindow::createTools()
     m_deleteTool = new DeleteTool(this);
     m_moveTool = new MoveTool(this);
     m_segmentCreationTool = new SegmentCreationTool(this);
+    m_circleCreationTool = new CircleCreationTool(this);
+    m_rectCreationTool = new RectangleCreationTool(this);
+    m_arcCreationTool = new ArcCreationTool(this);
 }
 
 void MainWindow::createPanelWindows()
@@ -136,6 +141,9 @@ void MainWindow::createConnections()
     //- PropertiesPanelWidget -
     //панель свойств сообщает данные -> в главном окне вызывается слот создания соответствующего примитива
     connect(m_propertiesPanel, &PropertiesPanelWidget::segmentPropertiesApplied, this, &MainWindow::applySegmentChanges);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::circlePropertiesApplied, this, &MainWindow::applyCircleChanges);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::rectanglePropertiesApplied, this, &MainWindow::applyRectangleChanges);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::arcPropertiesApplied, this, &MainWindow::applyArcChanges);
 
     //панель свойств сообщает об изменении данных (параметров) при создании нового примитива -> в главном окне вызываются слот установки параметра
     connect(m_propertiesPanel, &PropertiesPanelWidget::colorChanged, this, &MainWindow::onColorChanged);
@@ -145,6 +153,9 @@ void MainWindow::createConnections()
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::moveToolActivated, this, &MainWindow::activateMoveTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::segmentToolActivated, this, &MainWindow::activateSegmentCreationTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::circleToolActivated, this, &MainWindow::activateCircleCreationTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::rectangleToolActivated, this, &MainWindow::activateRectangleTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::arcToolActivated, this, &MainWindow::activateArcTool);
 
     //- NavigationPanelWidget -
     connect(m_navigationPanel, &NavigationPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
@@ -168,6 +179,24 @@ void MainWindow::createConnections()
 
     //- Tools -
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
+    connect(m_circleCreationTool, &CircleCreationTool::circleDataReady, this, [this](CirclePrimitive* circle){
+        // Сигнал из тула передает уже готовый объект, используем общий метод добавления
+        // Или вызываем applyCircleChanges с nullptr?
+        // Лучше использовать addPrimitiveToScene, так как тул уже создал объект в куче
+        addPrimitiveToScene(circle);
+    });
+    connect(m_rectCreationTool, &RectangleCreationTool::rectangleDataReady, this, [this](const PointPrimitive& center, double w, double h, double rot){
+        // Внимание: RectangleCreationTool шлёт сигнал rectangleDataReady
+        // Нужно проверить сигнатуру в RectangleCreationTool.h
+        // Если там создается примитив напрямую в сцену -> сигнал не нужен или пустой.
+        // В присланном вами коде RectangleCreationTool сам добавляет в сцену.
+        // Значит здесь просто emit sceneChanged(m_scene);
+        emit sceneChanged(m_scene);
+    });
+    connect(m_arcCreationTool, &ArcCreationTool::arcDataReady, this, [this](ArcPrimitive* arc){
+        addPrimitiveToScene(arc);
+    });
+
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
 
@@ -322,6 +351,36 @@ void MainWindow::activateSegmentCreationTool()
     m_toolbarPanel->getCreateSegmentButton()->setChecked(true); //установка кнопки в активное положение
 }
 
+void MainWindow::activateCircleCreationTool(CircleCreationMode mode)
+{
+    deactivateCurrentTool();
+
+    m_currentTool = m_circleCreationTool;
+    m_circleCreationTool->setCreationMode(mode); // Передаем режим
+    m_viewportPanel->setActiveTool(m_currentTool);
+
+    emit toolActivated(PrimitiveType::Circle);
+
+    // Выделяем кнопку (можно добавить метод getCreateCircleButton в ToolbarPanelWidget, чтобы сделать setChecked(true))
+    // m_toolbarPanel->getCreateCircleButton()->setChecked(true);
+}
+
+void MainWindow::activateRectangleTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_rectCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::Rectangle);
+    m_toolbarPanel->getCreateRectangleButton()->setChecked(true);
+}
+
+void MainWindow::activateArcTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_arcCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::Arc);
+    m_toolbarPanel->getCreateArcButton()->setChecked(true);
+}
+
 void MainWindow::deactivateCurrentTool()
 {
     //если какой-либо инструмент активен
@@ -389,6 +448,55 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
     // чтобы выделение осталось после перерисовки.
 }
 
+void MainWindow::applyCircleChanges(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType)
+{
+    // Режим создания (через панель свойств, если такое будет поддерживаться)
+    if (!circle) {
+        auto* newCircle = new CirclePrimitive(center, radius);
+        newCircle->setColor(color);
+        newCircle->setLineType(static_cast<int>(lineType));
+        addPrimitiveToScene(newCircle);
+        return;
+    }
+
+    // Режим редактирования
+    if (m_selectedPrimitives.contains(circle) && m_selectedPrimitives.size() > 1) {
+        for (auto* prim : m_selectedPrimitives) {
+            prim->setColor(color);
+            prim->setLineType(static_cast<int>(lineType));
+        }
+        // Геометрию меняем только у главного
+        circle->setCenter(center);
+        circle->setRadius(radius);
+    }
+    else {
+        circle->setCenter(center);
+        circle->setRadius(radius);
+        circle->setColor(color);
+        circle->setLineType(static_cast<int>(lineType));
+    }
+    emit sceneChanged(m_scene);
+}
+
+void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& color, LineType type) {
+    if(!rect) {
+        // Создание через панель свойств
+        auto* newRect = new RectanglePrimitive(center, w, h, r);
+        newRect->setColor(color);
+        newRect->setLineType((int)type);
+        addPrimitiveToScene(newRect);
+        return;
+    }
+    // Редактирование
+    rect->setCenter(center);
+    rect->setWidth(w);
+    rect->setHeight(h);
+    rect->setRotation(r);
+    rect->setColor(color);
+    rect->setLineType((int)type);
+    emit sceneChanged(m_scene);
+}
+
 void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
 {
     if (primitive) {
@@ -403,6 +511,23 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
         // Принудительно устанавливаем выделение нового объекта
         onSelectionChanged(newSelection);
     }
+}
+
+void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& color, LineType type) {
+    if(!arc) {
+        auto* newArc = new ArcPrimitive(center, rad, start, span);
+        newArc->setColor(color);
+        newArc->setLineType((int)type);
+        addPrimitiveToScene(newArc);
+        return;
+    }
+    arc->setCenter(center);
+    arc->setRadius(rad);
+    arc->setStartAngle(start);
+    arc->setSpanAngle(span);
+    arc->setColor(color);
+    arc->setLineType((int)type);
+    emit sceneChanged(m_scene);
 }
 
 void MainWindow::deletePrimitive(BasePrimitive* primitive)

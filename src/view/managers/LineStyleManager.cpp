@@ -1,5 +1,4 @@
 #include "LineStyleManager.h"
-
 #include <QtMath>
 #include <QPainter>
 #include <QPainterPath>
@@ -114,7 +113,6 @@ QVector<qreal> LineStyleManager::getPattern(int id) const
     }
 
     // 2. Применяем глобальные коэффициенты масштабирования
-    // Коэффициенты вычисляются относительно "эталонных" значений (10.0 и 5.0)
     double dashScale = m_dashLength / DEFAULT_DASH_REF;
     double spaceScale = m_dashSpace / DEFAULT_SPACE_REF;
 
@@ -123,7 +121,7 @@ QVector<qreal> LineStyleManager::getPattern(int id) const
 
     for (int i = 0; i < basePattern.size(); ++i) {
         if (i % 2 == 0) {
-            // Четные индексы - "рисуемая" часть (штрих или точка)
+            // Четные индексы - "рисуемая" часть
             scaledPattern.append(basePattern[i] * dashScale);
         } else {
             // Нечетные индексы - "пробел"
@@ -136,7 +134,6 @@ QVector<qreal> LineStyleManager::getPattern(int id) const
 
 LineWeight LineStyleManager::getWeightForType(int typeId) const
 {
-    //Пользовательские стили пока считаем тонкими
     if (typeId >= 1000) return LineWeight::Thin;
 
     LineType type = static_cast<LineType>(typeId);
@@ -176,19 +173,14 @@ QPen LineStyleManager::getPen(int typeId, const QColor& color, bool isSelected) 
 void LineStyleManager::drawLine(QPainter& painter, const QPointF& start, const QPointF& end,
                                 int typeId, const QColor& color, bool isSelected) const
 {
-    // 1. ОТРИСОВКА КОНТУРА ВЫДЕЛЕНИЯ (ПОДЛОЖКА)
+    // 1. ОТРИСОВКА КОНТУРА ВЫДЕЛЕНИЯ
     if (isSelected) {
         QPen highlightPen = getPen(typeId, color, false);
-
-        // Делаем контур значительно шире (+8 пикселя)
         highlightPen.setWidthF(highlightPen.widthF() + 8.0);
-
-        // Делаем контур полупрозрачным
         QColor hColor = color;
         hColor.setAlpha(100);
         highlightPen.setColor(hColor);
 
-        // Рисуем подложку
         bool isSpecialHighlight = false;
         if (typeId < 1000) {
             LineType type = static_cast<LineType>(typeId);
@@ -203,16 +195,14 @@ void LineStyleManager::drawLine(QPainter& painter, const QPointF& start, const Q
                 isSpecialHighlight = true;
             }
         }
-
         if (!isSpecialHighlight) {
             painter.setPen(highlightPen);
             painter.drawLine(start, end);
         }
     }
 
-    // 2. ОТРИСОВКА САМОЙ ЛИНИИ (СТАНДАРТ)
+    // 2. ОТРИСОВКА САМОЙ ЛИНИИ
     QPen standardPen = getPen(typeId, color, false);
-
     bool isSpecial = false;
     if (typeId < 1000) {
         LineType type = static_cast<LineType>(typeId);
@@ -227,7 +217,6 @@ void LineStyleManager::drawLine(QPainter& painter, const QPointF& start, const Q
             isSpecial = true;
         }
     }
-
     if (!isSpecial) {
         painter.setPen(standardPen);
         painter.drawLine(start, end);
@@ -243,12 +232,13 @@ void LineStyleManager::drawWaveLine(QPainter& painter, const QPointF& start, con
     double length = line.length();
     double amplitude = 2.0;
     double period = 10.0;
+
     double dx = end.x() - start.x();
     double dy = end.y() - start.y();
-    double nx = dx / length;
-    double ny = dy / length;
-    double px = -ny;
-    double py = nx;
+    double nx = dx / length; // Нормализованный вектор
+    double px = -dy / length; // Перпендикуляр
+    double py = dx / length;
+
     for (double i = 0; i <= length; i += 2.0) {
         double t = i / length;
         double offset = amplitude * qSin(i * 2 * M_PI / period);
@@ -269,27 +259,146 @@ void LineStyleManager::drawZigzagLine(QPainter& painter, const QPointF& start, c
     double length = line.length();
     double amplitude = 3.0;
     double period = 15.0;
+
     double dx = end.x() - start.x();
     double dy = end.y() - start.y();
-    double nx = dx / length;
-    double ny = dy / length;
-    double px = -ny;
-    double py = nx;
+    double px = -dy / length; // Перпендикуляр
+    double py = dx / length;
+
     for (double i = 0; i < length; i += period) {
-        double t1 = i / length;
         double t2 = (i + period / 4.0) / length; if (t2 > 1.0) t2 = 1.0;
         double topX = start.x() + dx * t2 + px * amplitude;
         double topY = start.y() + dy * t2 + py * amplitude;
+
         double t3 = (i + 3.0 * period / 4.0) / length; if (t3 > 1.0) t3 = 1.0;
         double botX = start.x() + dx * t3 - px * amplitude;
         double botY = start.y() + dy * t3 - py * amplitude;
+
         double t4 = (i + period) / length; if (t4 > 1.0) t4 = 1.0;
         double endPeriodX = start.x() + dx * t4;
         double endPeriodY = start.y() + dy * t4;
+
         path.lineTo(topX, topY);
         path.lineTo(botX, botY);
         path.lineTo(endPeriodX, endPeriodY);
     }
     path.lineTo(end);
     painter.drawPath(path);
+}
+
+void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, double rx, double ry,
+                                   int typeId, const QColor& color, bool isSelected) const
+{
+    // Определяем, является ли стиль "сложным" (волна или зигзаг)
+    bool isWave = false;
+    bool isZigzag = false;
+    if (typeId < 1000) {
+        LineType type = static_cast<LineType>(typeId);
+        if (type == LineType::SolidWave) isWave = true;
+        if (type == LineType::SolidKink) isZigzag = true;
+    }
+
+    // 1. ПОДЛОЖКА ПРИ ВЫДЕЛЕНИИ
+    if (isSelected) {
+        QPen highlightPen = getPen(typeId, color, false);
+        highlightPen.setWidthF(highlightPen.widthF() + 8.0);
+        QColor hColor = color;
+        hColor.setAlpha(100);
+        highlightPen.setColor(hColor);
+
+        if (isWave || isZigzag) {
+            highlightPen.setStyle(Qt::SolidLine); // Для кастомной отрисовки нужен Solid
+            painter.setPen(highlightPen);
+            painter.setBrush(Qt::NoBrush);
+            // Рисуем аппроксимацию для подсветки
+            // Можно упростить и рисовать просто эллипс для скорости,
+            // но для точности лучше повторять форму.
+            // Для простоты здесь рисуем обычный эллипс с толстой обводкой,
+            // так как волна идет "вдоль" него.
+            painter.drawEllipse(center, rx, ry);
+        } else {
+            painter.setPen(highlightPen);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawEllipse(center, rx, ry);
+        }
+    }
+
+    // 2. ОСНОВНАЯ ЛИНИЯ
+    QPen standardPen = getPen(typeId, color, false);
+    painter.setBrush(Qt::NoBrush);
+
+    if (isWave) {
+        standardPen.setStyle(Qt::SolidLine);
+        painter.setPen(standardPen);
+
+        // Рисуем волнистый эллипс
+        QPainterPath path;
+        double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0); // Приближенно
+        double period = 10.0;
+        double amplitude = 2.0;
+        int steps = static_cast<int>(perimeter); // Шаг 1 пиксель
+        if(steps < 10) steps = 10;
+
+        for(int i=0; i<=steps; ++i) {
+            double t = (double)i / steps; // 0..1
+            double angle = t * 2 * M_PI;
+
+            // Волна накладывается на радиус
+            // Частота зависит от периметра и периода
+            double waveOffset = amplitude * qSin((perimeter / period) * angle);
+
+            double rCurrent = rx + waveOffset; // Упрощенно считаем rx=ry
+
+            double x = center.x() + rCurrent * qCos(angle);
+            double y = center.y() + rCurrent * qSin(angle);
+
+            if (i==0) path.moveTo(x,y);
+            else path.lineTo(x,y);
+        }
+        path.closeSubpath();
+        painter.drawPath(path);
+
+    }
+    else if (isZigzag) {
+        standardPen.setStyle(Qt::SolidLine);
+        painter.setPen(standardPen);
+
+        // Рисуем зигзаг эллипс (упрощенная реализация через ломаную)
+        QPainterPath path;
+        double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
+        double period = 15.0;
+        double amplitude = 3.0;
+
+        int segments = std::round(perimeter / period);
+        if (segments < 4) segments = 4;
+
+        for(int i=0; i<segments; ++i) {
+            double angleStart = (double)i / segments * 2 * M_PI;
+            double angleEnd = (double)(i+1) / segments * 2 * M_PI;
+            double angleMid = (angleStart + angleEnd) / 2.0;
+
+            // Точки на окружности
+            QPointF pStart(center.x() + rx * qCos(angleStart), center.y() + ry * qSin(angleStart));
+            QPointF pEnd(center.x() + rx * qCos(angleEnd), center.y() + ry * qSin(angleEnd));
+
+            // Точка "выброса" зигзага (наружу или внутрь)
+            // Чередуем: четные наружу, нечетные внутрь? Или просто "пик" посередине?
+            // Сделаем "пик" наружу
+            double rMid = rx + amplitude;
+            if (i%2 != 0) rMid = rx - amplitude;
+
+            QPointF pMid(center.x() + rMid * qCos(angleMid), center.y() + rMid * qSin(angleMid));
+
+            if (i==0) path.moveTo(pStart);
+            path.lineTo(pMid);
+            path.lineTo(pEnd);
+        }
+        path.closeSubpath();
+        painter.drawPath(path);
+    }
+    else {
+        // Стандартная отрисовка
+        painter.setPen(standardPen);
+        painter.drawEllipse(center, rx, ry);
+    }
 }

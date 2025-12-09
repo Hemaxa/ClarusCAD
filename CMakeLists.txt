@@ -21,7 +21,18 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 
 #создание исполняемого файла
-add_executable(ClarusCAD)
+add_executable(ClarusCAD
+    src/model/primitives/RectanglePrimitive.h src/model/primitives/RectanglePrimitive.cpp
+    src/model/primitives/ArcPrimitive.h src/model/primitives/ArcPrimitive.cpp
+    src/view/drawing/RectangleDrawingTool.h src/view/drawing/RectangleDrawingTool.cpp
+    src/view/drawing/ArcDrawingTool.h src/view/drawing/ArcDrawingTool.cpp
+    src/controller/tools/RectangleCreationTool.h src/controller/tools/RectangleCreationTool.cpp
+    src/controller/tools/ArcCreationTool.h src/controller/tools/ArcCreationTool.cpp
+    src/view/properties/RectanglePropertiesWidget.h src/view/properties/RectanglePropertiesWidget.cpp
+    src/view/properties/ArcPropertiesWidget.h src/view/properties/ArcPropertiesWidget.cpp
+    src/model/primitives/EllipsePrimitive.h src/model/primitives/EllipsePrimitive.cpp
+    src/view/drawing/EllipseDrawingTool.h src/view/drawing/EllipseDrawingTool.cpp
+    src/controller/tools/EllipseCreationTool.h src/controller/tools/EllipseCreationTool.cpp)
 
 #обозначение исходных файлов
 target_sources (ClarusCAD PRIVATE
@@ -32,6 +43,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/controller/CommandParser.h
     ${SRC_DIR}/controller/CommandParser.cpp
 
+    ${SRC_DIR}/controller/tools/CircleCreationTool.h
+    ${SRC_DIR}/controller/tools/CircleCreationTool.cpp
     ${SRC_DIR}/controller/tools/DeleteTool.h
     ${SRC_DIR}/controller/tools/DeleteTool.cpp
     ${SRC_DIR}/controller/tools/MoveTool.h
@@ -45,6 +58,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/Scene.h
     ${SRC_DIR}/model/Scene.cpp
 
+    ${SRC_DIR}/model/primitives/CirclePrimitive.h
+    ${SRC_DIR}/model/primitives/CirclePrimitive.cpp
     ${SRC_DIR}/model/primitives/PointPrimitive.h
     ${SRC_DIR}/model/primitives/PointPrimitive.cpp
     ${SRC_DIR}/model/primitives/SegmentPrimitive.h
@@ -72,6 +87,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/managers/ThemeManager.h
     ${SRC_DIR}/view/managers/ThemeManager.cpp
 
+    ${SRC_DIR}/view/drawing/CircleDrawingTool.h
+    ${SRC_DIR}/view/drawing/CircleDrawingTool.cpp
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.h
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.cpp
 
@@ -90,6 +107,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/panels/ViewportPanelWidget.h
     ${SRC_DIR}/view/panels/ViewportPanelWidget.cpp
 
+    ${SRC_DIR}/view/properties/CirclePropertiesWidget.h
+    ${SRC_DIR}/view/properties/CirclePropertiesWidget.cpp
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
 

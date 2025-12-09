@@ -1,12 +1,16 @@
 #include "ViewportPanelWidget.h"
 #include "ViewportCamera.h"
 #include "Scene.h"
+#include "ThemeManager.h"
 #include "BaseCreationTool.h"
+
 #include "BaseDrawingTool.h"
 #include "SegmentDrawingTool.h"
+#include "CircleDrawingTool.h"
+
 #include "PointPrimitive.h"
 #include "SegmentPrimitive.h"
-#include "ThemeManager.h"
+#include "CirclePrimitive.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -189,6 +193,13 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                                 auto* pt = static_cast<PointPrimitive*>(prim.get());
                                 dist = QLineF(worldClick, QPointF(pt->getX(), pt->getY())).length();
                             }
+                            // 3. НОВОЕ: Проверка для Окружностей
+                            else if (prim->getType() == PrimitiveType::Circle) {
+                                auto* circle = static_cast<CirclePrimitive*>(prim.get());
+                                QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+                                double distToCenter = QLineF(worldClick, center).length();
+                                dist = std::abs(distToCenter - circle->getRadius());
+                            }
 
                             // Если попали в допуск и это самый близкий объект
                             if (dist < minDistance) {
@@ -203,10 +214,18 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                     }
                 }
                 else {
-                    // ЛОГИКА РАМКИ (оставляем как было, тут Bounding Box подходит лучше для скорости)
+                    // ЛОГИКА РАМКИ
                     if (m_scene) {
-                        bool isCrossing = (mouseEvent->pos().x() < m_selectionStartPos.x());
+                        bool isCrossing = (mouseEvent->pos().x() < m_selectionStartPos.x()); // Справа налево (зеленая)
                         for (const auto& prim : m_scene->getPrimitives()) {
+
+                            // Получаем BoundingBox примитива в мировых координатах
+                            QRectF bbWorld = prim->getBoundingBox();
+
+                            // Преобразуем bbox в экранные координаты для проверки (грубая проверка)
+                            // Или преобразуем рамку в мировые. Лучше преобразуем точки объекта в экранные.
+
+                            // Для ОТРЕЗКОВ (как было)
                             if (prim->getType() == PrimitiveType::Segment) {
                                 auto* seg = static_cast<SegmentPrimitive*>(prim.get());
                                 QPoint p1Screen = worldToScreen(QPointF(seg->getStart().getX(), seg->getStart().getY())).toPoint();
@@ -216,9 +235,37 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                                 bool p2In = selectionRect.contains(p2Screen);
 
                                 if (isCrossing) {
+                                    // Пересечение (простой вариант: если хотя бы одна точка внутри)
+                                    // Плюс проверка на пересечение линии с прямоугольником (здесь упрощено)
                                     if (p1In || p2In) newSelection.append(prim.get());
+                                    // TODO: Добавить полноценную проверку пересечения линии и Rect
                                 } else {
+                                    // Window (обе точки внутри)
                                     if (p1In && p2In) newSelection.append(prim.get());
+                                }
+                            }
+                            // НОВОЕ: Для ОКРУЖНОСТЕЙ
+                            else if (prim->getType() == PrimitiveType::Circle) {
+                                auto* circle = static_cast<CirclePrimitive*>(prim.get());
+                                // Проверка Bounding Box окружности
+                                // Преобразуем прямоугольник выделения в мировые координаты для сравнения
+                                QPointF topLeftWorld = screenToWorld(selectionRect.topLeft());
+                                QPointF bottomRightWorld = screenToWorld(selectionRect.bottomRight());
+                                QRectF selectionWorld(topLeftWorld, bottomRightWorld);
+                                selectionWorld = selectionWorld.normalized();
+
+                                QRectF circleBB = circle->getBoundingBox();
+
+                                if (isCrossing) {
+                                    // Пересечение: если прямоугольники пересекаются
+                                    if (selectionWorld.intersects(circleBB)) {
+                                        newSelection.append(prim.get());
+                                    }
+                                } else {
+                                    // Window: если bounding box окружности полностью внутри рамки
+                                    if (selectionWorld.contains(circleBB)) {
+                                        newSelection.append(prim.get());
+                                    }
                                 }
                             }
                             // Можно добавить поддержку других типов
@@ -283,6 +330,7 @@ double ViewportPanelWidget::calculateDynamicGridStep() const
 void ViewportPanelWidget::createDrawingTools()
 {
     m_drawingTools[PrimitiveType::Segment] = std::make_unique<SegmentDrawingTool>();
+    m_drawingTools[PrimitiveType::Circle] = std::make_unique<CircleDrawingTool>();
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
@@ -369,7 +417,6 @@ void ViewportPanelWidget::paintGrid(QPainter& painter, const QTransform& worldTr
     double startX = std::floor(worldBounds.left() / dynamicGridStep) * dynamicGridStep;
     double endX = std::ceil(worldBounds.right() / dynamicGridStep) * dynamicGridStep;
 
-    // --- Твой фикс для горизонтальных линий (он правильный) ---
     double startY = std::floor(worldBounds.top() / dynamicGridStep) * dynamicGridStep;
     double endY = std::ceil(worldBounds.bottom() / dynamicGridStep) * dynamicGridStep;
 
@@ -390,7 +437,6 @@ void ViewportPanelWidget::paintGrid(QPainter& painter, const QTransform& worldTr
 
     painter.restore(); // Возвращаемся в экранные координаты
 
-    // --- ИСПРАВЛЕНИЕ 2 (ШКАЛЫ) ---
     // Получаем экранные векторы, указывающие направление осей
     QPointF originScreen = worldTransform.map(QPointF(0.0, 0.0));
     QPointF xAxisScreen = worldTransform.map(QPointF(1.0, 0.0));
@@ -415,8 +461,6 @@ void ViewportPanelWidget::paintGrid(QPainter& painter, const QTransform& worldTr
     QPointF downDir = -yDir;
     // xDir указывает "вправо" по экрану. Нам нужен "влево" (перпендикулярно оси Y).
     QPointF leftDir = -xDir;
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ 2 ---
-
 
     // --- Отрисовка текста и точки (0,0) (в экранных координатах) ---
     QColor scaleColor = ThemeManager::instance().getColor("axisScaleColor");
@@ -475,17 +519,15 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
     int padding = 60;
     QPoint origin(padding, canvas()->height() - padding);
 
-    // --- НОВЫЙ КОД ---
     // Создаем трансформацию для осей гизмо
     // Вращаем в обратную сторону, т.к. Y на экране "вниз"
     QTransform gizmoTransform;
-    gizmoTransform.rotate(-m_camera->getRotationAngle()); // <-- Применяем вращение
+    gizmoTransform.rotate(-m_camera->getRotationAngle());
 
     QPointF xAxisEnd = gizmoTransform.map(QPointF(gizmoSize, 0));
     QPointF yAxisEnd = gizmoTransform.map(QPointF(0, -gizmoSize)); // (0, -size) т.к. Y "вверх"
-    // --- КОНЕЦ НОВОГО КОДА ---
 
-    // Ось X (рисуем до 'rotated' точки)
+    // Ось X
     painter.setPen(QPen(Qt::red, 2.0));
     painter.setBrush(Qt::red);
     painter.drawLine(origin, origin + xAxisEnd.toPoint());
@@ -496,7 +538,7 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
                << origin + gizmoTransform.map(QPointF(gizmoSize - 8, 4)).toPoint();
     painter.drawPolygon(arrowHeadX);
 
-    // Ось Y (рисуем до 'rotated' точки)
+    // Ось Y
     painter.setPen(QPen(Qt::green, 2.0));
     painter.setBrush(Qt::green);
     painter.drawLine(origin, origin + yAxisEnd.toPoint());
@@ -507,40 +549,32 @@ void ViewportPanelWidget::paintGizmo(QPainter& painter)
                << origin + gizmoTransform.map(QPointF(4, -gizmoSize + 8)).toPoint();
     painter.drawPolygon(arrowHeadY);
 
-    // ... (точка в начале координат - не меняется) ...
+    // Точка в начале
     painter.setPen(Qt::white);
     painter.setBrush(Qt::white);
     painter.drawEllipse(origin, 3, 3);
-
-    // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-    // painter.drawText(origin + xAxisEnd.toPoint() + QPoint(8, 4), "X"); // <-- БЫЛО
-    // painter.drawText(origin + yAxisEnd.toPoint() + QPoint(-4, -8), "Y"); // <-- БЫЛО
 
     // Задаем смещение в 12px "наружу" от конца оси ВНУТРИ системы гизмо
     QPointF xTextPos = gizmoTransform.map(QPointF(gizmoSize + 12, 0));
     QPointF yTextPos = gizmoTransform.map(QPointF(0, -gizmoSize - 12));
 
-    // Рисуем текст в прямоугольнике 20x20, центрируя его
+    // Рисуем текст
     painter.setPen(Qt::white);
     painter.setBrush(Qt::NoBrush);
     painter.drawText(QRectF(origin.x() + xTextPos.x() - 10, origin.y() + xTextPos.y() - 10, 20, 20), Qt::AlignCenter, "X");
     painter.drawText(QRectF(origin.x() + yTextPos.x() - 10, origin.y() + yTextPos.y() - 10, 20, 20), Qt::AlignCenter, "Y");
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
     painter.restore();
 }
 
-// НОВЫЙ МЕТОД: ОБЛАСТЬ НАЖАТИЯ ГИЗМО
 QRect ViewportPanelWidget::getGizmoRect() const
 {
     int gizmoSize = 50;
     int padding = 60;
-    int clickAreaSize = gizmoSize + padding; // 65
-    // Прямоугольник 65x65 в левом нижнем углу
+    int clickAreaSize = gizmoSize + padding;
     return QRect(0, canvas()->height() - clickAreaSize, clickAreaSize, clickAreaSize);
 }
 
-// НОВЫЙ МЕТОД: СЛОТ ДЛЯ ЗАПУСКА АНИМАЦИИ
 void ViewportPanelWidget::rotateSceneLeft()
 {
     m_camera->rotateLeft();
@@ -554,19 +588,14 @@ void ViewportPanelWidget::rotateSceneRight()
 void ViewportPanelWidget::zoomToExtents()
 {
     if (!m_scene || m_scene->getPrimitives().empty()) {
-        // Если сцена пуста, можно просто сбросить вид (по желанию)
-        // m_camera->resetView(); // (потребовалось бы добавить в камеру)
         return;
     }
 
-    // 1. Считаем общий AABB в Мировом пространстве
     QRectF worldBounds;
     bool first = true;
     for (const auto& primitive : m_scene->getPrimitives()) {
         QRectF primBounds = primitive->getBoundingBox();
         if (!primBounds.isValid() && primBounds.size().isEmpty()) {
-            // Для точек (0x0 rect) мы используем united,
-            // который правильно обработает их как координаты
             if (first) {
                 worldBounds = primBounds;
                 first = false;
@@ -583,15 +612,12 @@ void ViewportPanelWidget::zoomToExtents()
         }
     }
 
-    // Если у нас только одна точка (или несколько в одном месте),
-    // worldBounds будет 0x0. Дадим ему мин. размер.
     if (worldBounds.width() == 0 && worldBounds.height() == 0) {
-        worldBounds.adjust(-50, -50, 50, 50); // Даем +/- 50
+        worldBounds.adjust(-50, -50, 50, 50);
     }
 
     if (!worldBounds.isValid()) return;
 
-    // 2. Делегируем камере
     m_camera->fitBounds(worldBounds);
 }
 
@@ -606,22 +632,18 @@ void ViewportPanelWidget::updateInfoLabel()
         m_gridMultiplier = 1.0;
     }
 
-    //проверка текущей системы координат
-    //декартова система координат
     if (m_coordSystemType == CoordinateSystemType::Cartesian) {
         infoText = QString("X: %1\nY: %2\nGrid: x%3")
         .arg(m_currentMouseWorldPos.x(), 0, 'f', 2)
             .arg(m_currentMouseWorldPos.y(), 0, 'f', 2)
             .arg(m_gridMultiplier, 0, 'f', 2);
     }
-    //полярная система координат
     else {
-        //перевод координат
         PointPrimitive p(m_currentMouseWorldPos.x(), m_currentMouseWorldPos.y());
-            infoText = QString("R: %1\nA: %2°\nGrid: x%3")
-            .arg(p.getRadius(), 0, 'f', 2)
-            .arg(p.getAngle(), 0, 'f', 2)
-            .arg(m_gridMultiplier, 0, 'f', 2);
+        infoText = QString("R: %1\nA: %2°\nGrid: x%3")
+                       .arg(p.getRadius(), 0, 'f', 2)
+                       .arg(p.getAngle(), 0, 'f', 2)
+                       .arg(m_gridMultiplier, 0, 'f', 2);
     }
     m_infoLabel->setText(infoText);
 }
@@ -633,25 +655,21 @@ void ViewportPanelWidget::applyZoom(double factor, const QPoint& anchorPoint)
 
 void ViewportPanelWidget::zoomIn()
 {
-    //зум к центру холста
     applyZoom(m_zoomStep, canvas()->rect().center());
 }
 
 void ViewportPanelWidget::zoomIn(const QPoint& anchorPoint)
 {
-    //зум к указанной точке
     applyZoom(m_zoomStep, anchorPoint);
 }
 
 void ViewportPanelWidget::zoomOut()
 {
-    //отдаление от центра холста
     applyZoom(1.0 / m_zoomStep, canvas()->rect().center());
 }
 
 void ViewportPanelWidget::zoomOut(const QPoint& anchorPoint)
 {
-    //отдаление от указанной точки
     applyZoom(1.0 / m_zoomStep, anchorPoint);
 }
 
@@ -667,17 +685,13 @@ QPointF ViewportPanelWidget::screenToWorld(const QPointF& screenPos) const
 
 QPointF ViewportPanelWidget::snapToGrid(const QPointF& worldPos) const
 {
-    const double dynamicGridStep = calculateDynamicGridStep(); // <-- СТАЛО
-    if (dynamicGridStep <= 0) { // <-- СТАЛО
+    const double dynamicGridStep = calculateDynamicGridStep();
+    if (dynamicGridStep <= 0) {
         return worldPos;
     }
 
-    //округление координат
-    // double snappedX = std::round(worldPos.x() / m_gridStep) * m_gridStep; // <-- БЫЛО
-    // double snappedY = std::round(worldPos.y() / m_gridStep) * m_gridStep; // <-- БЫЛО
-    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep; // <-- СТАЛО
-    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep; // <-- СТАЛО
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+    double snappedX = std::round(worldPos.x() / dynamicGridStep) * dynamicGridStep;
+    double snappedY = std::round(worldPos.y() / dynamicGridStep) * dynamicGridStep;
     return QPointF(snappedX, snappedY);
 }
 
@@ -687,7 +701,7 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
         return worldPos;
     }
 
-    double minDistance = 10.0 / getZoomFactor(); //порог привязки (10 пикселей)
+    double minDistance = 10.0 / getZoomFactor();
     QPointF bestSnapPoint = worldPos;
 
     for (const auto& primitive : m_scene->getPrimitives()) {
@@ -696,17 +710,25 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
             QPointF startPoint(segment->getStart().getX(), segment->getStart().getY());
             QPointF endPoint(segment->getEnd().getX(), segment->getEnd().getY());
 
-            //проверка расстояния до начальной точки
             if (QLineF(worldPos, startPoint).length() < minDistance) {
                 minDistance = QLineF(worldPos, startPoint).length();
                 bestSnapPoint = startPoint;
             }
 
-            //проверка расстояния до конечной точки
             if (QLineF(worldPos, endPoint).length() < minDistance) {
                 minDistance = QLineF(worldPos, endPoint).length();
                 bestSnapPoint = endPoint;
             }
+        }
+        else if (primitive->getType() == PrimitiveType::Circle) {
+            auto* circle = static_cast<CirclePrimitive*>(primitive.get());
+            // Привязка к центру
+            QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+            if (QLineF(worldPos, center).length() < minDistance) {
+                minDistance = QLineF(worldPos, center).length();
+                bestSnapPoint = center;
+            }
+            // Можно добавить привязку к квадрантам окружности
         }
     }
     return bestSnapPoint;
@@ -716,15 +738,12 @@ QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
 {
     QPointF snappedPos = worldPos;
 
-    //сначала идет привязка к примитивам, если включено
     if (m_isPrimitiveSnapEnabled) {
         snappedPos = snapToPrimitives(worldPos);
-        //если не получилась привязка к примитиву и включена привязка к сетке, то пробуется она
         if (snappedPos == worldPos && m_isGridSnapEnabled) {
             snappedPos = snapToGrid(worldPos);
         }
     }
-    //елси привязка к примитивам выключена, но включена к сетке
     else if (m_isGridSnapEnabled) {
         snappedPos = snapToGrid(worldPos);
     }

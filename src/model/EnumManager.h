@@ -1,42 +1,79 @@
-//EnumManager - класс глобальных перечислений в программе
-
 #pragma once
 
-//enum class - строго типизированный способ определения перечисления в C++
-
-//типы примитивов
+// Типы примитивов
 enum class PrimitiveType {
-    Generic, //общий
-    Point, //точка
-    Segment //отрезок
+    Generic,
+    Point,
+    Segment,
+    Circle,
+    Arc,
+    Rectangle,
+    Ellipse,
+    Polygon,
+    Spline
 };
 
-//типы систем координат
+// Режимы построения окружности
+enum class CircleCreationMode {
+    CenterRadius,
+    CenterDiameter,
+    TwoPoints,
+    ThreePoints
+};
+
+// Режимы построения дуги
+enum class ArcCreationMode {
+    ThreePoints,        // Три точки (Начало, Промежуточная, Конец)
+    CenterStartEnd      // Центр, Начальный угол, Конечный угол
+};
+
+// Режимы построения прямоугольника
+enum class RectangleCreationMode {
+    TwoPoints,          // По диагонали (P1, P2)
+    CenterSize,         // Центр и угол (половина диагонали)
+    ThreePoints         // Три точки (задает поворот)
+};
+
+// Режимы построения эллипса
+enum class EllipseCreationMode {
+    CenterAxes          // Центр и две полуоси
+};
+
+// Типы углов прямоугольника
+enum class CornerType {
+    None,       // Прямой угол
+    Fillet,     // Скругление
+    Chamfer     // Фаска
+};
+
+// Режимы построения многоугольника
+enum class PolygonCreationMode {
+    Inscribed,      // Вписанный в окружность
+    Circumscribed   // Описанный вокруг окружности
+};
+
 enum class CoordinateSystemType {
-    Cartesian, //декартовая
-    Polar //полярная
+    Cartesian,
+    Polar
 };
 
-//единицы измерения углов
 enum class AngleUnit {
-    Degrees, //градусы
-    Radians //радианы
+    Degrees,
+    Radians
 };
 
-//типы линий (согласно ГОСТ 2.303-68)
 enum class LineType {
-    SolidMain, //сплошная основная (толстая)
-    SolidThin, //сплошная тонкая
-    SolidWave, //сплошная волнистая (требует спец. реализации, пока сделаем заглушку)
-    Dashed, //штриховая
-    DashDotThick, //штрихпунктирная утолщенная
-    DashDotThin, //штрихпунктирная тонкая
-    DashDotDot, //штрихпунктирная с двумя точками
-    SolidKink //сплошная тонкая с изломами (тоже требует спец. реализации)
+    SolidMain,
+    SolidThin,
+    SolidWave,
+    Dashed,
+    DashDotThick,
+    DashDotThin,
+    DashDotDot,
+    SolidKink
 };
 
-//толщины линии
 enum class LineWeight {
-    Thin, //S/2 или S/3
-    Thick //S
+    Thin,
+    Thick
 };
