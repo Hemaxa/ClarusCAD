@@ -33,7 +33,8 @@ add_executable(ClarusCAD
     src/model/primitives/EllipsePrimitive.h src/model/primitives/EllipsePrimitive.cpp
     src/view/drawing/EllipseDrawingTool.h src/view/drawing/EllipseDrawingTool.cpp
     src/controller/tools/EllipseCreationTool.h src/controller/tools/EllipseCreationTool.cpp
-    src/view/properties/EllipsePropertiesWidget.h src/view/properties/EllipsePropertiesWidget.cpp)
+    src/view/properties/EllipsePropertiesWidget.h src/view/properties/EllipsePropertiesWidget.cpp
+    src/view/managers/ObjectBindingManager.h src/view/managers/ObjectBindingManager.cpp)
 
 #обозначение исходных файлов
 target_sources (ClarusCAD PRIVATE

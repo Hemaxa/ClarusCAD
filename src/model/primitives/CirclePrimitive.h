@@ -1,26 +1,30 @@
-//CirclePrimitive - класс хранилища данных объекта "Окружность"
+//CirclePrimitive.h - модель окружности
 
 #pragma once
 
 #include "BasePrimitive.h"
 #include "PointPrimitive.h"
-
 #include <QRectF>
 
 class CirclePrimitive : public BasePrimitive
 {
 public:
-    //конструктор
     CirclePrimitive(const PointPrimitive& center, double radius);
 
-    //переопределение методов получения типа для объекта "Окружность"
     PrimitiveType getType() const override { return PrimitiveType::Circle; };
     QString getTypeName() const override { return "Окружность"; }
 
-    //переопределение метода получения габаритов
+    // --- Реализация Smart Model ---
+    void draw(QPainter& painter, bool isSelected) const override;
     QRectF getBoundingBox() const override;
 
-    //геттеры и сеттеры
+    // Проверка клика по контуру окружности
+    bool hitTest(const QPointF& point, double tolerance) const override;
+    bool intersects(const QRectF& rect) const override;
+    bool inside(const QRectF& rect) const override;
+    QVector<QPointF> getSnapPoints() const override;
+
+    // Геттеры/Сеттеры
     const PointPrimitive& getCenter() const;
     void setCenter(const PointPrimitive& center);
 

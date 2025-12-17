@@ -1,3 +1,5 @@
+//RectanglePrimitive.h
+
 #pragma once
 #include "BasePrimitive.h"
 #include "PointPrimitive.h"
@@ -8,8 +10,16 @@ public:
 
     PrimitiveType getType() const override { return PrimitiveType::Rectangle; }
     QString getTypeName() const override { return "Прямоугольник"; }
-    QRectF getBoundingBox() const override;
 
+    // --- Smart Model ---
+    void draw(QPainter& painter, bool isSelected) const override;
+    QRectF getBoundingBox() const override;
+    bool hitTest(const QPointF& point, double tolerance) const override;
+    bool intersects(const QRectF& rect) const override;
+    bool inside(const QRectF& rect) const override;
+    QVector<QPointF> getSnapPoints() const override;
+
+    // Геттеры/Сеттеры
     PointPrimitive getCenter() const { return m_center; }
     void setCenter(const PointPrimitive& c) { m_center = c; }
 
@@ -29,10 +39,13 @@ public:
     void setCornerRadius(double r) { m_cornerRadius = r; }
 
 private:
+    // Вспомогательный метод для получения контура (QPolygonF) с учетом поворота
+    QPolygonF getTransformedPolygon() const;
+
     PointPrimitive m_center;
     double m_width;
     double m_height;
-    double m_rotation; // Угол поворота в градусах
+    double m_rotation;
     CornerType m_cornerType = CornerType::None;
-    double m_cornerRadius = 0.0; // Для фасок и скруглений
+    double m_cornerRadius = 0.0;
 };

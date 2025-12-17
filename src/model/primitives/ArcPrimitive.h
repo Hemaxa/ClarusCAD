@@ -8,7 +8,14 @@ public:
 
     PrimitiveType getType() const override { return PrimitiveType::Arc; }
     QString getTypeName() const override { return "Дуга"; }
+
+    // --- Smart Model ---
+    void draw(QPainter& painter, bool isSelected) const override;
     QRectF getBoundingBox() const override;
+    bool hitTest(const QPointF& point, double tolerance) const override;
+    bool intersects(const QRectF& rect) const override;
+    bool inside(const QRectF& rect) const override;
+    QVector<QPointF> getSnapPoints() const override;
 
     PointPrimitive getCenter() const { return m_center; }
     void setCenter(const PointPrimitive& c) { m_center = c; }
@@ -25,6 +32,6 @@ public:
 private:
     PointPrimitive m_center;
     double m_radius;
-    double m_startAngle; // В градусах
-    double m_spanAngle;  // В градусах
+    double m_startAngle; // градусы
+    double m_spanAngle;  // градусы
 };

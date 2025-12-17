@@ -13,7 +13,7 @@ class Scene;
 class ViewportCamera;
 class ThemeManager;
 class BaseCreationTool;
-class BaseDrawingTool;
+// BaseDrawingTool и хедеры DrawingTool больше не нужны!
 class QLabel;
 
 //наслдедуется от базового класса BasePanelWidget
@@ -27,96 +27,87 @@ public:
     ~ViewportPanelWidget();
 
     //этими методами MainWindow настраивает и управляет вьюпортом
-    void setScene(Scene* scene); //метод установки сцены для отрисовки
-    void setActiveTool(BaseCreationTool* tool); //метод установки активного элемента
-    void setGridStep(int step); //метод установки шага сетки
+    void setScene(Scene* scene);
+    void setActiveTool(BaseCreationTool* tool);
+    void setGridStep(int step);
     void setSelectedPrimitives(const QList<BasePrimitive*>& primitives);
     QList<BasePrimitive*> getSelectedPrimitives() const;
 
-    int getGridStep() const; //геттер для шага сетки
-    double getDynamicGridStep() const; //геттер для масштабируемого шага сетки
-    double getZoomFactor() const; //геттер для коэффициента масштабирования
-    QWidget* getCanvas() const; //геттер для холста
-    QPointF getSnappedPoint(const QPointF& worldPos) const; //геттер для точки привязки
+    int getGridStep() const;
+    double getZoomFactor() const;
+    QWidget* getCanvas() const;
+
+    //Геттер для точки привязки (теперь просто делегирует в ObjectBindingManager)
+    QPointF getSnappedPoint(const QPointF& worldPos) const;
 
     //методы для трансформации координат
     QPointF worldToScreen(const QPointF& worldPos) const;
     QPointF screenToWorld(const QPointF& screenPos) const;
 
-    void update(); //метод перерисовки сцены
+    void update();
 
 public slots:
-    void applyZoom(double factor, const QPoint& anchorPoint); //слот применения масштабирования
+    void applyZoom(double factor, const QPoint& anchorPoint);
     void rotateSceneLeft();
     void rotateSceneRight();
 
-    //методы для зумирования
-    void zoomIn(); //зум к центру
-    void zoomIn(const QPoint& anchorPoint); //зум к точке
-    void zoomOut(); //отдаление от центра
-    void zoomOut(const QPoint& anchorPoint); //отдаление от точки
+    void zoomIn();
+    void zoomIn(const QPoint& anchorPoint);
+    void zoomOut();
+    void zoomOut(const QPoint& anchorPoint);
     void zoomToExtents();
 
-    void setZoomStep(double step); //слот установки шага увеличения/уменьшения
-    void setCoordinateSystem(CoordinateSystemType type); //слот установки системы координат
-    void setGridSnapEnabled(bool enabled); //слот включения/выключения привязки к сетке
-    void setPrimitiveSnapEnabled(bool enabled); //слот включения/выключения привязки к примитивам
-    void setSelectedPrimitive(BasePrimitive* primitive); //слот выбранных объектов
+    void setZoomStep(double step);
+    void setCoordinateSystem(CoordinateSystemType type);
+    void setGridSnapEnabled(bool enabled);
+    void setPrimitiveSnapEnabled(bool enabled);
+    void setSelectedPrimitive(BasePrimitive* primitive);
 
     void panWorld(const QPointF& worldDelta);
 
 signals:
-    //cигнал, который передает позицию мыши
     void mouseMoved(const QPoint& screenPos);
-
-    //сигнал, который передает список выбранных объектов
     void selectionChanged(const QList<BasePrimitive*>& primitives);
 
 private slots:
-    // НОВЫЙ СЛОТ для связи с камерой
     void onCameraUpdated();
 
 private:
-    Scene* m_scene = nullptr; //указатель на сцену
-    BasePrimitive* m_selectedPrimitive = nullptr; //указатель на выбранные объекты
-    QLabel* m_infoLabel; //указатель на info-панель
-    BaseCreationTool* m_activeTool = nullptr; //указатель на выбранный инструмент
-    std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools; //мапа отрисовщиков
-    ThemeManager* m_themeManager = nullptr; //указатель на менеджер тем
+    Scene* m_scene = nullptr;
+    BasePrimitive* m_selectedPrimitive = nullptr;
+    QLabel* m_infoLabel;
+    BaseCreationTool* m_activeTool = nullptr;
+
+    // std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools; // УДАЛЕНО: больше не нужно
+
+    ThemeManager* m_themeManager = nullptr;
 
     //параметры панели по умолчанию
-    int m_gridStep = 50; //шаг сетки
-    double m_zoomStep = 1.25; //шаг увеличения/уменьшения
-    QPoint m_lastPanPos; //последняя позиция курсора во время панорамирования для расчета смещения
+    int m_gridStep = 50;
+    double m_zoomStep = 1.25;
+    QPoint m_lastPanPos;
 
-    bool m_isPanning = false; //флаг активации перемещения по сцене (зажатие ЛКМ)
-    bool m_isGridSnapEnabled = true; //флаг активации привязки к сетке
-    bool m_isPrimitiveSnapEnabled = true; //флаг активации привязки к примитивам
+    bool m_isPanning = false;
+    // флаги снепа удалены, так как они теперь живут в ObjectBindingManager
 
-    QPointF m_currentMouseWorldPos; //текущая позиция мыши в мировых координатах
-    double m_gridMultiplier = 1.0; //текущий множитель сетки
-    CoordinateSystemType m_coordSystemType = CoordinateSystemType::Cartesian; //текущая система координат
+    QPointF m_currentMouseWorldPos;
+    double m_gridMultiplier = 1.0;
+    CoordinateSystemType m_coordSystemType = CoordinateSystemType::Cartesian;
 
     ViewportCamera* m_camera;
 
-    QRect getGizmoRect() const; // Область нажатия для гизмо
+    QRect getGizmoRect() const;
 
-    bool eventFilter(QObject* obj, QEvent* event) override; //метод перехвата действий с холстом
-    double calculateDynamicGridStep() const; //метод расчета отмасштабированного шага сетки
-    QPointF snapToGrid(const QPointF& worldPos) const; //метод привязки к сетке
-    QPointF snapToPrimitives(const QPointF& worldPos) const; //метод привязки к примитивам
-    void paintCanvas(QPaintEvent* event); //метод отрисовки на холсте
-    void paintGrid(QPainter& painter, const QTransform& worldTransform); //метод отрисовки сетки
-    void paintGizmo(QPainter& painter); //метод отрисовки гизмо
-    void createDrawingTools(); //метод создание отрисовщиков
-    void updateInfoLabel(); //метод обновления содержимого info-панели
+    bool eventFilter(QObject* obj, QEvent* event) override;
+    void paintCanvas(QPaintEvent* event);
+    void paintGrid(QPainter& painter, const QTransform& worldTransform);
+    void paintGizmo(QPainter& painter);
+    void updateInfoLabel();
 
     QList<BasePrimitive*> m_selectedPrimitives;
 
-    // ... (другие поля)
-
-    // НОВЫЕ ПОЛЯ ДЛЯ РАМКИ
-    bool m_isSelecting = false; // Флаг выделения рамкой
-    QPoint m_selectionStartPos; // Точка начала выделения
-    QPoint m_currentMousePosScreen; // Текущая точка для отрисовки рамки
+    // ПОЛЯ ДЛЯ РАМКИ
+    bool m_isSelecting = false;
+    QPoint m_selectionStartPos;
+    QPoint m_currentMousePosScreen;
 };
