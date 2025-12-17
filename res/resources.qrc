@@ -6,6 +6,9 @@
         <file>icons/scene/grid-snap.svg</file>
         <file>icons/scene/polar.svg</file>
         <file>icons/scene/primitive-snap.svg</file>
+        <file>icons/scene/snap-intersection.svg</file>
+        <file>icons/scene/snap-perpendicular.svg</file>
+        <file>icons/scene/snap-tangent.svg</file>
         <file>icons/lines/dash-dot-dot.svg</file>
         <file>icons/lines/dash-dot.svg</file>
         <file>icons/lines/dashed.svg</file>

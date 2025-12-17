@@ -1,6 +1,7 @@
 #include "SegmentCreationTool.h"
 #include "ViewportPanelWidget.h"
 #include "LineStyleManager.h"
+#include "SnapManager.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -21,17 +22,24 @@ void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
             m_firstPoint.setY(snappedPos.y());
             m_currentMousePos = m_firstPoint;
             m_currentState = State::WaitingForSecondPoint;
+            
+            // Устанавливаем базовую точку для привязок перпендикуляр/касательная
+            SnapManager::instance().setBasePoint(snappedPos);
         }
         //второй клик
         else if (m_currentState == State::WaitingForSecondPoint) {
             PointPrimitive secondPoint(snappedPos.x(), snappedPos.y());
             emit segmentDataReady(nullptr, m_firstPoint, secondPoint, m_currentColor, m_currentLineType);
             m_currentState = State::Idle;
+            
+            // Очищаем базовую точку
+            SnapManager::instance().clearBasePoint();
         }
     }
     //отмена создания
     else if (event->button() == Qt::RightButton) {
         m_currentState = State::Idle;
+        SnapManager::instance().clearBasePoint();
     }
 }
 

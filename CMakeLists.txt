@@ -129,6 +129,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
     ${SRC_DIR}/view/properties/CommonPropertiesWidget.h
     ${SRC_DIR}/view/properties/CommonPropertiesWidget.cpp
+    ${SRC_DIR}/view/properties/PolygonPropertiesWidget.h
+    ${SRC_DIR}/view/properties/PolygonPropertiesWidget.cpp
+    ${SRC_DIR}/view/properties/SplinePropertiesWidget.h
+    ${SRC_DIR}/view/properties/SplinePropertiesWidget.cpp
 
     ${SRC_DIR}/view/widgets/FlyoutToolButton.h
     ${SRC_DIR}/view/widgets/FlyoutToolButton.cpp

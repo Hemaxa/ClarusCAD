@@ -139,8 +139,22 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             }
             else if (m_activeTool) {
                 QPointF worldPos = screenToWorld(mouseEvent->pos());
+                
+                // Обновляем маркер привязки для визуализации при каждом движении мыши
+                if (m_isPrimitiveSnapEnabled && m_scene) {
+                    m_lastSnapPoint = SnapManager::instance().findNearestSnapPoint(
+                        worldPos, m_scene, getZoomFactor(), 15.0);
+                }
+                
                 QMouseEvent transformedEvent(mouseEvent->type(), worldPos, mouseEvent->globalPosition(), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
                 m_activeTool->onMouseMove(&transformedEvent, m_scene, this);
+                update();
+            }
+            // Обновляем маркер привязки даже когда нет активного инструмента
+            else if (m_isPrimitiveSnapEnabled && m_scene) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                m_lastSnapPoint = SnapManager::instance().findNearestSnapPoint(
+                    worldPos, m_scene, getZoomFactor(), 15.0);
                 update();
             }
             return true;
@@ -447,6 +461,35 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
                         << QPointF(screenPos.x(), screenPos.y() + markerSize)
                         << QPointF(screenPos.x() - markerSize, screenPos.y());
                 painter.drawPolygon(diamond);
+            }
+            break;
+        case SnapType::Intersection:
+            // X (крест под 45°)
+            {
+                painter.setPen(QPen(Qt::cyan, 2.0));
+                painter.drawLine(QPointF(screenPos.x() - markerSize, screenPos.y() - markerSize),
+                               QPointF(screenPos.x() + markerSize, screenPos.y() + markerSize));
+                painter.drawLine(QPointF(screenPos.x() + markerSize, screenPos.y() - markerSize),
+                               QPointF(screenPos.x() - markerSize, screenPos.y() + markerSize));
+            }
+            break;
+        case SnapType::Perpendicular:
+            // Квадрат с линией (символ перпендикуляра)
+            {
+                painter.setPen(QPen(Qt::green, 2.0));
+                painter.drawRect(QRectF(screenPos.x() - markerSize/2, screenPos.y() - markerSize/2, 
+                                        markerSize, markerSize));
+                painter.drawLine(QPointF(screenPos.x() - markerSize, screenPos.y() + markerSize),
+                               QPointF(screenPos.x() - markerSize, screenPos.y() - markerSize));
+            }
+            break;
+        case SnapType::Tangent:
+            // Кружок с касательной линией
+            {
+                painter.setPen(QPen(Qt::magenta, 2.0));
+                painter.drawEllipse(screenPos, markerSize/2, markerSize/2);
+                painter.drawLine(QPointF(screenPos.x() - markerSize*1.5, screenPos.y() - markerSize),
+                               QPointF(screenPos.x() + markerSize*1.5, screenPos.y() + markerSize));
             }
             break;
         default:

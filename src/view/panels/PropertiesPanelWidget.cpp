@@ -21,6 +21,8 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_rectProperties = new RectanglePropertiesWidget();
     m_arcProperties = new ArcPropertiesWidget();
     m_ellipseProperties = new EllipsePropertiesWidget();
+    m_polygonProperties = new PolygonPropertiesWidget();
+    m_splineProperties = new SplinePropertiesWidget();
     m_commonProperties = new CommonPropertiesWidget();
 
     //добавление содержимого в панель
@@ -30,6 +32,8 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_stack->addWidget(m_rectProperties);
     m_stack->addWidget(m_arcProperties);
     m_stack->addWidget(m_ellipseProperties);
+    m_stack->addWidget(m_polygonProperties);
+    m_stack->addWidget(m_splineProperties);
     m_stack->addWidget(m_commonProperties);
 
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
@@ -59,6 +63,19 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_ellipseProperties, &EllipsePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::ellipsePropertiesApplied);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+
+    // --- Коннекты МНОГОУГОЛЬНИКА ---
+    connect(m_polygonProperties, &PolygonPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::polygonPropertiesApplied);
+    connect(m_polygonProperties, &PolygonPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
+    connect(m_polygonProperties, &PolygonPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_polygonProperties, &PolygonPropertiesWidget::sidesChanged, this, &PropertiesPanelWidget::polygonSidesChanged);
+    connect(m_polygonProperties, &PolygonPropertiesWidget::polygonTypeChanged, this, &PropertiesPanelWidget::polygonTypeChanged);
+
+    // --- Коннекты СПЛАЙНА ---
+    connect(m_splineProperties, &SplinePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::splinePropertiesApplied);
+    connect(m_splineProperties, &SplinePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
+    connect(m_splineProperties, &SplinePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_splineProperties, &SplinePropertiesWidget::closedChanged, this, &PropertiesPanelWidget::splineClosedChanged);
 
     // --- Коннекты ОБЩИХ СВОЙСТВ ---
     connect(m_commonProperties, &CommonPropertiesWidget::commonPropertiesApplied, this, &PropertiesPanelWidget::commonPropertiesApplied);
@@ -99,9 +116,17 @@ void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primi
             m_arcProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_arcProperties);
         }
-        else if (firstType == PrimitiveType::Ellipse) { // <--- Добавили обработку
+        else if (firstType == PrimitiveType::Ellipse) {
             m_ellipseProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_ellipseProperties);
+        }
+        else if (firstType == PrimitiveType::Polygon) {
+            m_polygonProperties->setPrimitives(primitives);
+            m_stack->setCurrentWidget(m_polygonProperties);
+        }
+        else if (firstType == PrimitiveType::Spline) {
+            m_splineProperties->setPrimitives(primitives);
+            m_stack->setCurrentWidget(m_splineProperties);
         }
         else {
             m_stack->setCurrentWidget(m_emptyWidget);
@@ -132,9 +157,17 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
         m_arcProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_arcProperties);
     }
-    else if (type == PrimitiveType::Ellipse) { // <--- Добавили обработку
+    else if (type == PrimitiveType::Ellipse) {
         m_ellipseProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_ellipseProperties);
+    }
+    else if (type == PrimitiveType::Polygon) {
+        m_polygonProperties->setPrimitives({});
+        m_stack->setCurrentWidget(m_polygonProperties);
+    }
+    else if (type == PrimitiveType::Spline) {
+        m_splineProperties->setPrimitives({});
+        m_stack->setCurrentWidget(m_splineProperties);
     }
     else {
         m_stack->setCurrentWidget(m_emptyWidget);
@@ -158,5 +191,7 @@ void PropertiesPanelWidget::updateColors()
     m_rectProperties->updateColors();
     m_arcProperties->updateColors();
     m_ellipseProperties->updateColors();
+    m_polygonProperties->updateColors();
+    m_splineProperties->updateColors();
     m_commonProperties->updateColors();
 }

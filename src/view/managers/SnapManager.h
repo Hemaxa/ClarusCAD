@@ -81,9 +81,42 @@ private:
     void collectCenters(BasePrimitive* prim, QVector<SnapPoint>& out);
     void collectQuadrants(BasePrimitive* prim, QVector<SnapPoint>& out);
     
+    // Сбор точек пересечения между примитивами
+    void collectIntersections(const QPointF& mousePos, Scene* scene, 
+                               double tolerance, QVector<SnapPoint>& out);
+    
+    // Сбор точек перпендикуляра от текущей позиции к примитивам
+    void collectPerpendiculars(const QPointF& mousePos, const QPointF& basePoint,
+                                Scene* scene, double tolerance, QVector<SnapPoint>& out);
+    
+    // Сбор точек касательной к окружностям/дугам
+    void collectTangents(const QPointF& mousePos, const QPointF& basePoint,
+                          Scene* scene, double tolerance, QVector<SnapPoint>& out);
+    
+    // Вспомогательные геометрические функции
+    QVector<QPointF> findSegmentSegmentIntersection(const QPointF& a1, const QPointF& a2,
+                                                     const QPointF& b1, const QPointF& b2);
+    QVector<QPointF> findSegmentCircleIntersection(const QPointF& p1, const QPointF& p2,
+                                                    const QPointF& center, double radius);
+    QVector<QPointF> findCircleCircleIntersection(const QPointF& c1, double r1,
+                                                   const QPointF& c2, double r2);
+    QPointF findPerpendicularToSegment(const QPointF& from, const QPointF& segStart, 
+                                        const QPointF& segEnd);
+    QVector<QPointF> findTangentPointsToCircle(const QPointF& from, const QPointF& center, 
+                                                double radius);
+    
     // Привязка к сетке
     SnapPoint snapToGrid(const QPointF& pos);
 
     int m_enabledSnapTypes = static_cast<int>(SnapType::All);
     double m_gridStep = 50.0;
+    
+    // Базовая точка для привязок перпендикуляр/касательная (первая точка при построении)
+    QPointF m_basePoint;
+    bool m_hasBasePoint = false;
+    
+public:
+    // Установка базовой точки для привязок (вызывается при первом клике)
+    void setBasePoint(const QPointF& point) { m_basePoint = point; m_hasBasePoint = true; }
+    void clearBasePoint() { m_hasBasePoint = false; }
 };

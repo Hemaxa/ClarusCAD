@@ -33,6 +33,10 @@ public:
     // Завершить построение сплайна
     void finishSpline();
 
+    // Настройка замкнутости сплайна
+    void setClosed(bool closed) { m_closed = closed; }
+    bool isClosed() const { return m_closed; }
+
 signals:
     void splineDataReady(SplinePrimitive* spline);
 

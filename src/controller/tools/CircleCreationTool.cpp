@@ -2,6 +2,7 @@
 #include "CirclePrimitive.h"
 #include "ViewportPanelWidget.h"
 #include "LineStyleManager.h"
+#include "SnapManager.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -28,6 +29,7 @@ void CircleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewport
             if (m_step == 0) {
                 m_p1 = clickedPoint; // Центр
                 m_step = 1;
+                SnapManager::instance().setBasePoint(snappedPos);
             } else {
                 // Второй клик завершает построение
                 double dist = QLineF(m_p1.getX(), m_p1.getY(), clickedPoint.getX(), clickedPoint.getY()).length();
@@ -50,6 +52,7 @@ void CircleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewport
             if (m_step == 0) {
                 m_p1 = clickedPoint; // Первая точка диаметра
                 m_step = 1;
+                SnapManager::instance().setBasePoint(snappedPos);
             } else {
                 // Второй клик - вторая точка диаметра
                 m_p2 = clickedPoint;
@@ -70,6 +73,7 @@ void CircleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewport
             if (m_step == 0) {
                 m_p1 = clickedPoint;
                 m_step = 1;
+                SnapManager::instance().setBasePoint(snappedPos);
             } else if (m_step == 1) {
                 m_p2 = clickedPoint;
                 m_step = 2;
@@ -107,6 +111,7 @@ void CircleCreationTool::onMouseRelease(QMouseEvent* event, Scene* scene, Viewpo
 void CircleCreationTool::reset()
 {
     m_step = 0;
+    SnapManager::instance().clearBasePoint();
 }
 
 void CircleCreationTool::setColor(const QColor& color) { m_currentColor = color; }

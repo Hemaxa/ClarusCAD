@@ -170,6 +170,17 @@ void MainWindow::createConnections()
     //- SceneSettingsPanelWidget -
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::primitiveSnapToggled, m_viewportPanel, &ViewportPanelWidget::setPrimitiveSnapEnabled);
+    
+    // Расширенные типы привязок
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::intersectionSnapToggled, this, [](bool enabled) {
+        SnapManager::instance().setSnapTypeEnabled(SnapType::Intersection, enabled);
+    });
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::perpendicularSnapToggled, this, [](bool enabled) {
+        SnapManager::instance().setSnapTypeEnabled(SnapType::Perpendicular, enabled);
+    });
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::tangentSnapToggled, this, [](bool enabled) {
+        SnapManager::instance().setSnapTypeEnabled(SnapType::Tangent, enabled);
+    });
 
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
@@ -233,6 +244,16 @@ void MainWindow::createConnections()
 
     // Связь кнопки на панели инструментов с активацией сплайна
     connect(m_toolbarPanel, &ToolbarPanelWidget::splineToolActivated, this, &MainWindow::activateSplineTool);
+
+    // Связь параметров многоугольника из панели свойств с инструментом
+    connect(m_propertiesPanel, &PropertiesPanelWidget::polygonSidesChanged, 
+            m_polygonCreationTool, &PolygonCreationTool::setSides);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::polygonTypeChanged, 
+            m_polygonCreationTool, &PolygonCreationTool::setPolygonType);
+
+    // Связь параметров сплайна из панели свойств с инструментом
+    connect(m_propertiesPanel, &PropertiesPanelWidget::splineClosedChanged, 
+            m_splineCreationTool, &SplineCreationTool::setClosed);
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);

@@ -61,6 +61,21 @@ QVector<SnapPoint> SnapManager::findSnapPointsInRadius(const QPointF& mousePos, 
         collectSnapPoints(mousePos, primitive.get(), worldRadius, result);
     }
     
+    // Сбор точек пересечений (если включено)
+    if (isSnapTypeEnabled(SnapType::Intersection)) {
+        collectIntersections(mousePos, scene, worldRadius, result);
+    }
+    
+    // Сбор перпендикуляров и касательных (если есть базовая точка)
+    if (m_hasBasePoint) {
+        if (isSnapTypeEnabled(SnapType::Perpendicular)) {
+            collectPerpendiculars(mousePos, m_basePoint, scene, worldRadius, result);
+        }
+        if (isSnapTypeEnabled(SnapType::Tangent)) {
+            collectTangents(mousePos, m_basePoint, scene, worldRadius, result);
+        }
+    }
+    
     // Привязка к сетке (если включена)
     if (isSnapTypeEnabled(SnapType::Grid)) {
         SnapPoint gridSnap = snapToGrid(mousePos);
@@ -363,4 +378,330 @@ SnapPoint SnapManager::snapToGrid(const QPointF& pos)
     sp.position = QPointF(snappedX, snappedY);
     
     return sp;
+}
+
+// === ГЕОМЕТРИЧЕСКИЕ ФУНКЦИИ ===
+
+QVector<QPointF> SnapManager::findSegmentSegmentIntersection(const QPointF& a1, const QPointF& a2,
+                                                              const QPointF& b1, const QPointF& b2)
+{
+    QVector<QPointF> result;
+    
+    double d1x = a2.x() - a1.x();
+    double d1y = a2.y() - a1.y();
+    double d2x = b2.x() - b1.x();
+    double d2y = b2.y() - b1.y();
+    
+    double cross = d1x * d2y - d1y * d2x;
+    if (std::abs(cross) < 1e-10) return result; // Параллельны
+    
+    double t = ((b1.x() - a1.x()) * d2y - (b1.y() - a1.y()) * d2x) / cross;
+    double u = ((b1.x() - a1.x()) * d1y - (b1.y() - a1.y()) * d1x) / cross;
+    
+    // Проверяем что точка лежит на обоих отрезках
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        result.append(QPointF(a1.x() + t * d1x, a1.y() + t * d1y));
+    }
+    
+    return result;
+}
+
+QVector<QPointF> SnapManager::findSegmentCircleIntersection(const QPointF& p1, const QPointF& p2,
+                                                             const QPointF& center, double radius)
+{
+    QVector<QPointF> result;
+    
+    double dx = p2.x() - p1.x();
+    double dy = p2.y() - p1.y();
+    double fx = p1.x() - center.x();
+    double fy = p1.y() - center.y();
+    
+    double a = dx * dx + dy * dy;
+    double b = 2.0 * (fx * dx + fy * dy);
+    double c = fx * fx + fy * fy - radius * radius;
+    
+    double discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0) return result;
+    
+    discriminant = std::sqrt(discriminant);
+    double t1 = (-b - discriminant) / (2.0 * a);
+    double t2 = (-b + discriminant) / (2.0 * a);
+    
+    if (t1 >= 0 && t1 <= 1) {
+        result.append(QPointF(p1.x() + t1 * dx, p1.y() + t1 * dy));
+    }
+    if (t2 >= 0 && t2 <= 1 && std::abs(t1 - t2) > 1e-10) {
+        result.append(QPointF(p1.x() + t2 * dx, p1.y() + t2 * dy));
+    }
+    
+    return result;
+}
+
+QVector<QPointF> SnapManager::findCircleCircleIntersection(const QPointF& c1, double r1,
+                                                            const QPointF& c2, double r2)
+{
+    QVector<QPointF> result;
+    
+    double dx = c2.x() - c1.x();
+    double dy = c2.y() - c1.y();
+    double d = std::sqrt(dx * dx + dy * dy);
+    
+    // Проверка на пересечение
+    if (d > r1 + r2 || d < std::abs(r1 - r2) || d < 1e-10) {
+        return result; // Не пересекаются
+    }
+    
+    double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
+    double h = std::sqrt(r1 * r1 - a * a);
+    
+    double px = c1.x() + a * (dx / d);
+    double py = c1.y() + a * (dy / d);
+    
+    result.append(QPointF(px + h * (dy / d), py - h * (dx / d)));
+    if (h > 1e-10) {
+        result.append(QPointF(px - h * (dy / d), py + h * (dx / d)));
+    }
+    
+    return result;
+}
+
+QPointF SnapManager::findPerpendicularToSegment(const QPointF& from, 
+                                                 const QPointF& segStart, const QPointF& segEnd)
+{
+    double dx = segEnd.x() - segStart.x();
+    double dy = segEnd.y() - segStart.y();
+    double len2 = dx * dx + dy * dy;
+    
+    if (len2 < 1e-10) return segStart; // Вырожденный отрезок
+    
+    double t = ((from.x() - segStart.x()) * dx + (from.y() - segStart.y()) * dy) / len2;
+    t = std::max(0.0, std::min(1.0, t)); // Ограничиваем [0, 1]
+    
+    return QPointF(segStart.x() + t * dx, segStart.y() + t * dy);
+}
+
+QVector<QPointF> SnapManager::findTangentPointsToCircle(const QPointF& from, 
+                                                         const QPointF& center, double radius)
+{
+    QVector<QPointF> result;
+    
+    double dx = from.x() - center.x();
+    double dy = from.y() - center.y();
+    double dist2 = dx * dx + dy * dy;
+    double dist = std::sqrt(dist2);
+    
+    // Точка внутри или на окружности - нет касательной
+    if (dist <= radius + 1e-10) return result;
+    
+    // Угол от центра до from
+    double angle = std::atan2(dy, dx);
+    
+    // Угол между линией и касательной
+    double tangentAngle = std::acos(radius / dist);
+    
+    // Две точки касания
+    double a1 = angle + tangentAngle;
+    double a2 = angle - tangentAngle;
+    
+    result.append(QPointF(center.x() + radius * std::cos(a1), 
+                          center.y() + radius * std::sin(a1)));
+    result.append(QPointF(center.x() + radius * std::cos(a2), 
+                          center.y() + radius * std::sin(a2)));
+    
+    return result;
+}
+
+// === СБОР ТОЧЕК ПЕРЕСЕЧЕНИЯ ===
+
+void SnapManager::collectIntersections(const QPointF& mousePos, Scene* scene, 
+                                        double tolerance, QVector<SnapPoint>& out)
+{
+    if (!scene) return;
+    
+    const auto& primitives = scene->getPrimitives();
+    int count = primitives.size();
+    
+    // Перебираем все пары примитивов
+    for (int i = 0; i < count; ++i) {
+        for (int j = i + 1; j < count; ++j) {
+            auto* p1 = primitives[i].get();
+            auto* p2 = primitives[j].get();
+            
+            QVector<QPointF> intersections;
+            
+            // Сегмент-Сегмент
+            if (p1->getType() == PrimitiveType::Segment && p2->getType() == PrimitiveType::Segment) {
+                auto* s1 = static_cast<SegmentPrimitive*>(p1);
+                auto* s2 = static_cast<SegmentPrimitive*>(p2);
+                intersections = findSegmentSegmentIntersection(
+                    QPointF(s1->getStart().getX(), s1->getStart().getY()),
+                    QPointF(s1->getEnd().getX(), s1->getEnd().getY()),
+                    QPointF(s2->getStart().getX(), s2->getStart().getY()),
+                    QPointF(s2->getEnd().getX(), s2->getEnd().getY())
+                );
+            }
+            // Сегмент-Окружность
+            else if ((p1->getType() == PrimitiveType::Segment && p2->getType() == PrimitiveType::Circle) ||
+                     (p1->getType() == PrimitiveType::Circle && p2->getType() == PrimitiveType::Segment)) {
+                SegmentPrimitive* seg = nullptr;
+                CirclePrimitive* cir = nullptr;
+                if (p1->getType() == PrimitiveType::Segment) {
+                    seg = static_cast<SegmentPrimitive*>(p1);
+                    cir = static_cast<CirclePrimitive*>(p2);
+                } else {
+                    seg = static_cast<SegmentPrimitive*>(p2);
+                    cir = static_cast<CirclePrimitive*>(p1);
+                }
+                intersections = findSegmentCircleIntersection(
+                    QPointF(seg->getStart().getX(), seg->getStart().getY()),
+                    QPointF(seg->getEnd().getX(), seg->getEnd().getY()),
+                    QPointF(cir->getCenter().getX(), cir->getCenter().getY()),
+                    cir->getRadius()
+                );
+            }
+            // Окружность-Окружность
+            else if (p1->getType() == PrimitiveType::Circle && p2->getType() == PrimitiveType::Circle) {
+                auto* c1 = static_cast<CirclePrimitive*>(p1);
+                auto* c2 = static_cast<CirclePrimitive*>(p2);
+                intersections = findCircleCircleIntersection(
+                    QPointF(c1->getCenter().getX(), c1->getCenter().getY()), c1->getRadius(),
+                    QPointF(c2->getCenter().getX(), c2->getCenter().getY()), c2->getRadius()
+                );
+            }
+            
+            // Добавляем найденные точки
+            for (const auto& pt : intersections) {
+                double dist = QLineF(mousePos, pt).length();
+                if (dist <= tolerance) {
+                    SnapPoint sp;
+                    sp.position = pt;
+                    sp.type = SnapType::Intersection;
+                    sp.source = p1;
+                    sp.distance = dist;
+                    out.append(sp);
+                }
+            }
+        }
+    }
+}
+
+// === СБОР ТОЧЕК ПЕРПЕНДИКУЛЯРА ===
+
+void SnapManager::collectPerpendiculars(const QPointF& mousePos, const QPointF& basePoint,
+                                         Scene* scene, double tolerance, QVector<SnapPoint>& out)
+{
+    if (!scene) return;
+    
+    for (const auto& primitive : scene->getPrimitives()) {
+        auto* prim = primitive.get();
+        
+        if (prim->getType() == PrimitiveType::Segment) {
+            auto* seg = static_cast<SegmentPrimitive*>(prim);
+            QPointF perpPt = findPerpendicularToSegment(
+                basePoint,
+                QPointF(seg->getStart().getX(), seg->getStart().getY()),
+                QPointF(seg->getEnd().getX(), seg->getEnd().getY())
+            );
+            
+            double dist = QLineF(mousePos, perpPt).length();
+            if (dist <= tolerance) {
+                SnapPoint sp;
+                sp.position = perpPt;
+                sp.type = SnapType::Perpendicular;
+                sp.source = prim;
+                sp.distance = dist;
+                out.append(sp);
+            }
+        }
+        else if (prim->getType() == PrimitiveType::Circle) {
+            // Перпендикуляр к окружности = линия через центр
+            auto* cir = static_cast<CirclePrimitive*>(prim);
+            QPointF center(cir->getCenter().getX(), cir->getCenter().getY());
+            double radius = cir->getRadius();
+            
+            // Направление от basePoint к центру
+            double dx = center.x() - basePoint.x();
+            double dy = center.y() - basePoint.y();
+            double dist = std::sqrt(dx*dx + dy*dy);
+            
+            if (dist > 1e-10) {
+                // Точка на окружности в направлении от basePoint
+                QPointF perpPt(center.x() - dx * radius / dist, 
+                               center.y() - dy * radius / dist);
+                
+                double snapDist = QLineF(mousePos, perpPt).length();
+                if (snapDist <= tolerance) {
+                    SnapPoint sp;
+                    sp.position = perpPt;
+                    sp.type = SnapType::Perpendicular;
+                    sp.source = prim;
+                    sp.distance = snapDist;
+                    out.append(sp);
+                }
+            }
+        }
+    }
+}
+
+// === СБОР ТОЧЕК КАСАТЕЛЬНОЙ ===
+
+void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePoint,
+                                   Scene* scene, double tolerance, QVector<SnapPoint>& out)
+{
+    if (!scene) return;
+    
+    for (const auto& primitive : scene->getPrimitives()) {
+        auto* prim = primitive.get();
+        
+        if (prim->getType() == PrimitiveType::Circle) {
+            auto* cir = static_cast<CirclePrimitive*>(prim);
+            QPointF center(cir->getCenter().getX(), cir->getCenter().getY());
+            double radius = cir->getRadius();
+            
+            QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, radius);
+            
+            for (const auto& pt : tangentPoints) {
+                double dist = QLineF(mousePos, pt).length();
+                if (dist <= tolerance) {
+                    SnapPoint sp;
+                    sp.position = pt;
+                    sp.type = SnapType::Tangent;
+                    sp.source = prim;
+                    sp.distance = dist;
+                    out.append(sp);
+                }
+            }
+        }
+        else if (prim->getType() == PrimitiveType::Arc) {
+            auto* arc = static_cast<ArcPrimitive*>(prim);
+            QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
+            double radius = arc->getRadius();
+            
+            QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, radius);
+            
+            // Проверяем что точка лежит в пределах дуги
+            double startAngle = arc->getStartAngle() * M_PI / 180.0;
+            double spanAngle = arc->getSpanAngle() * M_PI / 180.0;
+            double endAngle = startAngle + spanAngle;
+            
+            for (const auto& pt : tangentPoints) {
+                double ptAngle = std::atan2(pt.y() - center.y(), pt.x() - center.x());
+                // Нормализуем углы
+                while (ptAngle < startAngle) ptAngle += 2 * M_PI;
+                while (ptAngle > startAngle + 2 * M_PI) ptAngle -= 2 * M_PI;
+                
+                if (ptAngle >= startAngle && ptAngle <= endAngle) {
+                    double dist = QLineF(mousePos, pt).length();
+                    if (dist <= tolerance) {
+                        SnapPoint sp;
+                        sp.position = pt;
+                        sp.type = SnapType::Tangent;
+                        sp.source = prim;
+                        sp.distance = dist;
+                        out.append(sp);
+                    }
+                }
+            }
+        }
+    }
 }
