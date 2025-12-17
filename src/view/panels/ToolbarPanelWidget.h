@@ -7,6 +7,7 @@
 
 class QToolButton;
 class QButtonGroup;
+class FlyoutToolButton;
 
 //наслдедуется от базового класса BasePanelWidget
 class ToolbarPanelWidget : public BasePanelWidget
@@ -28,6 +29,8 @@ public:
     QToolButton* getCreateRectangleButton() const;
     QToolButton* getCreateArcButton() const;
     QToolButton* getCreateEllipseButton() const;
+    QToolButton* getCreatePolygonButton() const;
+    QToolButton* getCreateSplineButton() const;
 
 signals:
     //сигналы нажатия соответствующих кнопок
@@ -38,6 +41,8 @@ signals:
     void rectangleToolActivated(RectangleCreationMode mode);
     void arcToolActivated(ArcCreationMode mode);
     void ellipseToolActivated();
+    void polygonToolActivated();
+    void splineToolActivated();
 
 private:
     //группа для кнопок на панели инструментов
@@ -47,8 +52,10 @@ private:
     QToolButton* m_deleteBtn;
     QToolButton* m_moveBtn;
     QToolButton* m_createSegmentBtn;
-    QToolButton* m_createCircleBtn;
-    QToolButton* m_createRectBtn;
-    QToolButton* m_createArcBtn;
+    FlyoutToolButton* m_createCircleBtn;
+    FlyoutToolButton* m_createRectBtn;
+    FlyoutToolButton* m_createArcBtn;
     QToolButton* m_createEllipseBtn;
+    QToolButton* m_createPolygonBtn;
+    QToolButton* m_createSplineBtn;
 };

@@ -1,11 +1,10 @@
 #include "ToolbarPanelWidget.h"
 #include "AnimationManager.h"
+#include "FlyoutToolButton.h"
 
 #include <QButtonGroup>
 #include <QToolButton>
 #include <QGridLayout>
-#include <QMenu>
-#include <QAction>
 
 ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : BasePanelWidget(title, parent)
 {
@@ -17,38 +16,46 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup = new QButtonGroup(this);
     m_buttonGroup->setExclusive(true);
 
-    //создание кнопок
+    //создание простых кнопок (без режимов)
     m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X, true);
     m_moveBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Перемещение [M]", Qt::Key_M, true);
     m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S, true);
-    m_createCircleBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Окружность [C]", Qt::Key_C, true);
-    m_createRectBtn = new AnimationManager(":/icons/icons/tools/rectangle.svg", "Прямоугольник [R]", Qt::Key_R, true);
-    m_createArcBtn = new AnimationManager(":/icons/icons/tools/arc.svg", "Дуга [A]", Qt::Key_A, true);
     m_createEllipseBtn = new AnimationManager(":/icons/icons/tools/ellipse.svg", "Эллипс [E]", Qt::Key_E, true);
+    m_createPolygonBtn = new AnimationManager(":/icons/icons/tools/polygon.svg", "Многоугольник [P]", Qt::Key_P, true);
+    m_createSplineBtn = new AnimationManager(":/icons/icons/tools/spline.svg", "Сплайн [L]", Qt::Key_L, true);
 
-    // === POPUP МЕНЮ ДЛЯ ОКРУЖНОСТИ ===
-    m_createCircleBtn->setPopupMode(QToolButton::MenuButtonPopup);
-    QMenu* circleMenu = new QMenu(m_createCircleBtn);
-    QAction* actCircleCenterRadius = circleMenu->addAction("Центр, Радиус");
-    QAction* actCircleCenterDiameter = circleMenu->addAction("Центр, Диаметр");
-    QAction* actCircle2Points = circleMenu->addAction("Две точки");
-    QAction* actCircle3Points = circleMenu->addAction("Три точки");
-    m_createCircleBtn->setMenu(circleMenu);
+    // === FLYOUT КНОПКА ДЛЯ ОКРУЖНОСТИ ===
+    m_createCircleBtn = new FlyoutToolButton(this);
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterRadius), 
+                                ":/icons/icons/tools/circle_center_radius.svg", "Центр, Радиус [C]");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterDiameter), 
+                                ":/icons/icons/tools/circle_center_diameter.svg", "Центр, Диаметр");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::TwoPoints), 
+                                ":/icons/icons/tools/circle_2points.svg", "Две точки");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::ThreePoints), 
+                                ":/icons/icons/tools/circle_3points.svg", "Три точки");
+    m_createCircleBtn->setFixedSize(40, 40);
+    m_createCircleBtn->setIconSize(QSize(28, 28));
 
-    // === POPUP МЕНЮ ДЛЯ ПРЯМОУГОЛЬНИКА ===
-    m_createRectBtn->setPopupMode(QToolButton::MenuButtonPopup);
-    QMenu* rectMenu = new QMenu(m_createRectBtn);
-    QAction* actRect2Points = rectMenu->addAction("Две точки");
-    QAction* actRectCenterSize = rectMenu->addAction("Центр и размер");
-    QAction* actRect3Points = rectMenu->addAction("Три точки");
-    m_createRectBtn->setMenu(rectMenu);
+    // === FLYOUT КНОПКА ДЛЯ ПРЯМОУГОЛЬНИКА ===
+    m_createRectBtn = new FlyoutToolButton(this);
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::TwoPoints), 
+                              ":/icons/icons/tools/rect_2points.svg", "Две точки [R]");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::CenterSize), 
+                              ":/icons/icons/tools/rect_center.svg", "Центр и размер");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::ThreePoints), 
+                              ":/icons/icons/tools/rect_3points.svg", "Три точки");
+    m_createRectBtn->setFixedSize(40, 40);
+    m_createRectBtn->setIconSize(QSize(28, 28));
 
-    // === POPUP МЕНЮ ДЛЯ ДУГИ ===
-    m_createArcBtn->setPopupMode(QToolButton::MenuButtonPopup);
-    QMenu* arcMenu = new QMenu(m_createArcBtn);
-    QAction* actArc3Points = arcMenu->addAction("Три точки");
-    QAction* actArcCenterStartEnd = arcMenu->addAction("Центр, Начало, Конец");
-    m_createArcBtn->setMenu(arcMenu);
+    // === FLYOUT КНОПКА ДЛЯ ДУГИ ===
+    m_createArcBtn = new FlyoutToolButton(this);
+    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::ThreePoints), 
+                             ":/icons/icons/tools/arc_3points.svg", "Три точки [A]");
+    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::CenterStartEnd), 
+                             ":/icons/icons/tools/arc_center.svg", "Центр, Начало, Конец");
+    m_createArcBtn->setFixedSize(40, 40);
+    m_createArcBtn->setIconSize(QSize(28, 28));
 
     //добавление кнопок в общую группу
     m_buttonGroup->addButton(m_deleteBtn);
@@ -58,6 +65,8 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->addButton(m_createRectBtn);
     m_buttonGroup->addButton(m_createArcBtn);
     m_buttonGroup->addButton(m_createEllipseBtn);
+    m_buttonGroup->addButton(m_createPolygonBtn);
+    m_buttonGroup->addButton(m_createSplineBtn);
 
     //добавление кнопок в layout
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
@@ -67,65 +76,35 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->addWidget(m_createRectBtn, 4, 0, Qt::AlignLeft);
     layout->addWidget(m_createArcBtn, 5, 0, Qt::AlignLeft);
     layout->addWidget(m_createEllipseBtn, 6, 0, Qt::AlignLeft);
+    layout->addWidget(m_createPolygonBtn, 7, 0, Qt::AlignLeft);
+    layout->addWidget(m_createSplineBtn, 8, 0, Qt::AlignLeft);
 
     layout->setColumnStretch(1, 1);
-    layout->setRowStretch(7, 1);
+    layout->setRowStretch(9, 1);
 
-    //подключение сигналов
+    //подключение сигналов для простых кнопок
     connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
     connect(m_moveBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::moveToolActivated);
     connect(m_createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
     connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated);
+    connect(m_createPolygonBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::polygonToolActivated);
+    connect(m_createSplineBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::splineToolActivated);
 
-    // Circle: клик по кнопке = CenterRadius
-    connect(m_createCircleBtn, &QToolButton::clicked, this, [this]() {
-        emit circleToolActivated(CircleCreationMode::CenterRadius);
-    });
-    connect(actCircleCenterRadius, &QAction::triggered, this, [this]() {
-        m_createCircleBtn->click();
-        emit circleToolActivated(CircleCreationMode::CenterRadius);
-    });
-    connect(actCircleCenterDiameter, &QAction::triggered, this, [this]() {
-        m_createCircleBtn->click();
-        emit circleToolActivated(CircleCreationMode::CenterDiameter);
-    });
-    connect(actCircle2Points, &QAction::triggered, this, [this]() {
-        m_createCircleBtn->click();
-        emit circleToolActivated(CircleCreationMode::TwoPoints);
-    });
-    connect(actCircle3Points, &QAction::triggered, this, [this]() {
-        m_createCircleBtn->click();
-        emit circleToolActivated(CircleCreationMode::ThreePoints);
+    // === ПОДКЛЮЧЕНИЕ FLYOUT КНОПОК ===
+    
+    // Circle: modeActivated передает int, который можно напрямую преобразовать в CircleCreationMode
+    connect(m_createCircleBtn, &FlyoutToolButton::modeActivated, this, [this](int modeId) {
+        emit circleToolActivated(static_cast<CircleCreationMode>(modeId));
     });
 
-    // Rectangle: клик = TwoPoints
-    connect(m_createRectBtn, &QToolButton::clicked, this, [this]() {
-        emit rectangleToolActivated(RectangleCreationMode::TwoPoints);
-    });
-    connect(actRect2Points, &QAction::triggered, this, [this]() {
-        m_createRectBtn->click();
-        emit rectangleToolActivated(RectangleCreationMode::TwoPoints);
-    });
-    connect(actRectCenterSize, &QAction::triggered, this, [this]() {
-        m_createRectBtn->click();
-        emit rectangleToolActivated(RectangleCreationMode::CenterSize);
-    });
-    connect(actRect3Points, &QAction::triggered, this, [this]() {
-        m_createRectBtn->click();
-        emit rectangleToolActivated(RectangleCreationMode::ThreePoints);
+    // Rectangle: modeActivated -> RectangleCreationMode
+    connect(m_createRectBtn, &FlyoutToolButton::modeActivated, this, [this](int modeId) {
+        emit rectangleToolActivated(static_cast<RectangleCreationMode>(modeId));
     });
 
-    // Arc: клик = ThreePoints
-    connect(m_createArcBtn, &QToolButton::clicked, this, [this]() {
-        emit arcToolActivated(ArcCreationMode::ThreePoints);
-    });
-    connect(actArc3Points, &QAction::triggered, this, [this]() {
-        m_createArcBtn->click();
-        emit arcToolActivated(ArcCreationMode::ThreePoints);
-    });
-    connect(actArcCenterStartEnd, &QAction::triggered, this, [this]() {
-        m_createArcBtn->click();
-        emit arcToolActivated(ArcCreationMode::CenterStartEnd);
+    // Arc: modeActivated -> ArcCreationMode
+    connect(m_createArcBtn, &FlyoutToolButton::modeActivated, this, [this](int modeId) {
+        emit arcToolActivated(static_cast<ArcCreationMode>(modeId));
     });
 
     setMinimumWidth(200);
@@ -149,3 +128,5 @@ QToolButton* ToolbarPanelWidget::getCreateCircleButton() const { return m_create
 QToolButton* ToolbarPanelWidget::getCreateRectangleButton() const { return m_createRectBtn; }
 QToolButton* ToolbarPanelWidget::getCreateArcButton() const { return m_createArcBtn; }
 QToolButton* ToolbarPanelWidget::getCreateEllipseButton() const { return m_createEllipseBtn; }
+QToolButton* ToolbarPanelWidget::getCreatePolygonButton() const { return m_createPolygonBtn; }
+QToolButton* ToolbarPanelWidget::getCreateSplineButton() const { return m_createSplineBtn; }

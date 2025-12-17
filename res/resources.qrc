@@ -13,6 +13,24 @@
         <file>icons/lines/solid-thick.svg</file>
         <file>icons/lines/solid.svg</file>
         <file>icons/tools/move.svg</file>
+        <file>icons/tools/circle.svg</file>
+        <file>icons/tools/rectangle.svg</file>
+        <file>icons/tools/arc.svg</file>
+        <file>icons/tools/ellipse.svg</file>
+        <file>icons/tools/polygon.svg</file>
+        <file>icons/tools/spline.svg</file>
+        <!-- Circle modes -->
+        <file>icons/tools/circle_center_radius.svg</file>
+        <file>icons/tools/circle_center_diameter.svg</file>
+        <file>icons/tools/circle_2points.svg</file>
+        <file>icons/tools/circle_3points.svg</file>
+        <!-- Rectangle modes -->
+        <file>icons/tools/rect_2points.svg</file>
+        <file>icons/tools/rect_center.svg</file>
+        <file>icons/tools/rect_3points.svg</file>
+        <!-- Arc modes -->
+        <file>icons/tools/arc_3points.svg</file>
+        <file>icons/tools/arc_center.svg</file>
         <file>icons/scene/zoom-in.svg</file>
         <file>icons/scene/zoom-out.svg</file>
         <file>icons/navigation/zoom-extents.svg</file>

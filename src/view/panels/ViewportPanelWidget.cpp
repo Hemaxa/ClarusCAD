@@ -777,10 +777,9 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
     return worldPos;
 }
 
-QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& screenPos) const
+QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
 {
-    // Конвертируем экранные координаты в мировые
-    QPointF worldPos = screenToWorld(screenPos);
+    // Входные координаты уже мировые (события трансформируются в eventFilter)
     QPointF snappedPos = worldPos;
 
     if (m_isPrimitiveSnapEnabled) {

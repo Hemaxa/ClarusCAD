@@ -18,7 +18,7 @@ void SplineCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewport
     
     if (event->button() == Qt::LeftButton) {
         // Добавляем контрольную точку
-        QPointF worldPos = viewport->getSnappedPoint(event->pos());
+        QPointF worldPos = viewport->getSnappedPoint(event->position());
         m_controlPoints.append(worldPos);
         viewport->update();
     }
@@ -32,7 +32,7 @@ void SplineCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportP
 {
     Q_UNUSED(scene);
     
-    QPointF worldPos = viewport->getSnappedPoint(event->pos());
+    QPointF worldPos = viewport->getSnappedPoint(event->position());
     m_currentMousePos = worldPos;
     
     viewport->update();

@@ -6,10 +6,14 @@
 #include "PointPrimitive.h"
 #include "RectangleCreationTool.h"
 #include "ArcCreationTool.h"
-#include "EllipseCreationTool.h" // <--- Добавили инклуд
+#include "EllipseCreationTool.h"
+#include "PolygonCreationTool.h"
+#include "SplineCreationTool.h"
 #include "RectanglePrimitive.h"
 #include "ArcPrimitive.h"
 #include "EllipsePrimitive.h"
+#include "PolygonPrimitive.h"
+#include "SplinePrimitive.h"
 
 #include <QMainWindow>
 #include <QShowEvent>
@@ -32,6 +36,8 @@ class CircleCreationTool;
 class RectangleCreationTool;
 class ArcCreationTool;
 class EllipseCreationTool;
+class PolygonCreationTool;
+class SplineCreationTool;
 
 class ConsolePanelWidget;
 class NavigationPanelWidget;
@@ -63,6 +69,8 @@ private slots:
     void activateRectangleTool(RectangleCreationMode mode = RectangleCreationMode::TwoPoints);
     void activateArcTool(ArcCreationMode mode = ArcCreationMode::ThreePoints);
     void activateEllipseTool();
+    void activatePolygonTool();
+    void activateSplineTool();
 
     //слот установки цвета для инструмента
     void onColorChanged(const QColor& color);
@@ -141,6 +149,8 @@ private:
     RectangleCreationTool* m_rectCreationTool;
     ArcCreationTool* m_arcCreationTool;
     EllipseCreationTool* m_ellipseCreationTool;
+    PolygonCreationTool* m_polygonCreationTool;
+    SplineCreationTool* m_splineCreationTool;
 
     //интерфейсные панели
     ViewportPanelWidget* m_viewportPanel;

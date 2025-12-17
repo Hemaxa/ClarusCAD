@@ -84,6 +84,9 @@ void MainWindow::createTools()
     m_circleCreationTool = new CircleCreationTool(this);
     m_rectCreationTool = new RectangleCreationTool(this);
     m_arcCreationTool = new ArcCreationTool(this);
+    m_ellipseCreationTool = new EllipseCreationTool(this);
+    m_polygonCreationTool = new PolygonCreationTool(this);
+    m_splineCreationTool = new SplineCreationTool(this);
 }
 
 void MainWindow::createPanelWindows()
@@ -96,7 +99,6 @@ void MainWindow::createPanelWindows()
     m_sceneObjectsPanel = new SceneObjectsPanelWidget("Список объектов", this);
     m_sceneSettingsPanel = new SceneSettingsPanelWidget("Параметры сцены", this);
     m_consolePanel = new ConsolePanelWidget("Консольный ввод", this);
-    m_ellipseCreationTool = new EllipseCreationTool(this);
 
     //установка имен панелей для оформления из файлов тем
     m_viewportPanel->setProperty("class", "ViewportPanel");
@@ -215,6 +217,22 @@ void MainWindow::createConnections()
 
     // Связь панели свойств с методом применения общих свойств ко всем выделенным объектам
     connect(m_propertiesPanel, &PropertiesPanelWidget::commonPropertiesApplied, this, &MainWindow::applyCommonProperties);
+
+    // Коннект для МНОГОУГОЛЬНИКА
+    connect(m_polygonCreationTool, &PolygonCreationTool::polygonDataReady, this, [this](PolygonPrimitive* polygon){
+        addPrimitiveToScene(polygon);
+    });
+
+    // Связь кнопки на панели инструментов с активацией многоугольника
+    connect(m_toolbarPanel, &ToolbarPanelWidget::polygonToolActivated, this, &MainWindow::activatePolygonTool);
+
+    // Коннект для СПЛАЙНА
+    connect(m_splineCreationTool, &SplineCreationTool::splineDataReady, this, [this](SplinePrimitive* spline){
+        addPrimitiveToScene(spline);
+    });
+
+    // Связь кнопки на панели инструментов с активацией сплайна
+    connect(m_toolbarPanel, &ToolbarPanelWidget::splineToolActivated, this, &MainWindow::activateSplineTool);
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
@@ -408,6 +426,22 @@ void MainWindow::activateEllipseTool() {
     m_viewportPanel->setActiveTool(m_currentTool);
     emit toolActivated(PrimitiveType::Ellipse);
     m_toolbarPanel->getCreateEllipseButton()->setChecked(true);
+}
+
+void MainWindow::activatePolygonTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_polygonCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::Polygon);
+    m_toolbarPanel->getCreatePolygonButton()->setChecked(true);
+}
+
+void MainWindow::activateSplineTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_splineCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::Spline);
+    m_toolbarPanel->getCreateSplineButton()->setChecked(true);
 }
 
 void MainWindow::deactivateCurrentTool()
