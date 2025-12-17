@@ -15,14 +15,14 @@
 #include <QListWidget>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QRegularExpression>
+#include <QCheckBox>
 
 SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
     //настройки окна
     setWindowTitle("Настройки");
-    setMinimumWidth(550);
-    setMinimumHeight(550); //Чуть увеличили высоту
+    setMinimumWidth(580);
+    setMinimumHeight(700); //Увеличили для новых настроек
 
     //создание табов
     m_tabWidget = new QTabWidget();
@@ -131,35 +131,35 @@ QWidget* SettingsWindow::createLineStylesTab()
 {
     auto* widget = new QWidget();
     auto* mainLayout = new QVBoxLayout(widget);
-    mainLayout->setSpacing(15);
+    mainLayout->setSpacing(10);
     mainLayout->setContentsMargins(15, 15, 15, 15);
 
+    // =======================================================
     // 1. Группа основных настроек
+    // =======================================================
     auto* baseGroup = new QGroupBox("Общие параметры линий");
     auto* baseLayout = new QFormLayout(baseGroup);
-    baseLayout->setContentsMargins(15, 25, 15, 15);
+    baseLayout->setContentsMargins(15, 20, 15, 10);
 
     m_lineThicknessSpinBox = new QDoubleSpinBox();
     m_lineThicknessSpinBox->setRange(0.5, 20.0);
-    m_lineThicknessSpinBox->setSingleStep(0.5);
+    m_lineThicknessSpinBox->setSingleStep(0.1);
     m_lineThicknessSpinBox->setSuffix(" px");
-    m_lineThicknessSpinBox->setFixedHeight(30);
+    m_lineThicknessSpinBox->setFixedHeight(28);
     m_lineThicknessSpinBox->setValue(SettingsManager::instance().getBaseLineThickness());
 
-    // Настройка длины штриха
     m_dashLengthSpinBox = new QDoubleSpinBox();
     m_dashLengthSpinBox->setRange(1.0, 100.0);
     m_dashLengthSpinBox->setSingleStep(1.0);
     m_dashLengthSpinBox->setSuffix(" px");
-    m_dashLengthSpinBox->setFixedHeight(30);
+    m_dashLengthSpinBox->setFixedHeight(28);
     m_dashLengthSpinBox->setValue(SettingsManager::instance().getDashLength());
 
-    // Настройка расстояния
     m_dashSpaceSpinBox = new QDoubleSpinBox();
     m_dashSpaceSpinBox->setRange(1.0, 100.0);
     m_dashSpaceSpinBox->setSingleStep(1.0);
     m_dashSpaceSpinBox->setSuffix(" px");
-    m_dashSpaceSpinBox->setFixedHeight(30);
+    m_dashSpaceSpinBox->setFixedHeight(28);
     m_dashSpaceSpinBox->setValue(SettingsManager::instance().getDashSpace());
 
     baseLayout->addRow("Базовая толщина:", m_lineThicknessSpinBox);
@@ -168,15 +168,79 @@ QWidget* SettingsWindow::createLineStylesTab()
 
     mainLayout->addWidget(baseGroup);
 
-    // 2. Группа пользовательских стилей
+    // =======================================================
+    // 2. Группа волнистой линии
+    // =======================================================
+    auto* waveGroup = new QGroupBox("Волнистая линия");
+    auto* waveLayout = new QFormLayout(waveGroup);
+    waveLayout->setContentsMargins(15, 20, 15, 10);
+
+    m_waveAmplitudeSpinBox = new QDoubleSpinBox();
+    m_waveAmplitudeSpinBox->setRange(0.5, 20.0);
+    m_waveAmplitudeSpinBox->setSingleStep(0.5);
+    m_waveAmplitudeSpinBox->setSuffix(" px");
+    m_waveAmplitudeSpinBox->setFixedHeight(28);
+    m_waveAmplitudeSpinBox->setValue(SettingsManager::instance().getWaveAmplitude());
+
+    m_wavePeriodSpinBox = new QDoubleSpinBox();
+    m_wavePeriodSpinBox->setRange(2.0, 100.0);
+    m_wavePeriodSpinBox->setSingleStep(1.0);
+    m_wavePeriodSpinBox->setSuffix(" px");
+    m_wavePeriodSpinBox->setFixedHeight(28);
+    m_wavePeriodSpinBox->setValue(SettingsManager::instance().getWavePeriod());
+
+    waveLayout->addRow("Амплитуда:", m_waveAmplitudeSpinBox);
+    waveLayout->addRow("Период:", m_wavePeriodSpinBox);
+
+    mainLayout->addWidget(waveGroup);
+
+    // =======================================================
+    // 3. Группа линии с изломами
+    // =======================================================
+    auto* kinkGroup = new QGroupBox("Линия с изломами");
+    auto* kinkLayout = new QFormLayout(kinkGroup);
+    kinkLayout->setContentsMargins(15, 20, 15, 10);
+
+    m_kinkAmplitudeSpinBox = new QDoubleSpinBox();
+    m_kinkAmplitudeSpinBox->setRange(0.5, 20.0);
+    m_kinkAmplitudeSpinBox->setSingleStep(0.5);
+    m_kinkAmplitudeSpinBox->setSuffix(" px");
+    m_kinkAmplitudeSpinBox->setFixedHeight(28);
+    m_kinkAmplitudeSpinBox->setValue(SettingsManager::instance().getKinkAmplitude());
+
+    m_kinkLengthSpinBox = new QDoubleSpinBox();
+    m_kinkLengthSpinBox->setRange(1.0, 50.0);
+    m_kinkLengthSpinBox->setSingleStep(1.0);
+    m_kinkLengthSpinBox->setSuffix(" px");
+    m_kinkLengthSpinBox->setFixedHeight(28);
+    m_kinkLengthSpinBox->setValue(SettingsManager::instance().getKinkLength());
+
+    m_kinkStraightSpinBox = new QDoubleSpinBox();
+    m_kinkStraightSpinBox->setRange(1.0, 100.0);
+    m_kinkStraightSpinBox->setSingleStep(1.0);
+    m_kinkStraightSpinBox->setSuffix(" px");
+    m_kinkStraightSpinBox->setFixedHeight(28);
+    m_kinkStraightSpinBox->setValue(SettingsManager::instance().getKinkStraight());
+
+    kinkLayout->addRow("Амплитуда:", m_kinkAmplitudeSpinBox);
+    kinkLayout->addRow("Длина излома:", m_kinkLengthSpinBox);
+    kinkLayout->addRow("Прямой участок:", m_kinkStraightSpinBox);
+
+    mainLayout->addWidget(kinkGroup);
+
+    // =======================================================
+    // 4. Группа пользовательских стилей
+    // =======================================================
     auto* customGroup = new QGroupBox("Конструктор стилей");
     auto* customLayout = new QVBoxLayout(customGroup);
-    customLayout->setContentsMargins(15, 25, 15, 15);
+    customLayout->setContentsMargins(15, 20, 15, 10);
+    customLayout->setSpacing(8);
 
     m_stylesListWidget = new QListWidget();
-    m_stylesListWidget->setFixedHeight(100);
+    m_stylesListWidget->setFixedHeight(80);
+    connect(m_stylesListWidget, &QListWidget::itemSelectionChanged, this, &SettingsWindow::onStyleSelectionChanged);
 
-    //Заполняем список
+    // Заполняем список
     auto styles = LineStyleManager::instance().getCustomStyles();
     for (auto it = styles.begin(); it != styles.end(); ++it) {
         QListWidgetItem* item = new QListWidgetItem(it.value().name);
@@ -186,16 +250,16 @@ QWidget* SettingsWindow::createLineStylesTab()
 
     // Поле имени
     m_styleNameEdit = new QLineEdit();
-    m_styleNameEdit->setPlaceholderText("Название нового стиля");
+    m_styleNameEdit->setPlaceholderText("Название стиля");
+    m_styleNameEdit->setFixedHeight(28);
 
-    // Кнопки конструктора
+    // Кнопки конструктора паттерна
     auto* builderLayout = new QHBoxLayout();
     auto* addDashBtn = new QPushButton("Штрих");
     auto* addSpaceBtn = new QPushButton("Пробел");
     auto* addDotBtn = new QPushButton("Точка");
     auto* clearBtn = new QPushButton("Очистить");
 
-    // Подсказки, что именно добавляется
     addDashBtn->setToolTip("Добавить штрих (10px)");
     addDotBtn->setToolTip("Добавить точку (2px)");
     addSpaceBtn->setToolTip("Добавить пробел (5px)");
@@ -210,25 +274,42 @@ QWidget* SettingsWindow::createLineStylesTab()
     builderLayout->addWidget(addDotBtn);
     builderLayout->addWidget(clearBtn);
 
-    // Превью паттерна
     m_patternPreviewLabel = new QLabel("Шаблон: (пусто)");
     m_patternPreviewLabel->setStyleSheet("color: #00ff7f; font-weight: bold;");
 
-    // Кнопки управления стилем
+    // Индивидуальная толщина
+    auto* thicknessLayout = new QHBoxLayout();
+    m_useCustomThicknessCheck = new QCheckBox("Своя толщина:");
+    m_customThicknessSpinBox = new QDoubleSpinBox();
+    m_customThicknessSpinBox->setRange(0.5, 20.0);
+    m_customThicknessSpinBox->setSingleStep(0.5);
+    m_customThicknessSpinBox->setSuffix(" px");
+    m_customThicknessSpinBox->setValue(2.0);
+    m_customThicknessSpinBox->setEnabled(false);
+    connect(m_useCustomThicknessCheck, &QCheckBox::toggled, m_customThicknessSpinBox, &QDoubleSpinBox::setEnabled);
+    thicknessLayout->addWidget(m_useCustomThicknessCheck);
+    thicknessLayout->addWidget(m_customThicknessSpinBox);
+    thicknessLayout->addStretch();
+
+    // Кнопки управления
     auto* actionLayout = new QHBoxLayout();
-    auto* addStyleBtn = new QPushButton("Сохранить стиль");
-    auto* delStyleBtn = new QPushButton("Удалить выбранный");
+    auto* addStyleBtn = new QPushButton("Сохранить");
+    auto* editStyleBtn = new QPushButton("Редактировать");
+    auto* delStyleBtn = new QPushButton("Удалить");
 
     connect(addStyleBtn, &QPushButton::clicked, this, &SettingsWindow::onAddStyleClicked);
+    connect(editStyleBtn, &QPushButton::clicked, this, &SettingsWindow::onEditStyleClicked);
     connect(delStyleBtn, &QPushButton::clicked, this, &SettingsWindow::onDeleteStyleClicked);
 
     actionLayout->addWidget(addStyleBtn);
+    actionLayout->addWidget(editStyleBtn);
     actionLayout->addWidget(delStyleBtn);
 
     customLayout->addWidget(m_stylesListWidget);
     customLayout->addWidget(m_styleNameEdit);
     customLayout->addLayout(builderLayout);
     customLayout->addWidget(m_patternPreviewLabel);
+    customLayout->addLayout(thicknessLayout);
     customLayout->addLayout(actionLayout);
 
     mainLayout->addWidget(customGroup);
@@ -298,20 +379,73 @@ void SettingsWindow::onAddStyleClicked()
     }
 
     if (m_currentPattern.size() % 2 != 0) {
-        // Добавим пробел автоматически для симметрии
         m_currentPattern.append(5.0);
     }
 
-    int newId = LineStyleManager::instance().generateNewId();
-    LineStyleManager::instance().addCustomStyle(newId, name, m_currentPattern);
+    // Определяем толщину
+    double thickness = m_useCustomThicknessCheck->isChecked() ? m_customThicknessSpinBox->value() : -1.0;
 
-    //Обновление UI
-    QListWidgetItem* item = new QListWidgetItem(name);
-    item->setData(Qt::UserRole, newId);
-    m_stylesListWidget->addItem(item);
+    if (m_editingStyleId >= 0) {
+        // Редактирование существующего
+        LineStyleManager::instance().updateCustomStyle(m_editingStyleId, name, m_currentPattern, thickness);
+        
+        // Обновим текст в списке
+        for (int i = 0; i < m_stylesListWidget->count(); ++i) {
+            auto* item = m_stylesListWidget->item(i);
+            if (item->data(Qt::UserRole).toInt() == m_editingStyleId) {
+                item->setText(name);
+                break;
+            }
+        }
+        m_editingStyleId = -1;
+    } else {
+        // Создание нового
+        int newId = LineStyleManager::instance().generateNewId();
+        LineStyleManager::instance().addCustomStyle(newId, name, m_currentPattern, thickness);
+
+        QListWidgetItem* item = new QListWidgetItem(name);
+        item->setData(Qt::UserRole, newId);
+        m_stylesListWidget->addItem(item);
+    }
 
     m_styleNameEdit->clear();
-    onClearPattern(); // Сброс конструктора
+    m_useCustomThicknessCheck->setChecked(false);
+    onClearPattern();
+}
+
+void SettingsWindow::onEditStyleClicked()
+{
+    auto items = m_stylesListWidget->selectedItems();
+    if (items.isEmpty()) {
+        QMessageBox::information(this, "Редактирование", "Выберите стиль для редактирования.");
+        return;
+    }
+
+    auto* item = items.first();
+    int id = item->data(Qt::UserRole).toInt();
+    auto styles = LineStyleManager::instance().getCustomStyles();
+
+    if (!styles.contains(id)) return;
+
+    const CustomLineStyle& style = styles[id];
+    m_editingStyleId = id;
+    m_styleNameEdit->setText(style.name);
+    m_currentPattern = style.pattern;
+    
+    if (style.thickness > 0) {
+        m_useCustomThicknessCheck->setChecked(true);
+        m_customThicknessSpinBox->setValue(style.thickness);
+    } else {
+        m_useCustomThicknessCheck->setChecked(false);
+    }
+    
+    updatePatternPreview();
+}
+
+void SettingsWindow::onStyleSelectionChanged()
+{
+    // Сбрасываем режим редактирования при смене выделения
+    // (опционально, можно убрать если не нужно)
 }
 
 void SettingsWindow::onDeleteStyleClicked()
@@ -324,6 +458,7 @@ void SettingsWindow::onDeleteStyleClicked()
         LineStyleManager::instance().removeCustomStyle(id);
         delete m_stylesListWidget->takeItem(m_stylesListWidget->row(item));
     }
+    m_editingStyleId = -1;
 }
 
 void SettingsWindow::applySettings()
@@ -333,9 +468,20 @@ void SettingsWindow::applySettings()
     int newGridStep = m_gridStepSpinBox->value();
     double newZoomStep = m_zoomStepSpinBox->value();
     AngleUnit newAngleUnit = static_cast<AngleUnit>(m_angleUnitComboBox->currentData().toInt());
+    
+    // Базовые параметры линий
     double newThickness = m_lineThicknessSpinBox->value();
     double newDashLength = m_dashLengthSpinBox->value();
     double newDashSpace = m_dashSpaceSpinBox->value();
+    
+    // Параметры волнистой линии
+    double newWaveAmplitude = m_waveAmplitudeSpinBox->value();
+    double newWavePeriod = m_wavePeriodSpinBox->value();
+    
+    // Параметры линии с изломами
+    double newKinkAmplitude = m_kinkAmplitudeSpinBox->value();
+    double newKinkLength = m_kinkLengthSpinBox->value();
+    double newKinkStraight = m_kinkStraightSpinBox->value();
 
     //отправка значений в SettingsManager
     SettingsManager::instance().setThemeName(selectedTheme);
@@ -345,6 +491,11 @@ void SettingsWindow::applySettings()
     SettingsManager::instance().setBaseLineThickness(newThickness);
     SettingsManager::instance().setDashLength(newDashLength);
     SettingsManager::instance().setDashSpace(newDashSpace);
+    SettingsManager::instance().setWaveAmplitude(newWaveAmplitude);
+    SettingsManager::instance().setWavePeriod(newWavePeriod);
+    SettingsManager::instance().setKinkAmplitude(newKinkAmplitude);
+    SettingsManager::instance().setKinkLength(newKinkLength);
+    SettingsManager::instance().setKinkStraight(newKinkStraight);
 
     //сохранение значений в SettingsManager
     SettingsManager::instance().saveSettings();

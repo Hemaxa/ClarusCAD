@@ -1,25 +1,26 @@
-//PointPrimitive - класс хранилища данных объекта "Точка"
+//PointPrimitive - класс-контейнер для хранения координат точки
+//НЕ является примитивом сцены, просто хранит координаты (x, y)
 
 #pragma once
 
-#include "BasePrimitive.h"
 #include "EnumManager.h"
 
 #include <QRectF>
+#include <QPointF>
 
-class PointPrimitive : public BasePrimitive
+class PointPrimitive
 {
 
 public:
     //конструктор с параметрами по умолчанию
     PointPrimitive(double x = 0.0, double y = 0.0);
 
-    //переопределение методов получения типа для объекта "Точка"
-    PrimitiveType getType() const override { return PrimitiveType::Point; };
-    QString getTypeName() const override { return "Точка"; }
+    //получение типа (для совместимости, но это НЕ примитив сцены)
+    PrimitiveType getType() const { return PrimitiveType::Point; }
+    QString getTypeName() const { return "Точка"; }
 
-    //переопределение метода получения габаритов объекта "Точка"
-    QRectF getBoundingBox() const override;
+    //получение габаритов (точка не имеет размера)
+    QRectF getBoundingBox() const;
 
     //методы для установки глобальных единиц измерения углов
     static void setAngleUnit(AngleUnit unit);
@@ -38,6 +39,12 @@ public:
 
     //метод конвертации полярных координат в декартовы
     void setPolar(double radius, double angle);
+
+    //конвертация в QPointF для удобства
+    QPointF toPointF() const { return QPointF(m_x, m_y); }
+
+    //создание из QPointF
+    static PointPrimitive fromPointF(const QPointF& pt) { return PointPrimitive(pt.x(), pt.y()); }
 
 private:
     //поля хранения

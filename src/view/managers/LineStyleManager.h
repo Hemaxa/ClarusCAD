@@ -9,9 +9,11 @@
 
 class QPainter;
 
+// Структура пользовательского стиля линии
 struct CustomLineStyle {
     QString name;
     QVector<qreal> pattern;
+    double thickness = -1.0;  // -1 означает использование глобальной толщины
 };
 
 class LineStyleManager : public QObject
@@ -27,16 +29,35 @@ public:
     void drawEllipse(QPainter& painter, const QPointF& center, double rx, double ry,
                      int typeId, const QColor& color, bool isSelected = false) const;
 
-    // --- ЭТОТ МЕТОД ТЕПЕРЬ PUBLIC ---
+    // Получение пера для отрисовки
     QPen getPen(int typeId, const QColor& color, bool isSelected) const;
 
+    // --- Базовые параметры линий ---
     void setBaseLineThickness(double thickness);
     double getBaseLineThickness() const;
 
     void setDashLength(double length);
+    double getDashLength() const;
     void setDashSpace(double space);
+    double getDashSpace() const;
 
-    void addCustomStyle(int id, const QString& name, const QVector<qreal>& pattern);
+    // --- Параметры волнистой линии ---
+    void setWaveAmplitude(double val);
+    double getWaveAmplitude() const;
+    void setWavePeriod(double val);
+    double getWavePeriod() const;
+
+    // --- Параметры линии с изломами ---
+    void setKinkAmplitude(double val);
+    double getKinkAmplitude() const;
+    void setKinkLength(double val);
+    double getKinkLength() const;
+    void setKinkStraight(double val);
+    double getKinkStraight() const;
+
+    // --- Пользовательские стили ---
+    void addCustomStyle(int id, const QString& name, const QVector<qreal>& pattern, double thickness = -1.0);
+    void updateCustomStyle(int id, const QString& name, const QVector<qreal>& pattern, double thickness = -1.0);
     void removeCustomStyle(int id);
     QMap<int, CustomLineStyle> getCustomStyles() const;
     int generateNewId() const;
@@ -50,9 +71,19 @@ signals:
 private:
     explicit LineStyleManager(QObject* parent = nullptr);
 
+    // Базовые параметры
     double m_baseThickness = 2.0;
     double m_dashLength = 10.0;
     double m_dashSpace = 5.0;
+
+    // Параметры волнистой линии
+    double m_waveAmplitude = 2.0;
+    double m_wavePeriod = 10.0;
+
+    // Параметры линии с изломами (зигзаг)
+    double m_kinkAmplitude = 3.0;
+    double m_kinkLength = 5.0;
+    double m_kinkStraight = 10.0;
 
     const double DEFAULT_DASH_REF = 10.0;
     const double DEFAULT_SPACE_REF = 5.0;

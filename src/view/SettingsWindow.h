@@ -14,6 +14,7 @@ class QTabWidget;
 class QListWidget;
 class QLineEdit;
 class QLabel;
+class QCheckBox;
 
 class SettingsWindow : public QDialog
 {
@@ -30,6 +31,8 @@ private slots:
     //слоты для управления стилями линий
     void onAddStyleClicked();
     void onDeleteStyleClicked();
+    void onEditStyleClicked();
+    void onStyleSelectionChanged();
 
     //слоты конструктора паттерна
     void onAddDash();    // Добавить штрих
@@ -60,17 +63,28 @@ private:
     QDoubleSpinBox* m_zoomStepSpinBox;
     QComboBox* m_angleUnitComboBox;
 
-    //Элементы вкладки Стили линий
+    //Элементы вкладки Стили линий - Базовые параметры
     QDoubleSpinBox* m_lineThicknessSpinBox;
-    QDoubleSpinBox* m_dashLengthSpinBox; // <--- Новый
-    QDoubleSpinBox* m_dashSpaceSpinBox;  // <--- Новый
+    QDoubleSpinBox* m_dashLengthSpinBox;
+    QDoubleSpinBox* m_dashSpaceSpinBox;
 
+    //Элементы вкладки Стили линий - Волнистая линия
+    QDoubleSpinBox* m_waveAmplitudeSpinBox;
+    QDoubleSpinBox* m_wavePeriodSpinBox;
+
+    //Элементы вкладки Стили линий - Линия с изломами
+    QDoubleSpinBox* m_kinkAmplitudeSpinBox;
+    QDoubleSpinBox* m_kinkLengthSpinBox;
+    QDoubleSpinBox* m_kinkStraightSpinBox;
+
+    //Элементы конструктора пользовательских стилей
     QListWidget* m_stylesListWidget;
     QLineEdit* m_styleNameEdit;
-
-    //Вместо поля ввода теперь лейбл для отображения текущего паттерна
     QLabel* m_patternPreviewLabel;
+    QDoubleSpinBox* m_customThicknessSpinBox;
+    QCheckBox* m_useCustomThicknessCheck;
 
     //Временное хранилище паттерна при создании
     QVector<qreal> m_currentPattern;
+    int m_editingStyleId = -1; // ID редактируемого стиля (-1 = создание нового)
 };

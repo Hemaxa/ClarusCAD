@@ -2,6 +2,7 @@
 
 #include "SegmentPropertiesWidget.h"
 #include "CirclePropertiesWidget.h"
+#include "CommonPropertiesWidget.h"
 
 #include "BasePrimitive.h"
 
@@ -20,6 +21,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_rectProperties = new RectanglePropertiesWidget();
     m_arcProperties = new ArcPropertiesWidget();
     m_ellipseProperties = new EllipsePropertiesWidget();
+    m_commonProperties = new CommonPropertiesWidget();
 
     //добавление содержимого в панель
     m_stack->addWidget(m_emptyWidget);
@@ -28,6 +30,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_stack->addWidget(m_rectProperties);
     m_stack->addWidget(m_arcProperties);
     m_stack->addWidget(m_ellipseProperties);
+    m_stack->addWidget(m_commonProperties);
 
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
     layout->setContentsMargins(0, 0, 0, 0); //убирает отступы, чтобы занять всю допустимую область панели
@@ -56,6 +59,9 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_ellipseProperties, &EllipsePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::ellipsePropertiesApplied);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+
+    // --- Коннекты ОБЩИХ СВОЙСТВ ---
+    connect(m_commonProperties, &CommonPropertiesWidget::commonPropertiesApplied, this, &PropertiesPanelWidget::commonPropertiesApplied);
 
     //минимальная высота окна
     setMinimumHeight(200);
@@ -102,7 +108,9 @@ void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primi
         }
     }
     else {
-        m_stack->setCurrentWidget(m_emptyWidget);
+        // Разные типы - показываем общий виджет
+        m_commonProperties->setPrimitives(primitives);
+        m_stack->setCurrentWidget(m_commonProperties);
     }
 }
 
@@ -150,4 +158,5 @@ void PropertiesPanelWidget::updateColors()
     m_rectProperties->updateColors();
     m_arcProperties->updateColors();
     m_ellipseProperties->updateColors();
+    m_commonProperties->updateColors();
 }

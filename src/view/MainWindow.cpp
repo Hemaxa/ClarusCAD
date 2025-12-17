@@ -213,6 +213,9 @@ void MainWindow::createConnections()
     // Связь панели свойств с методом применения изменений эллипса
     connect(m_propertiesPanel, &PropertiesPanelWidget::ellipsePropertiesApplied, this, &MainWindow::applyEllipseChanges);
 
+    // Связь панели свойств с методом применения общих свойств ко всем выделенным объектам
+    connect(m_propertiesPanel, &PropertiesPanelWidget::commonPropertiesApplied, this, &MainWindow::applyCommonProperties);
+
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
 
@@ -581,6 +584,16 @@ void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive
         ell->setRotation(rot);
         ell->setColor(c);
         ell->setLineType((int)t);
+    }
+    emit sceneChanged(m_scene);
+}
+
+void MainWindow::applyCommonProperties(const QColor& color, int lineTypeId)
+{
+    // Применяем цвет и тип линии ко всем выделенным объектам
+    for (auto* prim : m_selectedPrimitives) {
+        prim->setColor(color);
+        prim->setLineType(lineTypeId);
     }
     emit sceneChanged(m_scene);
 }

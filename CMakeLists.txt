@@ -113,6 +113,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/properties/CirclePropertiesWidget.cpp
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.h
     ${SRC_DIR}/view/properties/SegmentPropertiesWidget.cpp
+    ${SRC_DIR}/view/properties/CommonPropertiesWidget.h
+    ${SRC_DIR}/view/properties/CommonPropertiesWidget.cpp
 
     #resources
     ${RES_DIR}/resources.qrc

@@ -18,6 +18,7 @@ class QStackedWidget;
 
 class SegmentPropertiesWidget;
 class CirclePropertiesWidget;
+class CommonPropertiesWidget;
 
 class BasePrimitive;
 class SegmentPrimitive;
@@ -60,6 +61,9 @@ signals:
     void rectanglePropertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
     void arcPropertiesApplied(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
     void ellipsePropertiesApplied(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
+    
+    //сигнал для применения общих свойств ко всем выделенным объектам
+    void commonPropertiesApplied(const QColor& color, int lineTypeId);
 
 private:
     QStackedWidget* m_stack; //панель виджетов без содержимого
@@ -69,4 +73,5 @@ private:
     RectanglePropertiesWidget* m_rectProperties;
     ArcPropertiesWidget* m_arcProperties;
     EllipsePropertiesWidget* m_ellipseProperties;
+    CommonPropertiesWidget* m_commonProperties; //виджет общих свойств для мультивыделения
 };

@@ -49,6 +49,20 @@ public:
     void setDashSpace(double val);
     double getDashSpace() const;
 
+    // --- Параметры волнистой линии ---
+    void setWaveAmplitude(double val);
+    double getWaveAmplitude() const;
+    void setWavePeriod(double val);
+    double getWavePeriod() const;
+
+    // --- Параметры линии с изломами ---
+    void setKinkAmplitude(double val);
+    double getKinkAmplitude() const;
+    void setKinkLength(double val);
+    double getKinkLength() const;
+    void setKinkStraight(double val);
+    double getKinkStraight() const;
+
 signals:
     //сигналы об изменении настроек
     void themeNameChanged(const QString& themeName);
@@ -58,6 +72,8 @@ signals:
     void baseLineThicknessChanged(double thickness);
     void dashLengthChanged(double length);
     void dashSpaceChanged(double space);
+    void waveParamsChanged();
+    void kinkParamsChanged();
 
 private:
     //конструктор
@@ -78,4 +94,13 @@ private:
     double m_baseLineThickness;
     double m_dashLength;
     double m_dashSpace;
+
+    // Параметры волнистой линии
+    double m_waveAmplitude;
+    double m_wavePeriod;
+
+    // Параметры линии с изломами
+    double m_kinkAmplitude;
+    double m_kinkLength;
+    double m_kinkStraight;
 };

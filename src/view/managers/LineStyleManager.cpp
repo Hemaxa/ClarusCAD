@@ -30,6 +30,8 @@ void LineStyleManager::setDashLength(double length)
     }
 }
 
+double LineStyleManager::getDashLength() const { return m_dashLength; }
+
 void LineStyleManager::setDashSpace(double space)
 {
     if (m_dashSpace != space) {
@@ -38,12 +40,76 @@ void LineStyleManager::setDashSpace(double space)
     }
 }
 
+double LineStyleManager::getDashSpace() const { return m_dashSpace; }
+
+// --- Параметры волнистой линии ---
+
+void LineStyleManager::setWaveAmplitude(double val)
+{
+    if (val > 0 && m_waveAmplitude != val) {
+        m_waveAmplitude = val;
+        emit stylesChanged();
+    }
+}
+
+double LineStyleManager::getWaveAmplitude() const { return m_waveAmplitude; }
+
+void LineStyleManager::setWavePeriod(double val)
+{
+    if (val > 0 && m_wavePeriod != val) {
+        m_wavePeriod = val;
+        emit stylesChanged();
+    }
+}
+
+double LineStyleManager::getWavePeriod() const { return m_wavePeriod; }
+
+// --- Параметры линии с изломами ---
+
+void LineStyleManager::setKinkAmplitude(double val)
+{
+    if (val > 0 && m_kinkAmplitude != val) {
+        m_kinkAmplitude = val;
+        emit stylesChanged();
+    }
+}
+
+double LineStyleManager::getKinkAmplitude() const { return m_kinkAmplitude; }
+
+void LineStyleManager::setKinkLength(double val)
+{
+    if (val > 0 && m_kinkLength != val) {
+        m_kinkLength = val;
+        emit stylesChanged();
+    }
+}
+
+double LineStyleManager::getKinkLength() const { return m_kinkLength; }
+
+void LineStyleManager::setKinkStraight(double val)
+{
+    if (val > 0 && m_kinkStraight != val) {
+        m_kinkStraight = val;
+        emit stylesChanged();
+    }
+}
+
+double LineStyleManager::getKinkStraight() const { return m_kinkStraight; }
+
 // --- Работа с пользовательскими стилями ---
 
-void LineStyleManager::addCustomStyle(int id, const QString& name, const QVector<qreal>& pattern)
+void LineStyleManager::addCustomStyle(int id, const QString& name, const QVector<qreal>& pattern, double thickness)
 {
-    m_customStyles[id] = {name, pattern};
+    m_customStyles[id] = {name, pattern, thickness};
     emit stylesChanged();
+}
+
+void LineStyleManager::updateCustomStyle(int id, const QString& name, const QVector<qreal>& pattern, double thickness)
+{
+    if (m_customStyles.contains(id)) {
+        m_customStyles[id] = {name, pattern, thickness};
+        emit stylesChanged();
+    }
 }
 
 void LineStyleManager::removeCustomStyle(int id)
@@ -230,16 +296,19 @@ void LineStyleManager::drawWaveLine(QPainter& painter, const QPointF& start, con
     path.moveTo(start);
     QLineF line(start, end);
     double length = line.length();
-    double amplitude = 2.0;
-    double period = 10.0;
+    if (length < 1.0) { painter.drawLine(start, end); return; }
+
+    // Используем настраиваемые параметры
+    double amplitude = m_waveAmplitude;
+    double period = m_wavePeriod;
 
     double dx = end.x() - start.x();
     double dy = end.y() - start.y();
-    double nx = dx / length; // Нормализованный вектор
     double px = -dy / length; // Перпендикуляр
     double py = dx / length;
 
-    for (double i = 0; i <= length; i += 2.0) {
+    double step = qMax(1.0, period / 10.0); // Шаг для гладкости
+    for (double i = 0; i <= length; i += step) {
         double t = i / length;
         double offset = amplitude * qSin(i * 2 * M_PI / period);
         double x = start.x() + dx * t + px * offset;
@@ -252,35 +321,55 @@ void LineStyleManager::drawWaveLine(QPainter& painter, const QPointF& start, con
 
 void LineStyleManager::drawZigzagLine(QPainter& painter, const QPointF& start, const QPointF& end, const QPen& pen) const
 {
+    // Линия с изломами по ГОСТ: вниз - вверх - прямой участок - повтор
     painter.setPen(pen);
     QPainterPath path;
     path.moveTo(start);
     QLineF line(start, end);
     double length = line.length();
-    double amplitude = 3.0;
-    double period = 15.0;
+    if (length < 1.0) { painter.drawLine(start, end); return; }
+
+    // Используем настраиваемые параметры
+    double amplitude = m_kinkAmplitude;
+    double kinkLen = m_kinkLength;
+    double straightLen = m_kinkStraight;
+    double period = 2 * kinkLen + straightLen; // Полный цикл: вниз + вверх + прямой
 
     double dx = end.x() - start.x();
     double dy = end.y() - start.y();
-    double px = -dy / length; // Перпендикуляр
+    double px = -dy / length; // Перпендикуляр (нормаль)
     double py = dx / length;
 
-    for (double i = 0; i < length; i += period) {
-        double t2 = (i + period / 4.0) / length; if (t2 > 1.0) t2 = 1.0;
-        double topX = start.x() + dx * t2 + px * amplitude;
-        double topY = start.y() + dy * t2 + py * amplitude;
+    double currentPos = 0;
+    while (currentPos < length) {
+        // 1. Точка вниз (ниже линии)
+        double t1 = (currentPos + kinkLen / 2.0) / length;
+        if (t1 > 1.0) t1 = 1.0;
+        double downX = start.x() + dx * t1 - px * amplitude;
+        double downY = start.y() + dy * t1 - py * amplitude;
+        path.lineTo(downX, downY);
 
-        double t3 = (i + 3.0 * period / 4.0) / length; if (t3 > 1.0) t3 = 1.0;
-        double botX = start.x() + dx * t3 - px * amplitude;
-        double botY = start.y() + dy * t3 - py * amplitude;
+        // 2. Точка вверх (выше линии)
+        double t2 = (currentPos + kinkLen) / length;
+        if (t2 > 1.0) { path.lineTo(end); break; }
+        double upX = start.x() + dx * t2 + px * amplitude;
+        double upY = start.y() + dy * t2 + py * amplitude;
+        path.lineTo(upX, upY);
 
-        double t4 = (i + period) / length; if (t4 > 1.0) t4 = 1.0;
-        double endPeriodX = start.x() + dx * t4;
-        double endPeriodY = start.y() + dy * t4;
+        // 3. Возврат на линию и прямой участок
+        double t3 = (currentPos + kinkLen + kinkLen / 2.0) / length;
+        if (t3 > 1.0) t3 = 1.0;
+        double backX = start.x() + dx * t3;
+        double backY = start.y() + dy * t3;
+        path.lineTo(backX, backY);
 
-        path.lineTo(topX, topY);
-        path.lineTo(botX, botY);
-        path.lineTo(endPeriodX, endPeriodY);
+        // 4. Конец прямого участка
+        currentPos += period;
+        double t4 = currentPos / length;
+        if (t4 > 1.0) t4 = 1.0;
+        double endX = start.x() + dx * t4;
+        double endY = start.y() + dy * t4;
+        path.lineTo(endX, endY);
     }
     path.lineTo(end);
     painter.drawPath(path);

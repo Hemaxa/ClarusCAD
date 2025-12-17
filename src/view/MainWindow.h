@@ -92,6 +92,8 @@ private slots:
     void applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
     void applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t); // <--- Добавили
 
+    //слот применения общих свойств ко всем выделенным объектам
+    void applyCommonProperties(const QColor& color, int lineTypeId);
 
     //слот удаления объекта
     void deletePrimitive(BasePrimitive* primitive);

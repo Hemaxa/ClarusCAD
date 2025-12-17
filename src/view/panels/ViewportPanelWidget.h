@@ -8,12 +8,14 @@
 
 #include <QPointF>
 #include <QList>
+#include <map>
+#include <memory>
 
 class Scene;
 class ViewportCamera;
 class ThemeManager;
 class BaseCreationTool;
-// BaseDrawingTool и хедеры DrawingTool больше не нужны!
+class BaseDrawingTool;
 class QLabel;
 
 //наслдедуется от базового класса BasePanelWidget
@@ -34,6 +36,7 @@ public:
     QList<BasePrimitive*> getSelectedPrimitives() const;
 
     int getGridStep() const;
+    double getDynamicGridStep() const;
     double getZoomFactor() const;
     QWidget* getCanvas() const;
 
@@ -78,7 +81,7 @@ private:
     QLabel* m_infoLabel;
     BaseCreationTool* m_activeTool = nullptr;
 
-    // std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools; // УДАЛЕНО: больше не нужно
+    std::map<PrimitiveType, std::unique_ptr<BaseDrawingTool>> m_drawingTools;
 
     ThemeManager* m_themeManager = nullptr;
 
@@ -88,7 +91,8 @@ private:
     QPoint m_lastPanPos;
 
     bool m_isPanning = false;
-    // флаги снепа удалены, так как они теперь живут в ObjectBindingManager
+    bool m_isGridSnapEnabled = true;
+    bool m_isPrimitiveSnapEnabled = false;
 
     QPointF m_currentMouseWorldPos;
     double m_gridMultiplier = 1.0;
@@ -102,6 +106,10 @@ private:
     void paintCanvas(QPaintEvent* event);
     void paintGrid(QPainter& painter, const QTransform& worldTransform);
     void paintGizmo(QPainter& painter);
+    double calculateDynamicGridStep() const;
+    void createDrawingTools();
+    QPointF snapToGrid(const QPointF& worldPos) const;
+    QPointF snapToPrimitives(const QPointF& worldPos) const;
     void updateInfoLabel();
 
     QList<BasePrimitive*> m_selectedPrimitives;
