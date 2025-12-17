@@ -69,27 +69,57 @@ void EllipseCreationTool::reset() { m_step = 0; }
 void EllipseCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
 
-    QColor c = m_currentColor; c.setAlpha(150);
-    painter.setPen(QPen(c, 1, Qt::DashLine));
+    // Стандартный стиль для служебных линий
+    QPen guidePen(Qt::white);
+    guidePen.setStyle(Qt::DashLine);
+    guidePen.setWidthF(1.0);
+    
+    QPointF centerPt(m_center.getX(), m_center.getY());
+    QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
+    
+    // Цвет предпросмотра
+    QColor previewColor = m_currentColor;
+    previewColor.setAlpha(180);
 
     if (m_step == 1) {
-        painter.drawLine(QPointF(m_center.getX(), m_center.getY()), QPointF(m_currentPos.getX(), m_currentPos.getY()));
+        // Линия от центра к первой оси (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(centerPt, currentPt);
     } else if (m_step == 2) {
-        // Рисуем эллипс
+        QPointF axis1Pt(m_axisPoint1.getX(), m_axisPoint1.getY());
+        
+        // Линии осей (белые пунктирные)
+        painter.setPen(guidePen);
+        painter.drawLine(centerPt, axis1Pt);
+        painter.drawLine(centerPt, currentPt);
+        
+        // Предпросмотр эллипса
         painter.save();
-        painter.translate(m_center.getX(), m_center.getY());
-        double angle = QLineF(m_center.getX(), m_center.getY(), m_axisPoint1.getX(), m_axisPoint1.getY()).angle();
+        painter.translate(centerPt);
+        double angle = QLineF(centerPt, axis1Pt).angle();
         painter.rotate(-angle);
 
-        double rx = QLineF(m_center.getX(), m_center.getY(), m_axisPoint1.getX(), m_axisPoint1.getY()).length();
-
-        // Расчет ry (копия из onMousePress)
-        double dx = m_currentPos.getX() - m_center.getX();
-        double dy = m_currentPos.getY() - m_center.getY();
+        double rx = QLineF(centerPt, axis1Pt).length();
+        double dx = currentPt.x() - centerPt.x();
+        double dy = currentPt.y() - centerPt.y();
         double radAngle = -angle * M_PI / 180.0;
         double ry = std::abs(dx * std::sin(radAngle) + dy * std::cos(radAngle));
 
+        QPen ellipsePen(previewColor);
+        ellipsePen.setWidthF(1.5);
+        painter.setPen(ellipsePen);
+        painter.setBrush(Qt::NoBrush);
         painter.drawEllipse(QPointF(0,0), rx, ry);
         painter.restore();
+        
+        // Маркер для точки оси 1
+        painter.setPen(QPen(Qt::white, 2.0));
+        painter.setBrush(m_currentColor);
+        painter.drawEllipse(axis1Pt, 6, 6);
     }
+    
+    // ЖИРНЫЙ МАРКЕР ЦЕНТРА
+    painter.setPen(QPen(Qt::white, 2.0));
+    painter.setBrush(m_currentColor);
+    painter.drawEllipse(centerPt, 6, 6);
 }

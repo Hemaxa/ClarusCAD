@@ -60,8 +60,8 @@ private slots:
     void activateMoveTool();
     void activateSegmentCreationTool();
     void activateCircleCreationTool(CircleCreationMode mode);
-    void activateRectangleTool();
-    void activateArcTool();
+    void activateRectangleTool(RectangleCreationMode mode = RectangleCreationMode::TwoPoints);
+    void activateArcTool(ArcCreationMode mode = ArcCreationMode::ThreePoints);
     void activateEllipseTool();
 
     //слот установки цвета для инструмента

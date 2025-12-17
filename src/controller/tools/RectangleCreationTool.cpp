@@ -142,29 +142,66 @@ void RectangleCreationTool::reset() { m_step = 0; }
 void RectangleCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
 
+    // Стандартный стиль для служебных линий
+    QPen guidePen(Qt::white);
+    guidePen.setStyle(Qt::DashLine);
+    guidePen.setWidthF(1.0);
+    
+    QPointF p1Pt(m_p1.getX(), m_p1.getY());
+    QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
+    
+    // Предпросмотр прямоугольника в цвете
     QColor previewColor = m_currentColor;
-    previewColor.setAlpha(150);
-    QPen pen(previewColor);
-    pen.setStyle(Qt::DashLine);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
+    previewColor.setAlpha(180);
+    QPen rectPen(previewColor);
+    rectPen.setWidthF(1.5);
 
     if (m_mode == RectangleCreationMode::TwoPoints) {
-        double w = m_currentPos.getX() - m_p1.getX();
-        double h = m_currentPos.getY() - m_p1.getY();
-        painter.drawRect(QRectF(m_p1.getX(), m_p1.getY(), w, h));
+        double w = currentPt.x() - p1Pt.x();
+        double h = currentPt.y() - p1Pt.y();
+        
+        // Линия диагонали (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(p1Pt, currentPt);
+        
+        // Предпросмотр прямоугольника
+        painter.setPen(rectPen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(QRectF(p1Pt.x(), p1Pt.y(), w, h));
     }
     else if (m_mode == RectangleCreationMode::CenterSize) {
-        double halfW = std::abs(m_currentPos.getX() - m_p1.getX());
-        double halfH = std::abs(m_currentPos.getY() - m_p1.getY());
-        painter.drawRect(QRectF(m_p1.getX() - halfW, m_p1.getY() - halfH, halfW * 2, halfH * 2));
+        double halfW = std::abs(currentPt.x() - p1Pt.x());
+        double halfH = std::abs(currentPt.y() - p1Pt.y());
+        
+        // Линия от центра к углу (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(p1Pt, currentPt);
+        
+        // Предпросмотр прямоугольника
+        painter.setPen(rectPen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(QRectF(p1Pt.x() - halfW, p1Pt.y() - halfH, halfW * 2, halfH * 2));
     }
     else if (m_mode == RectangleCreationMode::ThreePoints) {
-        painter.drawLine(QPointF(m_p1.getX(), m_p1.getY()), QPointF(m_currentPos.getX(), m_currentPos.getY()));
-        if (m_step == 2) {
-            painter.setPen(QPen(previewColor, 2));
-            painter.drawLine(QPointF(m_p1.getX(), m_p1.getY()), QPointF(m_p2.getX(), m_p2.getY()));
-            // Можно дорисовать примерный контур прямоугольника для 3 шага, но это требует копирования математики из onMousePress
+        // Линии между точками (белые пунктирные)
+        painter.setPen(guidePen);
+        
+        if (m_step == 1) {
+            painter.drawLine(p1Pt, currentPt);
+        } else if (m_step == 2) {
+            QPointF p2Pt(m_p2.getX(), m_p2.getY());
+            painter.drawLine(p1Pt, p2Pt);
+            painter.drawLine(p2Pt, currentPt);
+            
+            // Маркер для P2
+            painter.setPen(QPen(Qt::white, 2.0));
+            painter.setBrush(m_currentColor);
+            painter.drawEllipse(p2Pt, 6, 6);
         }
     }
+    
+    // ЖИРНЫЙ МАРКЕР ПЕРВОЙ ТОЧКИ
+    painter.setPen(QPen(Qt::white, 2.0));
+    painter.setBrush(m_currentColor);
+    painter.drawEllipse(p1Pt, 6, 6);
 }

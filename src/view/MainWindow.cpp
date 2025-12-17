@@ -384,16 +384,18 @@ void MainWindow::activateCircleCreationTool(CircleCreationMode mode)
     // m_toolbarPanel->getCreateCircleButton()->setChecked(true);
 }
 
-void MainWindow::activateRectangleTool() {
+void MainWindow::activateRectangleTool(RectangleCreationMode mode) {
     deactivateCurrentTool();
+    m_rectCreationTool->setCreationMode(mode);
     m_currentTool = m_rectCreationTool;
     m_viewportPanel->setActiveTool(m_currentTool);
     emit toolActivated(PrimitiveType::Rectangle);
     m_toolbarPanel->getCreateRectangleButton()->setChecked(true);
 }
 
-void MainWindow::activateArcTool() {
+void MainWindow::activateArcTool(ArcCreationMode mode) {
     deactivateCurrentTool();
+    m_arcCreationTool->setCreationMode(mode);
     m_currentTool = m_arcCreationTool;
     m_viewportPanel->setActiveTool(m_currentTool);
     emit toolActivated(PrimitiveType::Arc);

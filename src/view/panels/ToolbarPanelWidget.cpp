@@ -14,11 +14,10 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->setContentsMargins(10, 10, 10, 10);
 
     //общая группа для кнопок на панели инструментов (для возможности выбора только одной)
-    m_buttonGroup = new QButtonGroup(this); //создание группы кнопок (this - указатель на родителя для автоматического контроля памяти)
-    m_buttonGroup->setExclusive(true); //возможность выбора только одной кнопки
+    m_buttonGroup = new QButtonGroup(this);
+    m_buttonGroup->setExclusive(true);
 
-    //создание и добавление кнопок в группу
-    //шаблон: путь до иконки, текст описания, горячая клавиша, залипание
+    //создание кнопок
     m_deleteBtn = new AnimationManager(":/icons/icons/tools/delete.svg", "Удаление [X]", Qt::Key_X, true);
     m_moveBtn = new AnimationManager(":/icons/icons/tools/move.svg", "Перемещение [M]", Qt::Key_M, true);
     m_createSegmentBtn = new AnimationManager(":/icons/icons/tools/segment.svg", "Отрезок [S]", Qt::Key_S, true);
@@ -27,15 +26,29 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_createArcBtn = new AnimationManager(":/icons/icons/tools/arc.svg", "Дуга [A]", Qt::Key_A, true);
     m_createEllipseBtn = new AnimationManager(":/icons/icons/tools/ellipse.svg", "Эллипс [E]", Qt::Key_E, true);
 
-    //настройка выпадающих меню
-    //кнопка построения окружности
+    // === POPUP МЕНЮ ДЛЯ ОКРУЖНОСТИ ===
     m_createCircleBtn->setPopupMode(QToolButton::MenuButtonPopup);
     QMenu* circleMenu = new QMenu(m_createCircleBtn);
-    QAction* actCenterRadius = circleMenu->addAction("Центр, Радиус");
-    QAction* actCenterDiameter = circleMenu->addAction("Центр, Диаметр");
-    QAction* act2Points = circleMenu->addAction("Две точки");
-    QAction* act3Points = circleMenu->addAction("Три точки");
+    QAction* actCircleCenterRadius = circleMenu->addAction("Центр, Радиус");
+    QAction* actCircleCenterDiameter = circleMenu->addAction("Центр, Диаметр");
+    QAction* actCircle2Points = circleMenu->addAction("Две точки");
+    QAction* actCircle3Points = circleMenu->addAction("Три точки");
     m_createCircleBtn->setMenu(circleMenu);
+
+    // === POPUP МЕНЮ ДЛЯ ПРЯМОУГОЛЬНИКА ===
+    m_createRectBtn->setPopupMode(QToolButton::MenuButtonPopup);
+    QMenu* rectMenu = new QMenu(m_createRectBtn);
+    QAction* actRect2Points = rectMenu->addAction("Две точки");
+    QAction* actRectCenterSize = rectMenu->addAction("Центр и размер");
+    QAction* actRect3Points = rectMenu->addAction("Три точки");
+    m_createRectBtn->setMenu(rectMenu);
+
+    // === POPUP МЕНЮ ДЛЯ ДУГИ ===
+    m_createArcBtn->setPopupMode(QToolButton::MenuButtonPopup);
+    QMenu* arcMenu = new QMenu(m_createArcBtn);
+    QAction* actArc3Points = arcMenu->addAction("Три точки");
+    QAction* actArcCenterStartEnd = arcMenu->addAction("Центр, Начало, Конец");
+    m_createArcBtn->setMenu(arcMenu);
 
     //добавление кнопок в общую группу
     m_buttonGroup->addButton(m_deleteBtn);
@@ -46,7 +59,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->addButton(m_createArcBtn);
     m_buttonGroup->addButton(m_createEllipseBtn);
 
-    //добавление кнопок в шаблон
+    //добавление кнопок в layout
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
     layout->addWidget(m_moveBtn, 1, 0, Qt::AlignLeft);
     layout->addWidget(m_createSegmentBtn, 2, 0, Qt::AlignLeft);
@@ -55,47 +68,66 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->addWidget(m_createArcBtn, 5, 0, Qt::AlignLeft);
     layout->addWidget(m_createEllipseBtn, 6, 0, Qt::AlignLeft);
 
-    //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(1, 1);
-
-    //последняя путсая строка должна растягиваться, прижимая кнопки вверх
     layout->setRowStretch(7, 1);
 
-    //подключение сигналов от кнопок
+    //подключение сигналов
     connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
     connect(m_moveBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::moveToolActivated);
     connect(m_createSegmentBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::segmentToolActivated);
-    connect(m_createRectBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::rectangleToolActivated);
-    connect(m_createArcBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::arcToolActivated);
-    connect(m_createArcBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::arcToolActivated);
-    connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated); // <---
+    connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated);
 
-    // Логика кнопки окружности:
-    // По умолчанию (клик по иконке) - Центр, Радиус
+    // Circle: клик по кнопке = CenterRadius
     connect(m_createCircleBtn, &QToolButton::clicked, this, [this]() {
         emit circleToolActivated(CircleCreationMode::CenterRadius);
     });
-
-    // Обработка пунктов меню
-    // При выборе пункта меню мы также должны "нажать" саму кнопку визуально
-    connect(actCenterRadius, &QAction::triggered, this, [this]() {
+    connect(actCircleCenterRadius, &QAction::triggered, this, [this]() {
         m_createCircleBtn->click();
         emit circleToolActivated(CircleCreationMode::CenterRadius);
     });
-    connect(actCenterDiameter, &QAction::triggered, this, [this]() {
+    connect(actCircleCenterDiameter, &QAction::triggered, this, [this]() {
         m_createCircleBtn->click();
         emit circleToolActivated(CircleCreationMode::CenterDiameter);
     });
-    connect(act2Points, &QAction::triggered, this, [this]() {
+    connect(actCircle2Points, &QAction::triggered, this, [this]() {
         m_createCircleBtn->click();
         emit circleToolActivated(CircleCreationMode::TwoPoints);
     });
-    connect(act3Points, &QAction::triggered, this, [this]() {
+    connect(actCircle3Points, &QAction::triggered, this, [this]() {
         m_createCircleBtn->click();
         emit circleToolActivated(CircleCreationMode::ThreePoints);
     });
 
-    //минимальная ширина окна
+    // Rectangle: клик = TwoPoints
+    connect(m_createRectBtn, &QToolButton::clicked, this, [this]() {
+        emit rectangleToolActivated(RectangleCreationMode::TwoPoints);
+    });
+    connect(actRect2Points, &QAction::triggered, this, [this]() {
+        m_createRectBtn->click();
+        emit rectangleToolActivated(RectangleCreationMode::TwoPoints);
+    });
+    connect(actRectCenterSize, &QAction::triggered, this, [this]() {
+        m_createRectBtn->click();
+        emit rectangleToolActivated(RectangleCreationMode::CenterSize);
+    });
+    connect(actRect3Points, &QAction::triggered, this, [this]() {
+        m_createRectBtn->click();
+        emit rectangleToolActivated(RectangleCreationMode::ThreePoints);
+    });
+
+    // Arc: клик = ThreePoints
+    connect(m_createArcBtn, &QToolButton::clicked, this, [this]() {
+        emit arcToolActivated(ArcCreationMode::ThreePoints);
+    });
+    connect(actArc3Points, &QAction::triggered, this, [this]() {
+        m_createArcBtn->click();
+        emit arcToolActivated(ArcCreationMode::ThreePoints);
+    });
+    connect(actArcCenterStartEnd, &QAction::triggered, this, [this]() {
+        m_createArcBtn->click();
+        emit arcToolActivated(ArcCreationMode::CenterStartEnd);
+    });
+
     setMinimumWidth(200);
 }
 

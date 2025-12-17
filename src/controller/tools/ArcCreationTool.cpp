@@ -132,14 +132,64 @@ void ArcCreationTool::reset() { m_step = 0; }
 void ArcCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
 
-    // Отрисовка превью (упрощенная)
-    QColor previewColor = m_currentColor;
-    previewColor.setAlpha(150);
-    painter.setPen(QPen(previewColor, 1, Qt::DashLine));
-
+    // Стандартный стиль для служебных линий (белый пунктир)
+    QPen guidePen(Qt::white);
+    guidePen.setStyle(Qt::DashLine);
+    guidePen.setWidthF(1.0);
+    
+    QPointF p1Pt(m_p1.getX(), m_p1.getY());
+    QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
+    
     if (m_mode == ArcCreationMode::CenterStartEnd) {
-        painter.drawLine(QPointF(m_p1.getX(), m_p1.getY()), QPointF(m_currentPos.getX(), m_currentPos.getY()));
-    } else {
-        painter.drawLine(QPointF(m_p1.getX(), m_p1.getY()), QPointF(m_currentPos.getX(), m_currentPos.getY()));
+        if (m_step >= 1) {
+            // Линия от центра к текущей позиции
+            painter.setPen(guidePen);
+            painter.drawLine(p1Pt, currentPt);
+        }
+        if (m_step >= 2) {
+            QPointF p2Pt(m_p2.getX(), m_p2.getY());
+            // Линия от центра к начальной точке
+            painter.setPen(guidePen);
+            painter.drawLine(p1Pt, p2Pt);
+            
+            // Предпросмотр дуги
+            double radius = QLineF(p1Pt, p2Pt).length();
+            double startAngle = QLineF(p1Pt, p2Pt).angle();
+            double endAngle = QLineF(p1Pt, currentPt).angle();
+            double span = endAngle - startAngle;
+            if (span < 0) span += 360.0;
+            
+            QColor previewColor = m_currentColor;
+            previewColor.setAlpha(180);
+            QPen arcPen(previewColor);
+            arcPen.setWidthF(1.5);
+            painter.setPen(arcPen);
+            painter.setBrush(Qt::NoBrush);
+            QRectF arcRect(p1Pt.x() - radius, p1Pt.y() - radius, radius * 2, radius * 2);
+            painter.drawArc(arcRect, int(startAngle * 16), int(span * 16));
+        }
+    }
+    else if (m_mode == ArcCreationMode::ThreePoints) {
+        // Линии между точками
+        painter.setPen(guidePen);
+        painter.drawLine(p1Pt, currentPt);
+        
+        if (m_step >= 2) {
+            QPointF p2Pt(m_p2.getX(), m_p2.getY());
+            painter.drawLine(p1Pt, p2Pt);
+            painter.drawLine(p2Pt, currentPt);
+        }
+    }
+    
+    // ЖИРНЫЕ МАРКЕРЫ ТОЧЕК
+    painter.setPen(QPen(Qt::white, 2.0));
+    painter.setBrush(m_currentColor);
+    int markerSize = 6;
+    
+    painter.drawEllipse(p1Pt, markerSize, markerSize);
+    
+    if (m_step >= 2) {
+        QPointF p2Pt(m_p2.getX(), m_p2.getY());
+        painter.drawEllipse(p2Pt, markerSize, markerSize);
     }
 }

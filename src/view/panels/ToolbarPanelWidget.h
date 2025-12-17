@@ -35,8 +35,8 @@ signals:
     void moveToolActivated();
     void segmentToolActivated();
     void circleToolActivated(CircleCreationMode mode);
-    void rectangleToolActivated();
-    void arcToolActivated();
+    void rectangleToolActivated(RectangleCreationMode mode);
+    void arcToolActivated(ArcCreationMode mode);
     void ellipseToolActivated();
 
 private:

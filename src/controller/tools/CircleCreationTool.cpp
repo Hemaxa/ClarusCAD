@@ -118,9 +118,15 @@ void CircleCreationTool::onPaint(QPainter& painter)
     if (m_step == 0) return;
 
     QColor previewColor = m_currentColor;
-    previewColor.setAlpha(150);
+    previewColor.setAlpha(180);
 
     QPointF current(m_currentMousePos.getX(), m_currentMousePos.getY());
+    QPointF p1Pt(m_p1.getX(), m_p1.getY());
+
+    // Стандартный стиль для ВСЕХ служебных линий
+    QPen guidePen(Qt::white);
+    guidePen.setStyle(Qt::DashLine);
+    guidePen.setWidthF(1.0);
 
     // Временные переменные для расчета параметров предпросмотра
     QPointF center;
@@ -128,29 +134,45 @@ void CircleCreationTool::onPaint(QPainter& painter)
     bool isValid = false;
 
     if (m_mode == CircleCreationMode::CenterRadius) {
-        center = QPointF(m_p1.getX(), m_p1.getY());
+        center = p1Pt;
         radius = QLineF(center, current).length();
         isValid = true;
+        
+        // Радиус-линия (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(center, current);
     }
     else if (m_mode == CircleCreationMode::CenterDiameter) {
-        center = QPointF(m_p1.getX(), m_p1.getY());
-        radius = QLineF(center, current).length() / 2.0; // Мышь задает точку на расстоянии диаметра от центра? Или точку края?
-        // Обычно "Центр-Диаметр" означает: 1 точка центр, 2 точка задает расстояние, которое есть диаметр.
-        // Значит радиус = dist / 2.
+        center = p1Pt;
+        radius = QLineF(center, current).length() / 2.0;
         isValid = true;
+        
+        // Диаметр-линия (белая пунктирная)
+        painter.setPen(guidePen);
+        QPointF opposite = center - (current - center);
+        painter.drawLine(opposite, current);
     }
     else if (m_mode == CircleCreationMode::TwoPoints) {
-        QPointF p1(m_p1.getX(), m_p1.getY());
-        center = (p1 + current) / 2.0;
-        radius = QLineF(p1, current).length() / 2.0;
+        center = (p1Pt + current) / 2.0;
+        radius = QLineF(p1Pt, current).length() / 2.0;
         isValid = true;
+        
+        // Линия диаметра (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(p1Pt, current);
     }
     else if (m_mode == CircleCreationMode::ThreePoints) {
         if (m_step == 1) {
-            // Рисуем линию между 1 и текущей
-            LineStyleManager::instance().drawLine(painter, QPointF(m_p1.getX(), m_p1.getY()), current, static_cast<int>(m_currentLineType), previewColor);
+            // Линия между первой и текущей (белая пунктирная)
+            painter.setPen(guidePen);
+            painter.drawLine(p1Pt, current);
         } else if (m_step == 2) {
-            // Пытаемся построить окружность по 3 точкам (p1, p2, current)
+            QPointF p2Pt(m_p2.getX(), m_p2.getY());
+            // Линии между точками (белые пунктирные)
+            painter.setPen(guidePen);
+            painter.drawLine(p1Pt, p2Pt);
+            painter.drawLine(p2Pt, current);
+            
             PointPrimitive c;
             if (getCircleFrom3Points(m_p1, m_p2, m_currentMousePos, c, radius)) {
                 center = QPointF(c.getX(), c.getY());
@@ -159,6 +181,7 @@ void CircleCreationTool::onPaint(QPainter& painter)
         }
     }
 
+    // Предпросмотр окружности (в цвете пользователя)
     if (isValid && radius > 0) {
         LineStyleManager::instance().drawEllipse(
             painter,
@@ -167,6 +190,20 @@ void CircleCreationTool::onPaint(QPainter& painter)
             static_cast<int>(m_currentLineType),
             previewColor
             );
+    }
+    
+    // ЖИРНЫЕ МАРКЕРЫ ТОЧЕК ПОЛЬЗОВАТЕЛЯ
+    painter.setPen(QPen(Qt::white, 2.0));
+    painter.setBrush(m_currentColor);
+    int markerSize = 6;
+    
+    // Первая точка
+    painter.drawEllipse(p1Pt, markerSize, markerSize);
+    
+    // Вторая точка (если есть)
+    if (m_step >= 2 && m_mode == CircleCreationMode::ThreePoints) {
+        QPointF p2Pt(m_p2.getX(), m_p2.getY());
+        painter.drawEllipse(p2Pt, markerSize, markerSize);
     }
 }
 

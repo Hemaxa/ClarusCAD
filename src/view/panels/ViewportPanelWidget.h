@@ -10,6 +10,7 @@
 #include <QList>
 #include <map>
 #include <memory>
+#include "SnapManager.h"
 
 class Scene;
 class ViewportCamera;
@@ -118,4 +119,6 @@ private:
     bool m_isSelecting = false;
     QPoint m_selectionStartPos;
     QPoint m_currentMousePosScreen;
+    
+    mutable SnapPoint m_lastSnapPoint; // Текущая точка привязки для визуализации
 };

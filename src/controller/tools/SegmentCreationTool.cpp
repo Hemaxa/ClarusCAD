@@ -68,14 +68,22 @@ void SegmentCreationTool::onPaint(QPainter& painter)
         QColor previewColor = m_currentColor;
         previewColor.setAlpha(150);
 
+        QPointF firstPt(m_firstPoint.getX(), m_firstPoint.getY());
+        QPointF currentPt(m_currentMousePos.getX(), m_currentMousePos.getY());
+
         //используем менеджер стилей для отрисовки того типа линии, который выбран
         LineStyleManager::instance().drawLine(
             painter,
-            QPointF(m_firstPoint.getX(), m_firstPoint.getY()),
-            QPointF(m_currentMousePos.getX(), m_currentMousePos.getY()),
-            static_cast<int>(m_currentLineType), // <--- ИСПРАВЛЕНИЕ ЗДЕСЬ
+            firstPt,
+            currentPt,
+            static_cast<int>(m_currentLineType),
             previewColor
             );
+        
+        // ЖИРНЫЙ МАРКЕР ПЕРВОЙ ТОЧКИ
+        painter.setPen(QPen(Qt::white, 2.0));
+        painter.setBrush(m_currentColor);
+        painter.drawEllipse(firstPt, 6, 6);
     }
 }
 

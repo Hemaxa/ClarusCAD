@@ -31,6 +31,11 @@ public:
     //виртуальный метод очистки инструмента
     virtual void reset() {}
 
+    //виртуальный метод обработки клавиш
+    virtual void onKeyPress(QKeyEvent* event, Scene* scene, ViewportPanelWidget* viewport) {
+        Q_UNUSED(event); Q_UNUSED(scene); Q_UNUSED(viewport);
+    }
+
     //виртуальный вспомогательный метод для дополнительной геометрии
     virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }
 

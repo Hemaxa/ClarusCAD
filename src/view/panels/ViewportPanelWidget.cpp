@@ -14,6 +14,9 @@
 #include "RectangleDrawingTool.h"
 #include "ArcDrawingTool.h"
 #include "EllipseDrawingTool.h"
+#include "PolygonDrawingTool.h"
+#include "SplineDrawingTool.h"
+#include "SnapManager.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -332,6 +335,8 @@ void ViewportPanelWidget::createDrawingTools()
     m_drawingTools[PrimitiveType::Rectangle] = std::make_unique<RectangleDrawingTool>();
     m_drawingTools[PrimitiveType::Arc] = std::make_unique<ArcDrawingTool>();
     m_drawingTools[PrimitiveType::Ellipse] = std::make_unique<EllipseDrawingTool>();
+    m_drawingTools[PrimitiveType::Polygon] = std::make_unique<PolygonDrawingTool>();
+    m_drawingTools[PrimitiveType::Spline] = std::make_unique<SplineDrawingTool>();
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
@@ -396,6 +401,62 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
 
         painter.setBrush(fillColor);
         painter.drawRect(selectionRect);
+    }
+    
+    // 8. ОТРИСОВКА МАРКЕРА ПРИВЯЗКИ
+    if (m_lastSnapPoint.type != SnapType::None && m_lastSnapPoint.type != SnapType::Grid) {
+        painter.resetTransform();
+        QPointF screenPos = worldToScreen.map(m_lastSnapPoint.position);
+        
+        QPen snapPen(Qt::yellow, 2.0);
+        painter.setPen(snapPen);
+        painter.setBrush(Qt::NoBrush);
+        
+        int markerSize = 8;
+        
+        switch (m_lastSnapPoint.type) {
+        case SnapType::Endpoint:
+            // Квадрат
+            painter.drawRect(QRectF(screenPos.x() - markerSize/2, screenPos.y() - markerSize/2, 
+                                    markerSize, markerSize));
+            break;
+        case SnapType::Center:
+            // Круг с крестом
+            painter.drawEllipse(screenPos, markerSize/2, markerSize/2);
+            painter.drawLine(QPointF(screenPos.x() - markerSize, screenPos.y()),
+                           QPointF(screenPos.x() + markerSize, screenPos.y()));
+            painter.drawLine(QPointF(screenPos.x(), screenPos.y() - markerSize),
+                           QPointF(screenPos.x(), screenPos.y() + markerSize));
+            break;
+        case SnapType::Midpoint:
+            // Треугольник
+            {
+                QPolygonF triangle;
+                triangle << QPointF(screenPos.x(), screenPos.y() - markerSize)
+                         << QPointF(screenPos.x() - markerSize, screenPos.y() + markerSize/2)
+                         << QPointF(screenPos.x() + markerSize, screenPos.y() + markerSize/2);
+                painter.drawPolygon(triangle);
+            }
+            break;
+        case SnapType::Quadrant:
+            // Ромб
+            {
+                QPolygonF diamond;
+                diamond << QPointF(screenPos.x(), screenPos.y() - markerSize)
+                        << QPointF(screenPos.x() + markerSize, screenPos.y())
+                        << QPointF(screenPos.x(), screenPos.y() + markerSize)
+                        << QPointF(screenPos.x() - markerSize, screenPos.y());
+                painter.drawPolygon(diamond);
+            }
+            break;
+        default:
+            // Простой крест
+            painter.drawLine(QPointF(screenPos.x() - markerSize, screenPos.y()),
+                           QPointF(screenPos.x() + markerSize, screenPos.y()));
+            painter.drawLine(QPointF(screenPos.x(), screenPos.y() - markerSize),
+                           QPointF(screenPos.x(), screenPos.y() + markerSize));
+            break;
+        }
     }
 }
 
@@ -702,41 +763,24 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
         return worldPos;
     }
 
-    double minDistance = 10.0 / getZoomFactor();
-    QPointF bestSnapPoint = worldPos;
-
-    for (const auto& primitive : m_scene->getPrimitives()) {
-        if (primitive->getType() == PrimitiveType::Segment) {
-            auto* segment = static_cast<SegmentPrimitive*>(primitive.get());
-            QPointF startPoint(segment->getStart().getX(), segment->getStart().getY());
-            QPointF endPoint(segment->getEnd().getX(), segment->getEnd().getY());
-
-            if (QLineF(worldPos, startPoint).length() < minDistance) {
-                minDistance = QLineF(worldPos, startPoint).length();
-                bestSnapPoint = startPoint;
-            }
-
-            if (QLineF(worldPos, endPoint).length() < minDistance) {
-                minDistance = QLineF(worldPos, endPoint).length();
-                bestSnapPoint = endPoint;
-            }
-        }
-        else if (primitive->getType() == PrimitiveType::Circle) {
-            auto* circle = static_cast<CirclePrimitive*>(primitive.get());
-            // Привязка к центру
-            QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
-            if (QLineF(worldPos, center).length() < minDistance) {
-                minDistance = QLineF(worldPos, center).length();
-                bestSnapPoint = center;
-            }
-            // Можно добавить привязку к квадрантам окружности
-        }
+    // Используем SnapManager для поиска ближайшей точки привязки
+    SnapPoint snap = SnapManager::instance().findNearestSnapPoint(
+        worldPos, m_scene, getZoomFactor(), 15.0);
+    
+    // Сохраняем текущую точку привязки для отображения
+    m_lastSnapPoint = snap;
+    
+    if (snap.type != SnapType::None) {
+        return snap.position;
     }
-    return bestSnapPoint;
+    
+    return worldPos;
 }
 
-QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
+QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& screenPos) const
 {
+    // Конвертируем экранные координаты в мировые
+    QPointF worldPos = screenToWorld(screenPos);
     QPointF snappedPos = worldPos;
 
     if (m_isPrimitiveSnapEnabled) {

@@ -53,6 +53,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/controller/tools/MoveTool.cpp
     ${SRC_DIR}/controller/tools/SegmentCreationTool.h
     ${SRC_DIR}/controller/tools/SegmentCreationTool.cpp
+    ${SRC_DIR}/controller/tools/PolygonCreationTool.h
+    ${SRC_DIR}/controller/tools/PolygonCreationTool.cpp
+    ${SRC_DIR}/controller/tools/SplineCreationTool.h
+    ${SRC_DIR}/controller/tools/SplineCreationTool.cpp
 
     #model
     ${SRC_DIR}/model/BasePrimitive.h
@@ -66,6 +70,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/primitives/PointPrimitive.cpp
     ${SRC_DIR}/model/primitives/SegmentPrimitive.h
     ${SRC_DIR}/model/primitives/SegmentPrimitive.cpp
+    ${SRC_DIR}/model/primitives/PolygonPrimitive.h
+    ${SRC_DIR}/model/primitives/PolygonPrimitive.cpp
+    ${SRC_DIR}/model/primitives/SplinePrimitive.h
+    ${SRC_DIR}/model/primitives/SplinePrimitive.cpp
 
     #view
     ${SRC_DIR}/view/BaseDrawingTool.h
@@ -88,11 +96,17 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/managers/SettingsManager.cpp
     ${SRC_DIR}/view/managers/ThemeManager.h
     ${SRC_DIR}/view/managers/ThemeManager.cpp
+    ${SRC_DIR}/view/managers/SnapManager.h
+    ${SRC_DIR}/view/managers/SnapManager.cpp
 
     ${SRC_DIR}/view/drawing/CircleDrawingTool.h
     ${SRC_DIR}/view/drawing/CircleDrawingTool.cpp
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.h
     ${SRC_DIR}/view/drawing/SegmentDrawingTool.cpp
+    ${SRC_DIR}/view/drawing/PolygonDrawingTool.h
+    ${SRC_DIR}/view/drawing/PolygonDrawingTool.cpp
+    ${SRC_DIR}/view/drawing/SplineDrawingTool.h
+    ${SRC_DIR}/view/drawing/SplineDrawingTool.cpp
 
     ${SRC_DIR}/view/panels/ConsolePanelWidget.h
     ${SRC_DIR}/view/panels/ConsolePanelWidget.cpp
@@ -116,6 +130,9 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/properties/CommonPropertiesWidget.h
     ${SRC_DIR}/view/properties/CommonPropertiesWidget.cpp
 
+    ${SRC_DIR}/view/widgets/FlyoutToolButton.h
+    ${SRC_DIR}/view/widgets/FlyoutToolButton.cpp
+
     #resources
     ${RES_DIR}/resources.qrc
 )
@@ -136,6 +153,7 @@ target_include_directories(ClarusCAD PRIVATE
     ${SRC_DIR}/view/managers
     ${SRC_DIR}/view/panels
     ${SRC_DIR}/view/properties
+    ${SRC_DIR}/view/widgets
 )
 
 # ====================================================================
