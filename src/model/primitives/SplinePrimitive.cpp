@@ -112,20 +112,16 @@ void SplinePrimitive::draw(QPainter& painter, bool isSelected) const
     if (m_controlPoints.size() < 2) return;
     
     LineStyleManager& lsm = LineStyleManager::instance();
-    QPen pen = lsm.getPen(getLineType(), getColor(), isSelected);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
     
-    // Рисуем сплайн
+    // Рисуем сплайн сегмент за сегментом для поддержки всех стилей линий
     QVector<QPointF> splinePoints = calculateSplinePoints();
     
     if (splinePoints.size() >= 2) {
-        QPainterPath path;
-        path.moveTo(splinePoints[0]);
-        for (int i = 1; i < splinePoints.size(); ++i) {
-            path.lineTo(splinePoints[i]);
+        // Для каждого сегмента используем LineStyleManager
+        for (int i = 0; i < splinePoints.size() - 1; ++i) {
+            lsm.drawLine(painter, splinePoints[i], splinePoints[i + 1],
+                         getLineType(), getColor(), isSelected);
         }
-        painter.drawPath(path);
     }
     
     // Рисуем контрольные точки при выделении

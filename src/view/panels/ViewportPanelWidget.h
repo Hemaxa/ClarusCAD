@@ -93,7 +93,7 @@ private:
 
     bool m_isPanning = false;
     bool m_isGridSnapEnabled = true;
-    bool m_isPrimitiveSnapEnabled = false;
+    bool m_isPrimitiveSnapEnabled = true;
 
     QPointF m_currentMouseWorldPos;
     double m_gridMultiplier = 1.0;

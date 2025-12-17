@@ -423,8 +423,8 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
         // Рисуем волнистый эллипс
         QPainterPath path;
         double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0); // Приближенно
-        double period = 10.0;
-        double amplitude = 2.0;
+        double period = m_wavePeriod;
+        double amplitude = m_waveAmplitude;
         int steps = static_cast<int>(perimeter); // Шаг 1 пиксель
         if(steps < 10) steps = 10;
 
@@ -455,8 +455,8 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
         // Рисуем зигзаг эллипс (упрощенная реализация через ломаную)
         QPainterPath path;
         double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
-        double period = 15.0;
-        double amplitude = 3.0;
+        double period = 2 * m_kinkLength + m_kinkStraight;
+        double amplitude = m_kinkAmplitude;
 
         int segments = std::round(perimeter / period);
         if (segments < 4) segments = 4;

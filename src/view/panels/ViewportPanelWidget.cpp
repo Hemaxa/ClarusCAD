@@ -177,49 +177,14 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 
                     // Расстояние для клика (в пикселях, переведенное в мировые единицы)
                     double clickThreshold = 10.0 / getZoomFactor();
-                    double minDistance = clickThreshold;
                     BasePrimitive* bestCandidate = nullptr;
 
                     if (m_scene) {
+                        // Используем общий hitTest() для всех примитивов
                         for(const auto& prim : m_scene->getPrimitives()) {
-                            double dist = std::numeric_limits<double>::max();
-
-                            // 1. Проверка для Отрезков
-                            if (prim->getType() == PrimitiveType::Segment) {
-                                auto* seg = static_cast<SegmentPrimitive*>(prim.get());
-                                QPointF p1(seg->getStart().getX(), seg->getStart().getY());
-                                QPointF p2(seg->getEnd().getX(), seg->getEnd().getY());
-                                QLineF line(p1, p2);
-
-                                // Математика расстояния точки до отрезка
-                                QPointF vecLine = p2 - p1;
-                                QPointF vecPoint = worldClick - p1;
-                                double lineLen2 = QPointF::dotProduct(vecLine, vecLine);
-
-                                if (lineLen2 == 0.0) {
-                                    dist = QLineF(worldClick, p1).length();
-                                } else {
-                                    double t = QPointF::dotProduct(vecPoint, vecLine) / lineLen2;
-                                    if (t < 0.0) dist = QLineF(worldClick, p1).length();
-                                    else if (t > 1.0) dist = QLineF(worldClick, p2).length();
-                                    else {
-                                        QPointF projection = p1 + t * vecLine;
-                                        dist = QLineF(worldClick, projection).length();
-                                    }
-                                }
-                            }
-                            // 2. Проверка для Окружностей
-                            else if (prim->getType() == PrimitiveType::Circle) {
-                                auto* circle = static_cast<CirclePrimitive*>(prim.get());
-                                QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
-                                double distToCenter = QLineF(worldClick, center).length();
-                                dist = std::abs(distToCenter - circle->getRadius());
-                            }
-
-                            // Если попали в допуск и это самый близкий объект
-                            if (dist < minDistance) {
-                                minDistance = dist;
+                            if (prim->hitTest(worldClick, clickThreshold)) {
                                 bestCandidate = prim.get();
+                                break; // Берём первый попавшийся
                             }
                         }
                     }
@@ -232,58 +197,25 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                     // ЛОГИКА РАМКИ
                     if (m_scene) {
                         bool isCrossing = (mouseEvent->pos().x() < m_selectionStartPos.x()); // Справа налево (зеленая)
+                        
+                        // Преобразуем рамку в мировые координаты
+                        QPointF topLeftWorld = screenToWorld(selectionRect.topLeft());
+                        QPointF bottomRightWorld = screenToWorld(selectionRect.bottomRight());
+                        QRectF selectionWorld(topLeftWorld, bottomRightWorld);
+                        selectionWorld = selectionWorld.normalized();
+                        
                         for (const auto& prim : m_scene->getPrimitives()) {
-
-                            // Получаем BoundingBox примитива в мировых координатах
-                            QRectF bbWorld = prim->getBoundingBox();
-
-                            // Преобразуем bbox в экранные координаты для проверки (грубая проверка)
-                            // Или преобразуем рамку в мировые. Лучше преобразуем точки объекта в экранные.
-
-                            // Для ОТРЕЗКОВ (как было)
-                            if (prim->getType() == PrimitiveType::Segment) {
-                                auto* seg = static_cast<SegmentPrimitive*>(prim.get());
-                                QPoint p1Screen = worldToScreen(QPointF(seg->getStart().getX(), seg->getStart().getY())).toPoint();
-                                QPoint p2Screen = worldToScreen(QPointF(seg->getEnd().getX(), seg->getEnd().getY())).toPoint();
-
-                                bool p1In = selectionRect.contains(p1Screen);
-                                bool p2In = selectionRect.contains(p2Screen);
-
-                                if (isCrossing) {
-                                    // Пересечение (простой вариант: если хотя бы одна точка внутри)
-                                    // Плюс проверка на пересечение линии с прямоугольником (здесь упрощено)
-                                    if (p1In || p2In) newSelection.append(prim.get());
-                                    // TODO: Добавить полноценную проверку пересечения линии и Rect
-                                } else {
-                                    // Window (обе точки внутри)
-                                    if (p1In && p2In) newSelection.append(prim.get());
+                            if (isCrossing) {
+                                // Crossing (пересечение): если примитив пересекает рамку
+                                if (prim->intersects(selectionWorld)) {
+                                    newSelection.append(prim.get());
+                                }
+                            } else {
+                                // Window (окно): если примитив полностью внутри рамки
+                                if (prim->inside(selectionWorld)) {
+                                    newSelection.append(prim.get());
                                 }
                             }
-                            // НОВОЕ: Для ОКРУЖНОСТЕЙ
-                            else if (prim->getType() == PrimitiveType::Circle) {
-                                auto* circle = static_cast<CirclePrimitive*>(prim.get());
-                                // Проверка Bounding Box окружности
-                                // Преобразуем прямоугольник выделения в мировые координаты для сравнения
-                                QPointF topLeftWorld = screenToWorld(selectionRect.topLeft());
-                                QPointF bottomRightWorld = screenToWorld(selectionRect.bottomRight());
-                                QRectF selectionWorld(topLeftWorld, bottomRightWorld);
-                                selectionWorld = selectionWorld.normalized();
-
-                                QRectF circleBB = circle->getBoundingBox();
-
-                                if (isCrossing) {
-                                    // Пересечение: если прямоугольники пересекаются
-                                    if (selectionWorld.intersects(circleBB)) {
-                                        newSelection.append(prim.get());
-                                    }
-                                } else {
-                                    // Window: если bounding box окружности полностью внутри рамки
-                                    if (selectionWorld.contains(circleBB)) {
-                                        newSelection.append(prim.get());
-                                    }
-                                }
-                            }
-                            // Можно добавить поддержку других типов
                         }
                     }
                 }

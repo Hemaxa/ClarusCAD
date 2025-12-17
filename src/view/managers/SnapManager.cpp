@@ -20,12 +20,15 @@ SnapManager& SnapManager::instance()
 
 SnapManager::SnapManager() : QObject(nullptr)
 {
-    // По умолчанию включены: Endpoint, Midpoint, Center, Quadrant, Grid
+    // По умолчанию включены все основные привязки
     m_enabledSnapTypes = static_cast<int>(SnapType::Endpoint) |
                          static_cast<int>(SnapType::Midpoint) |
                          static_cast<int>(SnapType::Center) |
                          static_cast<int>(SnapType::Quadrant) |
-                         static_cast<int>(SnapType::Grid);
+                         static_cast<int>(SnapType::Grid) |
+                         static_cast<int>(SnapType::Intersection) |
+                         static_cast<int>(SnapType::Perpendicular) |
+                         static_cast<int>(SnapType::Tangent);
 }
 
 SnapPoint SnapManager::findNearestSnapPoint(const QPointF& mousePos, Scene* scene,
