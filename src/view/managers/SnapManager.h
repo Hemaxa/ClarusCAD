@@ -104,6 +104,8 @@ private:
                                         const QPointF& segEnd);
     QVector<QPointF> findTangentPointsToCircle(const QPointF& from, const QPointF& center, 
                                                 double radius);
+    QVector<QPointF> findTangentPointsToEllipse(const QPointF& from, const QPointF& center,
+                                                 double rx, double ry, double rotation);
     
     // Привязка к сетке
     SnapPoint snapToGrid(const QPointF& pos);
