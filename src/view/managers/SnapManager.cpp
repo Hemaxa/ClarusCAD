@@ -858,7 +858,10 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
             double spanAngle = arc->getSpanAngle() * M_PI / 180.0;
             
             for (const auto& pt : tangentPoints) {
-                 double ptAngle = std::atan2(pt.y() - center.y(), pt.x() - center.x());
+                 // В системе координат экрана Y направлен вниз, поэтому atan2 растет по часовой стрелке.
+                 // Углы в Qt (startAngle, spanAngle) обычно против часовой стрелки.
+                 // Инвертируем угол для корректного сравнения.
+                 double ptAngle = -std::atan2(pt.y() - center.y(), pt.x() - center.x());
                 
                  // Нормализуем углы для проверки
                  double normPtAngle = ptAngle - startAngle;
