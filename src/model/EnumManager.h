@@ -31,7 +31,7 @@ enum class ArcCreationMode {
 enum class RectangleCreationMode {
     TwoPoints,          // По диагонали (P1, P2)
     CenterSize,         // Центр и угол (половина диагонали)
-    ThreePoints         // Три точки (задает поворот)
+    PointSize           // Точка (угол) + ширина и высота
 };
 
 // Режимы построения эллипса

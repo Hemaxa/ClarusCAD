@@ -37,7 +37,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_createRectBtn = new FlyoutToolButton(this);
     m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::TwoPoints), ":/icons/icons/tools/rect_2points.svg", "Две точки [R]");
     m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::CenterSize), ":/icons/icons/tools/rect_center.svg", "Центр и размер");
-    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::ThreePoints), ":/icons/icons/tools/rect_3points.svg", "Три точки");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::PointSize), ":/icons/icons/tools/rect_3points.svg", "Точка и размер");
     m_createRectBtn->setFixedSize(40, 40);
     m_createRectBtn->setIconSize(QSize(28, 28));
 

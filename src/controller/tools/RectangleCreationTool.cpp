@@ -50,74 +50,24 @@ void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewp
                 reset();
             }
         }
-        else if (m_mode == RectangleCreationMode::ThreePoints) {
-            // P1 (угол) -> P2 (ширина/угол) -> P3 (высота)
+        else if (m_mode == RectangleCreationMode::PointSize) {
+            // Точка (угол) -> Противоположный угол (ширина и высота откладываются в одну сторону)
+            // Отличие от TwoPoints: точка - это угол, а не центр диагонали
             if (m_step == 0) {
-                m_p1 = pt;
+                m_p1 = pt; // Это угол прямоугольника
                 m_currentPos = pt;
                 m_step = 1;
-            } else if (m_step == 1) {
-                m_p2 = pt;
-                if (QLineF(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY()).length() > 0) {
-                    m_step = 2;
-                }
             } else {
-                // Вычисляем ширину (P1-P2)
-                QLineF vecW(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY());
-                double width = vecW.length();
-                double rotation = vecW.angle(); // 0..360
-                // В Qt angle() возвращает угол 0..360 против часовой стрелки от 3 часов (обычно),
-                // но в QPainter.rotate() нам нужны градусы. QLineF::angle() подходит. Note: Qt Y inverted.
+                double w = pt.getX() - m_p1.getX();
+                double h = pt.getY() - m_p1.getY();
+                
+                // Центр будет смещен от угла на половину ширины и высоты
+                double cx = m_p1.getX() + w / 2.0;
+                double cy = m_p1.getY() + h / 2.0;
 
-                // Высота - проекция вектора (P2-Mouse) на перпендикуляр к ширине?
-                // Упрощенно: расстояние от мыши до линии P1-P2
-
-                // Вектор P2 -> Mouse
-                QPointF p2(m_p2.getX(), m_p2.getY());
-                QPointF p3(pt.getX(), pt.getY());
-                QLineF vecH_raw(p2, p3);
-
-                // Проекция на нормаль
-                // Для простоты CAD построения "3 точки" обычно P1-P2 это одна сторона,
-                // а P3 просто задает вытягивание перпендикулярно.
-
-                double height = QLineF(p3, vecW.pointAt(
-                                               (QPointF::dotProduct(p3 - vecW.p1(), vecW.p2() - vecW.p1())) / (width * width)
-                                               ) * width + vecW.p1()).length(); // Расстояние от точки до прямой
-
-                // Но лучше использовать distanceToLine для точности? Нет в QLineF до Qt 5.14+
-                // Реализуем высоту как расстояние от P3 до прямой (P1, P2)
-
-                // Упростим: Высота = длина перпендикуляра.
-                // Центр прямоугольника смещается от середины P1-P2 на половину высоты вдоль нормали.
-
-                // Вектор ширины
-                double dx = m_p2.getX() - m_p1.getX();
-                double dy = m_p2.getY() - m_p1.getY();
-
-                // Нормаль (-dy, dx) или (dy, -dx)
-                // Определяем знак высоты через векторное произведение
-                double crossProduct = dx * (pt.getY() - m_p1.getY()) - dy * (pt.getX() - m_p1.getX());
-                double h_signed = crossProduct / width;
-                double h_final = std::abs(h_signed);
-
-                // Центр
-                double midX = (m_p1.getX() + m_p2.getX()) / 2.0;
-                double midY = (m_p1.getY() + m_p2.getY()) / 2.0;
-
-                // Смещаем центр по нормали
-                // Нормализованный вектор перпендикуляра (-dy, dx) / width
-                double nx = -dy / width;
-                double ny = dx / width;
-
-                double cx = midX + nx * (h_signed / 2.0);
-                double cy = midY + ny * (h_signed / 2.0);
-
-                emit rectangleDataReady(PointPrimitive(cx, cy), width, h_final, -rotation); // Qt rotation is CW? Check logic.
-                // QPainter::rotate поворачивает по часовой
-                // QLineF::angle возвращает 0..360 CCW
-                // Значит -rotation
-
+                if (std::abs(w) > 0 && std::abs(h) > 0) {
+                    emit rectangleDataReady(PointPrimitive(cx, cy), std::abs(w), std::abs(h), 0.0);
+                }
                 reset();
             }
         }
@@ -182,22 +132,18 @@ void RectangleCreationTool::onPaint(QPainter& painter) {
         painter.setBrush(Qt::NoBrush);
         painter.drawRect(QRectF(p1Pt.x() - halfW, p1Pt.y() - halfH, halfW * 2, halfH * 2));
     }
-    else if (m_mode == RectangleCreationMode::ThreePoints) {
-        // Линии между точками (белые пунктирные)
-        painter.setPen(guidePen);
+    else if (m_mode == RectangleCreationMode::PointSize) {
+        double w = currentPt.x() - p1Pt.x();
+        double h = currentPt.y() - p1Pt.y();
         
-        if (m_step == 1) {
-            painter.drawLine(p1Pt, currentPt);
-        } else if (m_step == 2) {
-            QPointF p2Pt(m_p2.getX(), m_p2.getY());
-            painter.drawLine(p1Pt, p2Pt);
-            painter.drawLine(p2Pt, currentPt);
-            
-            // Маркер для P2
-            painter.setPen(QPen(Qt::white, 2.0));
-            painter.setBrush(m_currentColor);
-            painter.drawEllipse(p2Pt, 6, 6);
-        }
+        // Линия диагонали (белая пунктирная)
+        painter.setPen(guidePen);
+        painter.drawLine(p1Pt, currentPt);
+        
+        // Предпросмотр прямоугольника (от угла P1)
+        painter.setPen(rectPen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(QRectF(p1Pt.x(), p1Pt.y(), w, h));
     }
     
     // ЖИРНЫЙ МАРКЕР ПЕРВОЙ ТОЧКИ

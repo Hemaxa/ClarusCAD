@@ -15,7 +15,6 @@ public:
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
-    // Сигнал передает все параметры прямоугольника включая скругление
     void propertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, 
                            double w, double h, double rotation, 
                            CornerType cornerType, double cornerRadius,
@@ -34,18 +33,30 @@ private:
     QComboBox* m_modeComboBox;
     QStackedWidget* m_modeStack;
 
-    // Поля Декартовой системы (Cartesian)
+    // Страница 0: Две точки
+    QLineEdit* m_p1X;
+    QLineEdit* m_p1Y;
+    QLineEdit* m_p2X;
+    QLineEdit* m_p2Y;
+
+    // Страница 1: Центр + размер
     QLineEdit* m_centerX;
     QLineEdit* m_centerY;
-
-    // Поля Полярной системы (Polar)
-    QLineEdit* m_centerRadius;
-    QLineEdit* m_centerAngle;
-
-    // Общие поля (размеры и поворот не зависят от системы координат положения)
     QLineEdit* m_width;
     QLineEdit* m_height;
+
+    // Страница 2: Точка + размер
+    QLineEdit* m_pointX;
+    QLineEdit* m_pointY;
+    QLineEdit* m_widthPS;
+    QLineEdit* m_heightPS;
+
+    // Общие поля
     QLineEdit* m_rotation;
+
+    // Поля Полярной системы
+    QLineEdit* m_centerRadius;
+    QLineEdit* m_centerAngle;
 
     // Скругление углов
     QComboBox* m_cornerTypeCombo;
