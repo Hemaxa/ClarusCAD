@@ -375,6 +375,121 @@ void LineStyleManager::drawZigzagLine(QPainter& painter, const QPointF& start, c
     painter.drawPath(path);
 }
 
+double LineStyleManager::drawWaveLineWithPhase(QPainter& painter, const QPointF& start, const QPointF& end, 
+                                                const QPen& pen, double startPhase) const
+{
+    painter.setPen(pen);
+    QPainterPath path;
+    path.moveTo(start);
+    QLineF line(start, end);
+    double length = line.length();
+    if (length < 1.0) { 
+        painter.drawLine(start, end); 
+        return startPhase + length; 
+    }
+
+    double amplitude = m_waveAmplitude;
+    double period = m_wavePeriod;
+
+    double dx = end.x() - start.x();
+    double dy = end.y() - start.y();
+    double px = -dy / length; // Perpendicular
+    double py = dx / length;
+
+    double step = qMax(1.0, period / 10.0);
+    for (double i = 0; i <= length; i += step) {
+        double t = i / length;
+        // Use startPhase to continue wave pattern from previous segment
+        double offset = amplitude * qSin((startPhase + i) * 2 * M_PI / period);
+        double x = start.x() + dx * t + px * offset;
+        double y = start.y() + dy * t + py * offset;
+        path.lineTo(x, y);
+    }
+    path.lineTo(end);
+    painter.drawPath(path);
+    
+    return startPhase + length; // Return accumulated distance
+}
+
+double LineStyleManager::drawZigzagLineWithPhase(QPainter& painter, const QPointF& start, const QPointF& end, 
+                                                  const QPen& pen, double startPhase) const
+{
+    painter.setPen(pen);
+    QPainterPath path;
+    path.moveTo(start);
+    QLineF line(start, end);
+    double length = line.length();
+    if (length < 1.0) { 
+        painter.drawLine(start, end); 
+        return startPhase + length; 
+    }
+
+    double amplitude = m_kinkAmplitude;
+    double kinkLen = m_kinkLength;
+    double straightLen = m_kinkStraight;
+    double period = 2 * kinkLen + straightLen;
+
+    double dx = end.x() - start.x();
+    double dy = end.y() - start.y();
+    double px = -dy / length;
+    double py = dx / length;
+
+    // Start from where we left off in the pattern
+    double currentPos = std::fmod(startPhase, period);
+    double localPos = 0;
+    
+    while (localPos < length) {
+        double phaseInPeriod = std::fmod(currentPos, period);
+        
+        if (phaseInPeriod < kinkLen / 2.0) {
+            // Going down
+            double remaining = kinkLen / 2.0 - phaseInPeriod;
+            double stepLen = std::min(remaining, length - localPos);
+            double progress = (phaseInPeriod + stepLen) / (kinkLen / 2.0);
+            double t = (localPos + stepLen) / length;
+            double offsetY = -amplitude * progress;
+            path.lineTo(start.x() + dx * t + px * offsetY, start.y() + dy * t + py * offsetY);
+            localPos += stepLen;
+            currentPos += stepLen;
+        }
+        else if (phaseInPeriod < kinkLen) {
+            // Going up
+            double remaining = kinkLen - phaseInPeriod;
+            double stepLen = std::min(remaining, length - localPos);
+            double progress = (phaseInPeriod - kinkLen / 2.0 + stepLen) / (kinkLen / 2.0);
+            double t = (localPos + stepLen) / length;
+            double offsetY = -amplitude + 2 * amplitude * progress;
+            path.lineTo(start.x() + dx * t + px * offsetY, start.y() + dy * t + py * offsetY);
+            localPos += stepLen;
+            currentPos += stepLen;
+        }
+        else if (phaseInPeriod < kinkLen + kinkLen / 2.0) {
+            // Returning to center
+            double remaining = kinkLen + kinkLen / 2.0 - phaseInPeriod;
+            double stepLen = std::min(remaining, length - localPos);
+            double progress = (phaseInPeriod - kinkLen + stepLen) / (kinkLen / 2.0);
+            double t = (localPos + stepLen) / length;
+            double offsetY = amplitude * (1.0 - progress);
+            path.lineTo(start.x() + dx * t + px * offsetY, start.y() + dy * t + py * offsetY);
+            localPos += stepLen;
+            currentPos += stepLen;
+        }
+        else {
+            // Straight section
+            double remaining = period - phaseInPeriod;
+            double stepLen = std::min(remaining, length - localPos);
+            double t = (localPos + stepLen) / length;
+            path.lineTo(start.x() + dx * t, start.y() + dy * t);
+            localPos += stepLen;
+            currentPos += stepLen;
+        }
+    }
+    path.lineTo(end);
+    painter.drawPath(path);
+    
+    return startPhase + length;
+}
+
 void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, double rx, double ry,
                                    int typeId, const QColor& color, bool isSelected) const
 {
@@ -401,6 +516,7 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
             double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
             int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
             
+            double phase = 0.0;
             for (int i = 0; i < numSegments; ++i) {
                 double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
                 double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
@@ -409,9 +525,9 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
                 QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
                 
                 if (isWave) {
-                    drawWaveLine(painter, p1, p2, highlightPen);
+                    phase = drawWaveLineWithPhase(painter, p1, p2, highlightPen, phase);
                 } else {
-                    drawZigzagLine(painter, p1, p2, highlightPen);
+                    phase = drawZigzagLineWithPhase(painter, p1, p2, highlightPen, phase);
                 }
             }
         } else {
@@ -426,12 +542,13 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
     painter.setBrush(Qt::NoBrush);
 
     if (isWave || isZigzag) {
-        // Break ellipse into segments and draw each with wave/zigzag
+        // Break ellipse into segments and draw each with wave/zigzag using continuous phase
         standardPen.setStyle(Qt::SolidLine);
         
         double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
         int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
         
+        double phase = 0.0;
         for (int i = 0; i < numSegments; ++i) {
             double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
             double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
@@ -440,9 +557,9 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
             QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
             
             if (isWave) {
-                drawWaveLine(painter, p1, p2, standardPen);
+                phase = drawWaveLineWithPhase(painter, p1, p2, standardPen, phase);
             } else {
-                drawZigzagLine(painter, p1, p2, standardPen);
+                phase = drawZigzagLineWithPhase(painter, p1, p2, standardPen, phase);
             }
         }
     }
@@ -491,7 +608,7 @@ void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double 
         return;
     }
 
-    // For wave/zigzag, break arc into segments and draw each
+    // For wave/zigzag, break arc into segments and draw each with continuous phase
     double startRad = startAngle * M_PI / 180.0;
     double spanRad = spanAngle * M_PI / 180.0;
     
@@ -502,6 +619,32 @@ void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double 
     QPen pen = getPen(typeId, color, false);
     pen.setStyle(Qt::SolidLine);
 
+    // Draw selection highlight with phase tracking
+    if (isSelected) {
+        QPen hPen = pen;
+        hPen.setWidthF(pen.widthF() + 8.0);
+        QColor hColor = color;
+        hColor.setAlpha(100);
+        hPen.setColor(hColor);
+        
+        double phase = 0.0;
+        for (int i = 0; i < numSegments; ++i) {
+            double t1 = static_cast<double>(i) / numSegments;
+            double t2 = static_cast<double>(i + 1) / numSegments;
+            
+            double angle1 = startRad + t1 * spanRad;
+            double angle2 = startRad + t2 * spanRad;
+            
+            QPointF p1(center.x() + radius * std::cos(angle1), center.y() + radius * std::sin(angle1));
+            QPointF p2(center.x() + radius * std::cos(angle2), center.y() + radius * std::sin(angle2));
+            
+            if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, hPen, phase);
+            else phase = drawZigzagLineWithPhase(painter, p1, p2, hPen, phase);
+        }
+    }
+
+    // Draw main line with phase tracking
+    double phase = 0.0;
     for (int i = 0; i < numSegments; ++i) {
         double t1 = static_cast<double>(i) / numSegments;
         double t2 = static_cast<double>(i + 1) / numSegments;
@@ -512,19 +655,8 @@ void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double 
         QPointF p1(center.x() + radius * std::cos(angle1), center.y() + radius * std::sin(angle1));
         QPointF p2(center.x() + radius * std::cos(angle2), center.y() + radius * std::sin(angle2));
         
-        // Draw using same wave/zigzag as line segment
-        if (isSelected) {
-            QPen hPen = pen;
-            hPen.setWidthF(pen.widthF() + 8.0);
-            QColor hColor = color;
-            hColor.setAlpha(100);
-            hPen.setColor(hColor);
-            if (isWave) drawWaveLine(painter, p1, p2, hPen);
-            else drawZigzagLine(painter, p1, p2, hPen);
-        }
-        
-        if (isWave) drawWaveLine(painter, p1, p2, pen);
-        else drawZigzagLine(painter, p1, p2, pen);
+        if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, pen, phase);
+        else phase = drawZigzagLineWithPhase(painter, p1, p2, pen, phase);
     }
 }
 
@@ -561,30 +693,42 @@ void LineStyleManager::drawPath(QPainter& painter, const QPainterPath& path,
         return;
     }
 
-    // For wave/zigzag, convert path to polygon and draw segments
+    // For wave/zigzag, convert path to polygon and draw segments with continuous phase
     // Flatten curves into line segments
     QList<QPolygonF> polygons = path.toSubpathPolygons();
     
     QPen pen = getPen(typeId, color, false);
     pen.setStyle(Qt::SolidLine);
 
+    // Draw selection highlight with phase tracking
+    if (isSelected) {
+        QPen hPen = pen;
+        hPen.setWidthF(pen.widthF() + 8.0);
+        QColor hColor = color;
+        hColor.setAlpha(100);
+        hPen.setColor(hColor);
+        
+        for (const QPolygonF& poly : polygons) {
+            double phase = 0.0;
+            for (int i = 0; i < poly.size() - 1; ++i) {
+                QPointF p1 = poly[i];
+                QPointF p2 = poly[i + 1];
+                
+                if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, hPen, phase);
+                else phase = drawZigzagLineWithPhase(painter, p1, p2, hPen, phase);
+            }
+        }
+    }
+
+    // Draw main line with phase tracking
     for (const QPolygonF& poly : polygons) {
+        double phase = 0.0;
         for (int i = 0; i < poly.size() - 1; ++i) {
             QPointF p1 = poly[i];
             QPointF p2 = poly[i + 1];
             
-            if (isSelected) {
-                QPen hPen = pen;
-                hPen.setWidthF(pen.widthF() + 8.0);
-                QColor hColor = color;
-                hColor.setAlpha(100);
-                hPen.setColor(hColor);
-                if (isWave) drawWaveLine(painter, p1, p2, hPen);
-                else drawZigzagLine(painter, p1, p2, hPen);
-            }
-            
-            if (isWave) drawWaveLine(painter, p1, p2, pen);
-            else drawZigzagLine(painter, p1, p2, pen);
+            if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, pen, phase);
+            else phase = drawZigzagLineWithPhase(painter, p1, p2, pen, phase);
         }
     }
 }

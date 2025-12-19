@@ -41,6 +41,12 @@ public:
     // Получение пера для отрисовки
     QPen getPen(int typeId, const QColor& color, bool isSelected) const;
 
+    // Версии с поддержкой непрерывной фазы (для криволинейных примитивов)
+    double drawWaveLineWithPhase(QPainter& painter, const QPointF& start, const QPointF& end, 
+                                  const QPen& pen, double startPhase) const;
+    double drawZigzagLineWithPhase(QPainter& painter, const QPointF& start, const QPointF& end, 
+                                    const QPen& pen, double startPhase) const;
+
     // --- Базовые параметры линий ---
     void setBaseLineThickness(double thickness);
     double getBaseLineThickness() const;
@@ -104,4 +110,5 @@ private:
     // Вспомогательные методы отрисовки спец. линий
     void drawWaveLine(QPainter& painter, const QPointF& start, const QPointF& end, const QPen& pen) const;
     void drawZigzagLine(QPainter& painter, const QPointF& start, const QPointF& end, const QPen& pen) const;
+
 };

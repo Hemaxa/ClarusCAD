@@ -117,10 +117,47 @@ void SplinePrimitive::draw(QPainter& painter, bool isSelected) const
     QVector<QPointF> splinePoints = calculateSplinePoints();
     
     if (splinePoints.size() >= 2) {
-        // Для каждого сегмента используем LineStyleManager
-        for (int i = 0; i < splinePoints.size() - 1; ++i) {
-            lsm.drawLine(painter, splinePoints[i], splinePoints[i + 1],
-                         getLineType(), getColor(), isSelected);
+        int typeId = getLineType();
+        bool isWave = false;
+        bool isZigzag = false;
+        if (typeId < 1000) {
+            LineType type = static_cast<LineType>(typeId);
+            if (type == LineType::SolidWave) isWave = true;
+            if (type == LineType::SolidKink) isZigzag = true;
+        }
+        
+        if (isWave || isZigzag) {
+            // Use phase-aware drawing for continuous pattern
+            QPen pen = lsm.getPen(typeId, getColor(), false);
+            pen.setStyle(Qt::SolidLine);
+            
+            // Draw selection highlight with phase
+            if (isSelected) {
+                QPen hPen = pen;
+                hPen.setWidthF(pen.widthF() + 8.0);
+                QColor hColor = getColor();
+                hColor.setAlpha(100);
+                hPen.setColor(hColor);
+                
+                double phase = 0.0;
+                for (int i = 0; i < splinePoints.size() - 1; ++i) {
+                    if (isWave) phase = lsm.drawWaveLineWithPhase(painter, splinePoints[i], splinePoints[i + 1], hPen, phase);
+                    else phase = lsm.drawZigzagLineWithPhase(painter, splinePoints[i], splinePoints[i + 1], hPen, phase);
+                }
+            }
+            
+            // Draw main line with phase
+            double phase = 0.0;
+            for (int i = 0; i < splinePoints.size() - 1; ++i) {
+                if (isWave) phase = lsm.drawWaveLineWithPhase(painter, splinePoints[i], splinePoints[i + 1], pen, phase);
+                else phase = lsm.drawZigzagLineWithPhase(painter, splinePoints[i], splinePoints[i + 1], pen, phase);
+            }
+        } else {
+            // Standard line types - use regular drawLine
+            for (int i = 0; i < splinePoints.size() - 1; ++i) {
+                lsm.drawLine(painter, splinePoints[i], splinePoints[i + 1],
+                             getLineType(), getColor(), isSelected);
+            }
         }
     }
     
