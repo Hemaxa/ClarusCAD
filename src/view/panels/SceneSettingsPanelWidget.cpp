@@ -46,30 +46,20 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     coordSystemGroup->addButton(m_cartesianBtn);
     coordSystemGroup->addButton(m_polarBtn);
 
-    // Разделительный заголовок для привязок
-    auto* snapLabel = new QLabel("Привязки:");
-    snapLabel->setStyleSheet("font-weight: bold; color: #888;");
-    
-    //добавление кнопок в шаблон
-    layout->addWidget(snapLabel, 0, 0, Qt::AlignLeft);
-    layout->addWidget(m_gridSnapBtn, 1, 0, Qt::AlignLeft);
-    layout->addWidget(m_primitiveSnapBtn, 2, 0, Qt::AlignLeft);
-    layout->addWidget(m_intersectionSnapBtn, 3, 0, Qt::AlignLeft);
-    layout->addWidget(m_perpendicularSnapBtn, 4, 0, Qt::AlignLeft);
-    layout->addWidget(m_tangentSnapBtn, 5, 0, Qt::AlignLeft);
-    
-    // Разделительный заголовок для координат
-    auto* coordLabel = new QLabel("Координаты:");
-    coordLabel->setStyleSheet("font-weight: bold; color: #888;");
-    layout->addWidget(coordLabel, 6, 0, Qt::AlignLeft);
-    layout->addWidget(m_cartesianBtn, 7, 0, Qt::AlignLeft);
-    layout->addWidget(m_polarBtn, 8, 0, Qt::AlignLeft);
+    //добавление кнопок в шаблон (без разделительных заголовков)
+    layout->addWidget(m_gridSnapBtn, 0, 0, Qt::AlignLeft);
+    layout->addWidget(m_primitiveSnapBtn, 1, 0, Qt::AlignLeft);
+    layout->addWidget(m_intersectionSnapBtn, 2, 0, Qt::AlignLeft);
+    layout->addWidget(m_perpendicularSnapBtn, 3, 0, Qt::AlignLeft);
+    layout->addWidget(m_tangentSnapBtn, 4, 0, Qt::AlignLeft);
+    layout->addWidget(m_cartesianBtn, 5, 0, Qt::AlignLeft);
+    layout->addWidget(m_polarBtn, 6, 0, Qt::AlignLeft);
 
     //последняя пустая колонка должна растягиваться, прижимая кнопки влево
     layout->setColumnStretch(2, 1);
 
     //последняя путсая строка должна растягиваться, прижимая кнопки вверх
-    layout->setRowStretch(9, 1);
+    layout->setRowStretch(7, 1);
 
     //подключение сигналов от кнопок
     connect(m_gridSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::gridSnapToggled);

@@ -169,6 +169,9 @@ void MainWindow::createConnections()
 
     //- SceneSettingsPanelWidget -
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, m_viewportPanel, &ViewportPanelWidget::setGridSnapEnabled);
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::gridSnapToggled, this, [](bool enabled) {
+        SnapManager::instance().setSnapTypeEnabled(SnapType::Grid, enabled);
+    });
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::primitiveSnapToggled, m_viewportPanel, &ViewportPanelWidget::setPrimitiveSnapEnabled);
     
     // Расширенные типы привязок

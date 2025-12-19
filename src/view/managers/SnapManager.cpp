@@ -664,13 +664,25 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
             QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, radius);
             
             for (const auto& pt : tangentPoints) {
-                double dist = QLineF(mousePos, pt).length();
-                if (dist <= tolerance) {
+                // NEW APPROACH: Check if the line from basePoint toward mousePos 
+                // is approximately aligned with the line to tangent point
+                QLineF lineToMouse(basePoint, mousePos);
+                QLineF lineToTangent(basePoint, pt);
+                
+                // Skip if mouse is too close to base point
+                if (lineToMouse.length() < 10.0) continue;
+                
+                // Calculate angle difference
+                double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
+                if (angleDiff > 180) angleDiff = 360 - angleDiff;
+                
+                // If angle is within 15 degrees, snap to tangent point
+                if (angleDiff < 15.0) {
                     SnapPoint sp;
                     sp.position = pt;
                     sp.type = SnapType::Tangent;
                     sp.source = prim;
-                    sp.distance = dist;
+                    sp.distance = angleDiff; // Use angle as priority (smaller = better)
                     out.append(sp);
                 }
             }
@@ -682,25 +694,33 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
             
             QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, radius);
             
-            // Проверяем что точка лежит в пределах дуги
+            // Check if tangent points lie within the arc's angular range
             double startAngle = arc->getStartAngle() * M_PI / 180.0;
             double spanAngle = arc->getSpanAngle() * M_PI / 180.0;
             double endAngle = startAngle + spanAngle;
             
             for (const auto& pt : tangentPoints) {
                 double ptAngle = std::atan2(pt.y() - center.y(), pt.x() - center.x());
-                // Нормализуем углы
+                // Normalize angles
                 while (ptAngle < startAngle) ptAngle += 2 * M_PI;
                 while (ptAngle > startAngle + 2 * M_PI) ptAngle -= 2 * M_PI;
                 
                 if (ptAngle >= startAngle && ptAngle <= endAngle) {
-                    double dist = QLineF(mousePos, pt).length();
-                    if (dist <= tolerance) {
+                    // Check angle alignment
+                    QLineF lineToMouse(basePoint, mousePos);
+                    QLineF lineToTangent(basePoint, pt);
+                    
+                    if (lineToMouse.length() < 10.0) continue;
+                    
+                    double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
+                    if (angleDiff > 180) angleDiff = 360 - angleDiff;
+                    
+                    if (angleDiff < 15.0) {
                         SnapPoint sp;
                         sp.position = pt;
                         sp.type = SnapType::Tangent;
                         sp.source = prim;
-                        sp.distance = dist;
+                        sp.distance = angleDiff;
                         out.append(sp);
                     }
                 }
@@ -708,3 +728,4 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
         }
     }
 }
+
