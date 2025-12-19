@@ -23,11 +23,6 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     auto* mainLayout = new QGridLayout(this);
     mainLayout->setContentsMargins(10, 10, 10, 10);
 
-    //1) левая колонка (подсказка)
-    m_leftColumn = new QLabel();
-    m_leftColumn->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
-    m_leftColumn->setContentsMargins(10, 20, 10, 10);
-
     //2) правая колонка (общие параметры)
     m_rightColumn = new QWidget();
     auto* rightLayout = new QFormLayout(m_rightColumn);
@@ -76,17 +71,15 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     m_applyButton = new QPushButton();
     m_applyButton->setFixedSize(120, 30);
 
-    //cборка всей сетки
-    mainLayout->addWidget(m_leftColumn, 0, 0, Qt::AlignHCenter);
-    mainLayout->addWidget(m_centralColumn, 0, 1, Qt::AlignHCenter);
-    mainLayout->addWidget(m_rightColumn, 0, 2, Qt::AlignHCenter);
+    //cборка всей сетки (2 колонки: параметры + цвет/линия)
+    mainLayout->addWidget(m_centralColumn, 0, 0, Qt::AlignHCenter);
+    mainLayout->addWidget(m_rightColumn, 0, 1, Qt::AlignHCenter);
 
-    mainLayout->addWidget(m_applyButton, 1, 0, 1, 3, Qt::AlignHCenter);
+    mainLayout->addWidget(m_applyButton, 1, 0, 1, 2, Qt::AlignHCenter);
 
     //равномерное растягивание колонок
     mainLayout->setColumnStretch(0, 1);
     mainLayout->setColumnStretch(1, 1);
-    mainLayout->setColumnStretch(2, 1);
 }
 
 void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives)
@@ -133,7 +126,6 @@ void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives
     }
 
     updateFieldValues();
-    updatePrompt();
 }
 
 void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
@@ -228,14 +220,14 @@ void BasePropertiesWidget::populateLineTypeComboBox()
 
     // 1. Стандартные типы
     QMap<LineType, QString> lineTypeIcons;
-    lineTypeIcons[LineType::SolidMain]      = ":/icons/icons/lines/solid-thick.svg";
-    lineTypeIcons[LineType::SolidThin]      = ":/icons/icons/lines/solid.svg";
-    lineTypeIcons[LineType::SolidWave]      = ":/icons/icons/lines/wave.svg";
-    lineTypeIcons[LineType::SolidKink]      = ":/icons/icons/lines/zigzag.svg";
-    lineTypeIcons[LineType::Dashed]         = ":/icons/icons/lines/dashed.svg";
-    lineTypeIcons[LineType::DashDotThick]   = ":/icons/icons/lines/dash-dot-thick.svg";
-    lineTypeIcons[LineType::DashDotThin]    = ":/icons/icons/lines/dash-dot.svg";
-    lineTypeIcons[LineType::DashDotDot]     = ":/icons/icons/lines/dash-dot-dot.svg";
+    lineTypeIcons[LineType::SolidMain]      = ":/icons/icons/lines/line-solid-main.svg";
+    lineTypeIcons[LineType::SolidThin]      = ":/icons/icons/lines/line-solid-thin.svg";
+    lineTypeIcons[LineType::SolidWave]      = ":/icons/icons/lines/line-wavy.svg";
+    lineTypeIcons[LineType::SolidKink]      = ":/icons/icons/lines/line-zigzag.svg";
+    lineTypeIcons[LineType::Dashed]         = ":/icons/icons/lines/line-dashed.svg";
+    lineTypeIcons[LineType::DashDotThick]   = ":/icons/icons/lines/line-dashdot-thick.svg";
+    lineTypeIcons[LineType::DashDotThin]    = ":/icons/icons/lines/line-dashdot-thin.svg";
+    lineTypeIcons[LineType::DashDotDot]     = ":/icons/icons/lines/line-dashdotdot.svg";
 
     for (auto it = lineTypeIcons.constBegin(); it != lineTypeIcons.constEnd(); ++it)
     {
@@ -277,7 +269,4 @@ void BasePropertiesWidget::populateLineTypeComboBox()
 void BasePropertiesWidget::updateColors()
 {
     populateLineTypeComboBox(); //перерисовка иконок линий
-    updatePrompt(); //перерисовка иконки подсказки
 }
-
-void BasePropertiesWidget::updatePrompt() {}

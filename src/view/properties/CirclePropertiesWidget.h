@@ -35,7 +35,6 @@ private slots:
 
 private:
     void updateFieldValues() override;
-    void updatePrompt() override;
 
     // Вспомогательный метод для расчета окружности по 3 точкам
     bool getCircleFrom3Points(const PointPrimitive& p1, const PointPrimitive& p2, const PointPrimitive& p3, PointPrimitive& outCenter, double& outRadius);

@@ -163,9 +163,35 @@ QSpinBox, QDoubleSpinBox {
     width: 114px;
 }
 
-/* --- Панель свойств примитивов --- */
+/* ======================================================= */
+/* --- ПАНЕЛЬ СВОЙСТВ ПРИМИТИВОВ --- */
+/* ======================================================= */
 
-/* Поля ввода в панели свойств */
+/* Поля ввода в панели свойств (используют objectName "PropertiesInput") */
+QLineEdit#PropertiesInput {
+    min-width: 70px;
+    max-width: 100px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 6px;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+}
+
+QLineEdit#PropertiesInput:focus {
+    border: 1px solid #00ff7f;
+}
+
+/* Комбобоксы в панели свойств (используют objectName "PropertiesComboBox") */
+QComboBox#PropertiesComboBox {
+    min-width: 100px;
+    max-width: 130px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 6px;
+}
+
+/* Fallback стили для панелей свойств без objectName */
 BasePropertiesWidget QLineEdit,
 SegmentPropertiesWidget QLineEdit,
 CirclePropertiesWidget QLineEdit,
@@ -174,18 +200,20 @@ EllipsePropertiesWidget QLineEdit,
 RectanglePropertiesWidget QLineEdit,
 PolygonPropertiesWidget QLineEdit,
 SplinePropertiesWidget QLineEdit {
-    min-width: 80px;
-    max-width: 120px;
+    min-width: 70px;
+    max-width: 100px;
     min-height: 24px;
     max-height: 24px;
-    padding: 2px 4px;
+    padding: 2px 6px;
 }
 
 /* Комбобоксы в панели свойств */
 BasePropertiesWidget QComboBox,
-CirclePropertiesWidget QComboBox {
+CirclePropertiesWidget QComboBox,
+RectanglePropertiesWidget QComboBox,
+ArcPropertiesWidget QComboBox {
     min-width: 100px;
-    max-width: 140px;
+    max-width: 130px;
     min-height: 24px;
     max-height: 24px;
 }
@@ -200,7 +228,28 @@ BasePropertiesWidget QLabel {
     min-height: 20px;
 }
 
-/* Стили для ScrollArea в настройках */
+/* Чекбоксы */
+QCheckBox {
+    spacing: 5px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    background-color: #2a2a2a;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #00ff7f;
+    border-color: #00ff7f;
+}
+
+/* ======================================================= */
+/* --- SCROLLAREA --- */
+/* ======================================================= */
+
 QScrollArea {
     background-color: transparent;
     border: none;
@@ -228,3 +277,19 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 
+QScrollBar:horizontal {
+    border: none;
+    background: #2a2a2a;
+    height: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #00ff7f;
+    border-radius: 5px;
+    min-width: 20px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}

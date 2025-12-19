@@ -62,11 +62,11 @@ signals:
     //сигналы, информирующие MainWindow о создании или изменении объекта
     void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
     void circlePropertiesApplied(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType);
-    void rectanglePropertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
+    void rectanglePropertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, CornerType cornerType, double cornerRadius, const QColor& c, LineType t);
     void arcPropertiesApplied(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
     void ellipsePropertiesApplied(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
     void polygonPropertiesApplied(PolygonPrimitive* polygon, int sides, PolygonCreationMode type, const QColor& color, LineType lineType);
-    void splinePropertiesApplied(SplinePrimitive* spline, bool closed, const QColor& color, LineType lineType);
+    void splinePropertiesApplied(SplinePrimitive* spline, bool closed, const QVector<QPointF>& controlPoints, const QColor& color, LineType lineType);
     
     //сигналы для обновления параметров инструментов
     void polygonSidesChanged(int sides);

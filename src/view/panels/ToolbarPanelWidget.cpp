@@ -26,34 +26,25 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
 
     // === FLYOUT КНОПКА ДЛЯ ОКРУЖНОСТИ ===
     m_createCircleBtn = new FlyoutToolButton(this);
-    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterRadius), 
-                                ":/icons/icons/tools/circle_center_radius.svg", "Центр, Радиус [C]");
-    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterDiameter), 
-                                ":/icons/icons/tools/circle_center_diameter.svg", "Центр, Диаметр");
-    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::TwoPoints), 
-                                ":/icons/icons/tools/circle_2points.svg", "Две точки");
-    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::ThreePoints), 
-                                ":/icons/icons/tools/circle_3points.svg", "Три точки");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterRadius), ":/icons/icons/tools/circle_center_radius.svg", "Центр, Радиус [C]");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::CenterDiameter), ":/icons/icons/tools/circle_center_diameter.svg", "Центр, Диаметр");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::TwoPoints), ":/icons/icons/tools/circle_2points.svg", "Две точки");
+    m_createCircleBtn->addMode(static_cast<int>(CircleCreationMode::ThreePoints), ":/icons/icons/tools/circle_3points.svg", "Три точки");
     m_createCircleBtn->setFixedSize(40, 40);
     m_createCircleBtn->setIconSize(QSize(28, 28));
 
     // === FLYOUT КНОПКА ДЛЯ ПРЯМОУГОЛЬНИКА ===
     m_createRectBtn = new FlyoutToolButton(this);
-    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::TwoPoints), 
-                              ":/icons/icons/tools/rect_2points.svg", "Две точки [R]");
-    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::CenterSize), 
-                              ":/icons/icons/tools/rect_center.svg", "Центр и размер");
-    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::ThreePoints), 
-                              ":/icons/icons/tools/rect_3points.svg", "Три точки");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::TwoPoints), ":/icons/icons/tools/rect_2points.svg", "Две точки [R]");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::CenterSize), ":/icons/icons/tools/rect_center.svg", "Центр и размер");
+    m_createRectBtn->addMode(static_cast<int>(RectangleCreationMode::ThreePoints), ":/icons/icons/tools/rect_3points.svg", "Три точки");
     m_createRectBtn->setFixedSize(40, 40);
     m_createRectBtn->setIconSize(QSize(28, 28));
 
     // === FLYOUT КНОПКА ДЛЯ ДУГИ ===
     m_createArcBtn = new FlyoutToolButton(this);
-    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::ThreePoints), 
-                             ":/icons/icons/tools/arc_3points.svg", "Три точки [A]");
-    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::CenterStartEnd), 
-                             ":/icons/icons/tools/arc_center.svg", "Центр, Начало, Конец");
+    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::ThreePoints), ":/icons/icons/tools/arc_3points.svg", "Три точки [A]");
+    m_createArcBtn->addMode(static_cast<int>(ArcCreationMode::CenterStartEnd), ":/icons/icons/tools/arc_center.svg", "Центр, Начало, Конец");
     m_createArcBtn->setFixedSize(40, 40);
     m_createArcBtn->setIconSize(QSize(28, 28));
 

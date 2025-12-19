@@ -96,9 +96,10 @@ private slots:
     //слоты создания или обновления объектов
     void applySegmentChanges(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
     void applyCircleChanges(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType); // <---
-    void applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& c, LineType t);
+    void applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, CornerType cornerType, double cornerRadius, const QColor& c, LineType t);
     void applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
-    void applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t); // <--- Добавили
+    void applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
+    void applySplineChanges(SplinePrimitive* spline, bool closed, const QVector<QPointF>& controlPoints, const QColor& c, LineType t);
 
     //слот применения общих свойств ко всем выделенным объектам
     void applyCommonProperties(const QColor& color, int lineTypeId);

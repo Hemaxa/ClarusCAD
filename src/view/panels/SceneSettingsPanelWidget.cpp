@@ -22,20 +22,20 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
 
     //создание и добавление кнопок в группы
     //шаблон: путь до иконки, текст описания, горячая клавиша, залипание
-    m_gridSnapBtn = new AnimationManager(":/icons/icons/scene/grid-snap.svg", "Привязка к сетке [G]", Qt::Key_G, true);
+    m_gridSnapBtn = new AnimationManager(":/icons/icons/scene/grid_snap.svg", "Привязка к сетке [G]", Qt::Key_G, true);
     m_gridSnapBtn->setChecked(true);
 
-    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/scene/primitive-snap.svg", "Привязка к объектам [O]", Qt::Key_O, true);
+    m_primitiveSnapBtn = new AnimationManager(":/icons/icons/scene/primitive_snap.svg", "Привязка к объектам [O]", Qt::Key_O, true);
     m_primitiveSnapBtn->setChecked(true);
     
     // Расширенные привязки
-    m_intersectionSnapBtn = new AnimationManager(":/icons/icons/scene/snap-intersection.svg", "Пересечение [I]", Qt::Key_I, true);
+    m_intersectionSnapBtn = new AnimationManager(":/icons/icons/scene/snap_intersection.svg", "Пересечение [I]", Qt::Key_I, true);
     m_intersectionSnapBtn->setChecked(true);
     
-    m_perpendicularSnapBtn = new AnimationManager(":/icons/icons/scene/snap-perpendicular.svg", "Перпендикуляр [E]", Qt::Key_E, true);
+    m_perpendicularSnapBtn = new AnimationManager(":/icons/icons/scene/snap_perpendicular.svg", "Перпендикуляр [E]", Qt::Key_E, true);
     m_perpendicularSnapBtn->setChecked(true);
     
-    m_tangentSnapBtn = new AnimationManager(":/icons/icons/scene/snap-tangent.svg", "Касательная [T]", Qt::Key_T, true);
+    m_tangentSnapBtn = new AnimationManager(":/icons/icons/scene/snap_tangent.svg", "Касательная [T]", Qt::Key_T, true);
     m_tangentSnapBtn->setChecked(true);
 
     m_cartesianBtn = new AnimationManager(":/icons/icons/scene/cartesian.svg", "Декартовы координаты [D]", Qt::Key_D, true);

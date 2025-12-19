@@ -64,13 +64,6 @@ void PolygonPropertiesWidget::updateFieldValues()
     //если новый объект - оставляем текущие значения (последние использованные)
 }
 
-void PolygonPropertiesWidget::updatePrompt()
-{
-    //подсказка для многоугольника (пока оставим пустой, можно добавить svg позже)
-    m_leftColumn->clear();
-    m_leftColumn->setText("Многоугольник\n\n1. Укажите центр\n2. Укажите радиус");
-}
-
 void PolygonPropertiesWidget::onApplyButtonClicked()
 {
     int sides = m_sidesSpinBox->value();

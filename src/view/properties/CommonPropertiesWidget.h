@@ -19,7 +19,6 @@ signals:
 
 protected:
     void updateFieldValues() override;
-    void updatePrompt() override;
 
 private slots:
     void onApplyClicked();

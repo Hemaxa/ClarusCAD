@@ -60,9 +60,6 @@ protected:
     //метод обновления полей ввода
     virtual void updateFieldValues() = 0;
 
-    //метод обнолвения подсказки (тип примитива и применная тема)
-    virtual void updatePrompt();
-
     //метод заполнения вкладки с типами линий
     void populateLineTypeComboBox();
 
@@ -75,9 +72,8 @@ protected:
     int m_selectedLineTypeId; //int для поддержки custom styles
 
     //виджеты для колонок
-    QLabel* m_leftColumn; //левая колонка
-    QWidget* m_centralColumn; //центральная колонка
-    QWidget* m_rightColumn; //правая колонка
+    QWidget* m_centralColumn; //центральная колонка (параметры)
+    QWidget* m_rightColumn; //правая колонка (цвет/тип линии)
 
     QStackedWidget* m_paramsStack; //общий виджет для сменяемых параметров центральной колонки
     QWidget* m_cartesianWidgets; //виджет декартовой системы координат

@@ -1,24 +1,9 @@
 <RCC>
     <qresource prefix="/icons">
+        <!-- Tools -->
         <file>icons/tools/delete.svg</file>
         <file>icons/tools/segment.svg</file>
-        <file>icons/scene/cartesian.svg</file>
-        <file>icons/scene/grid-snap.svg</file>
-        <file>icons/scene/polar.svg</file>
-        <file>icons/scene/primitive-snap.svg</file>
-        <file>icons/scene/snap-intersection.svg</file>
-        <file>icons/scene/snap-perpendicular.svg</file>
-        <file>icons/scene/snap-tangent.svg</file>
-        <file>icons/lines/dash-dot-dot.svg</file>
-        <file>icons/lines/dash-dot.svg</file>
-        <file>icons/lines/dashed.svg</file>
-        <file>icons/lines/dotted.svg</file>
-        <file>icons/lines/solid-thick.svg</file>
-        <file>icons/lines/solid.svg</file>
         <file>icons/tools/move.svg</file>
-        <file>icons/tools/circle.svg</file>
-        <file>icons/tools/rectangle.svg</file>
-        <file>icons/tools/arc.svg</file>
         <file>icons/tools/ellipse.svg</file>
         <file>icons/tools/polygon.svg</file>
         <file>icons/tools/spline.svg</file>
@@ -34,9 +19,29 @@
         <!-- Arc modes -->
         <file>icons/tools/arc_3points.svg</file>
         <file>icons/tools/arc_center.svg</file>
-        <file>icons/scene/zoom-in.svg</file>
-        <file>icons/scene/zoom-out.svg</file>
-        <file>icons/navigation/zoom-extents.svg</file>
+        <!-- Scene -->
+        <file>icons/scene/cartesian.svg</file>
+        <file>icons/scene/grid_snap.svg</file>
+        <file>icons/scene/polar.svg</file>
+        <file>icons/scene/primitive_snap.svg</file>
+        <file>icons/scene/snap_intersection.svg</file>
+        <file>icons/scene/snap_perpendicular.svg</file>
+        <file>icons/scene/snap_tangent.svg</file>
+        <!-- Navigation -->
+        <file>icons/navigation/zoom_extents.svg</file>
+        <file>icons/navigation/zoom_in.svg</file>
+        <file>icons/navigation/zoom_out.svg</file>
+        <file>icons/navigation/rotate_left.svg</file>
+        <file>icons/navigation/rotate_right.svg</file>
+        <!-- Line types -->
+        <file>icons/lines/line-solid-main.svg</file>
+        <file>icons/lines/line-solid-thin.svg</file>
+        <file>icons/lines/line-dashed.svg</file>
+        <file>icons/lines/line-dashdot-thick.svg</file>
+        <file>icons/lines/line-dashdot-thin.svg</file>
+        <file>icons/lines/line-dashdotdot.svg</file>
+        <file>icons/lines/line-wavy.svg</file>
+        <file>icons/lines/line-zigzag.svg</file>
     </qresource>
     <qresource prefix="/promts">
         <file>promts/segment-promt.svg</file>

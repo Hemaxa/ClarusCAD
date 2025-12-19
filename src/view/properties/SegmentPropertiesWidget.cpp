@@ -102,25 +102,6 @@ void SegmentPropertiesWidget::updateFieldValues()
     }
 }
 
-void SegmentPropertiesWidget::updatePrompt()
-{
-    ThemeManager& tm = ThemeManager::instance();
-
-    QMap<QString, QColor> colorMap;
-    colorMap.insert("currentColor", tm.getIconColor());
-    //colorMap.insert("@textColor", tm.getColor("textColor"));
-
-    QPixmap originalPixmap = tm.colorizeSvg(":/promts/promts/segment-promt.svg", colorMap);
-    if (originalPixmap.isNull()) {
-        return;
-    }
-
-    //размер подсказки
-    QPixmap scaledPixmap = originalPixmap.scaledToWidth(130, Qt::SmoothTransformation);
-
-    m_leftColumn->setPixmap(scaledPixmap);
-}
-
 
 void SegmentPropertiesWidget::onApplyButtonClicked()
 {

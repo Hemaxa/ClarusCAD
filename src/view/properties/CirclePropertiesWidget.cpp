@@ -219,13 +219,3 @@ bool CirclePropertiesWidget::getCircleFrom3Points(const PointPrimitive& p1, cons
     return true;
 }
 
-void CirclePropertiesWidget::updatePrompt()
-{
-    ThemeManager& tm = ThemeManager::instance();
-    QMap<QString, QColor> colorMap;
-    colorMap.insert("currentColor", tm.getIconColor());
-    QPixmap pix = tm.colorizeSvg(":/icons/icons/tools/circle.svg", colorMap);
-    if (!pix.isNull()) {
-        m_leftColumn->setPixmap(pix.scaledToWidth(40, Qt::SmoothTransformation));
-    }
-}

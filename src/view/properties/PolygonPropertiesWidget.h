@@ -42,9 +42,8 @@ private slots:
     void onTypeChanged(int index);
 
 private:
-    //реализация виртуальных методов из BasePropertiesWidget
+    //реализация виртуального метода из BasePropertiesWidget
     void updateFieldValues() override;
-    void updatePrompt() override;
 
     //указатель на текущий редактируемый объект
     PolygonPrimitive* m_currentPolygon = nullptr;

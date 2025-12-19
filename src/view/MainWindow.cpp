@@ -257,6 +257,10 @@ void MainWindow::createConnections()
     // Связь параметров сплайна из панели свойств с инструментом
     connect(m_propertiesPanel, &PropertiesPanelWidget::splineClosedChanged, 
             m_splineCreationTool, &SplineCreationTool::setClosed);
+    
+    // Связь панели свойств с методом применения изменений сплайна
+    connect(m_propertiesPanel, &PropertiesPanelWidget::splinePropertiesApplied, 
+            this, &MainWindow::applySplineChanges);
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
@@ -565,10 +569,12 @@ void MainWindow::applyCircleChanges(CirclePrimitive* circle, const PointPrimitiv
     emit sceneChanged(m_scene);
 }
 
-void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, const QColor& color, LineType type) {
+void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, CornerType cornerType, double cornerRadius, const QColor& color, LineType type) {
     if(!rect) {
         // Создание через панель свойств
         auto* newRect = new RectanglePrimitive(center, w, h, r);
+        newRect->setCornerType(cornerType);
+        newRect->setCornerRadius(cornerRadius);
         newRect->setColor(color);
         newRect->setLineType((int)type);
         addPrimitiveToScene(newRect);
@@ -579,6 +585,8 @@ void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrim
     rect->setWidth(w);
     rect->setHeight(h);
     rect->setRotation(r);
+    rect->setCornerType(cornerType);
+    rect->setCornerRadius(cornerRadius);
     rect->setColor(color);
     rect->setLineType((int)type);
     emit sceneChanged(m_scene);
@@ -645,6 +653,26 @@ void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive
         ell->setColor(c);
         ell->setLineType((int)t);
     }
+    emit sceneChanged(m_scene);
+}
+
+void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const QVector<QPointF>& controlPoints, const QColor& c, LineType t) {
+    if(!spline) {
+        // Создание через панель свойств
+        if (controlPoints.size() >= 2) {
+            auto* newSpline = new SplinePrimitive(controlPoints);
+            newSpline->setClosed(closed);
+            newSpline->setColor(c);
+            newSpline->setLineType((int)t);
+            addPrimitiveToScene(newSpline);
+        }
+        return;
+    }
+    // Редактирование
+    spline->setControlPoints(controlPoints);
+    spline->setClosed(closed);
+    spline->setColor(c);
+    spline->setLineType((int)t);
     emit sceneChanged(m_scene);
 }
 

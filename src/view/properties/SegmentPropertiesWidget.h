@@ -34,9 +34,6 @@ private:
     //реализация виртуального метода заполнения значениями полей ввода из BasePropertiesWidget
     void updateFieldValues() override;
 
-    //реализация виртуального метода обновления подсказки из BasePropertiesWidget
-    void updatePrompt() override;
-
     //указатель на текущий редактируемый объект "Отрезок" (главный из выделенных)
     SegmentPrimitive* m_currentSegment = nullptr;
 
