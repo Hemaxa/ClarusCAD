@@ -29,6 +29,15 @@ public:
     void drawEllipse(QPainter& painter, const QPointF& center, double rx, double ry,
                      int typeId, const QColor& color, bool isSelected = false) const;
 
+    // Draws arc with wave/zigzag support
+    void drawArc(QPainter& painter, const QPointF& center, double radius,
+                 double startAngle, double spanAngle,
+                 int typeId, const QColor& color, bool isSelected = false) const;
+
+    // Draws path (for rectangles, polygons) with wave/zigzag support
+    void drawPath(QPainter& painter, const QPainterPath& path,
+                  int typeId, const QColor& color, bool isSelected = false) const;
+
     // Получение пера для отрисовки
     QPen getPen(int typeId, const QColor& color, bool isSelected) const;
 

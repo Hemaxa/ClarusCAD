@@ -40,25 +40,12 @@ void RectangleDrawingTool::draw(QPainter& painter, BasePrimitive* primitive, boo
 
     path = t.map(path);
 
-    // Получаем перо через публичный метод LineStyleManager
-    QPen pen = LineStyleManager::instance().getPen(
+    // Use LineStyleManager for proper wave/zigzag support
+    LineStyleManager::instance().drawPath(
+        painter,
+        path,
         rectPrim->getLineType(),
         rectPrim->getColor(),
-        false // isSelected обрабатываем отдельно ниже
-        );
-
-    if (isSelected) {
-        QPen hPen = pen;
-        hPen.setWidthF(pen.widthF() + 8.0);
-        QColor c = rectPrim->getColor();
-        c.setAlpha(100);
-        hPen.setColor(c);
-        painter.setPen(hPen);
-        painter.setBrush(Qt::NoBrush);
-        painter.drawPath(path);
-    }
-
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
-    painter.drawPath(path);
+        isSelected
+    );
 }

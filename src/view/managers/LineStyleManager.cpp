@@ -416,78 +416,166 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
     QPen standardPen = getPen(typeId, color, false);
     painter.setBrush(Qt::NoBrush);
 
-    if (isWave) {
+    if (isWave || isZigzag) {
+        // Break ellipse into segments and draw each with wave/zigzag
         standardPen.setStyle(Qt::SolidLine);
-        painter.setPen(standardPen);
-
-        // Рисуем волнистый эллипс
-        QPainterPath path;
-        double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0); // Приближенно
-        double period = m_wavePeriod;
-        double amplitude = m_waveAmplitude;
-        int steps = static_cast<int>(perimeter); // Шаг 1 пиксель
-        if(steps < 10) steps = 10;
-
-        for(int i=0; i<=steps; ++i) {
-            double t = (double)i / steps; // 0..1
-            double angle = t * 2 * M_PI;
-
-            // Волна накладывается на радиус
-            // Частота зависит от периметра и периода
-            double waveOffset = amplitude * qSin((perimeter / period) * angle);
-
-            double rCurrent = rx + waveOffset; // Упрощенно считаем rx=ry
-
-            double x = center.x() + rCurrent * qCos(angle);
-            double y = center.y() + rCurrent * qSin(angle);
-
-            if (i==0) path.moveTo(x,y);
-            else path.lineTo(x,y);
-        }
-        path.closeSubpath();
-        painter.drawPath(path);
-
-    }
-    else if (isZigzag) {
-        standardPen.setStyle(Qt::SolidLine);
-        painter.setPen(standardPen);
-
-        // Рисуем зигзаг эллипс (упрощенная реализация через ломаную)
-        QPainterPath path;
+        
         double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
-        double period = 2 * m_kinkLength + m_kinkStraight;
-        double amplitude = m_kinkAmplitude;
-
-        int segments = std::round(perimeter / period);
-        if (segments < 4) segments = 4;
-
-        for(int i=0; i<segments; ++i) {
-            double angleStart = (double)i / segments * 2 * M_PI;
-            double angleEnd = (double)(i+1) / segments * 2 * M_PI;
-            double angleMid = (angleStart + angleEnd) / 2.0;
-
-            // Точки на окружности
-            QPointF pStart(center.x() + rx * qCos(angleStart), center.y() + ry * qSin(angleStart));
-            QPointF pEnd(center.x() + rx * qCos(angleEnd), center.y() + ry * qSin(angleEnd));
-
-            // Точка "выброса" зигзага (наружу или внутрь)
-            // Чередуем: четные наружу, нечетные внутрь? Или просто "пик" посередине?
-            // Сделаем "пик" наружу
-            double rMid = rx + amplitude;
-            if (i%2 != 0) rMid = rx - amplitude;
-
-            QPointF pMid(center.x() + rMid * qCos(angleMid), center.y() + rMid * qSin(angleMid));
-
-            if (i==0) path.moveTo(pStart);
-            path.lineTo(pMid);
-            path.lineTo(pEnd);
+        int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
+        
+        for (int i = 0; i < numSegments; ++i) {
+            double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
+            double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
+            
+            QPointF p1(center.x() + rx * std::cos(angle1), center.y() + ry * std::sin(angle1));
+            QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
+            
+            if (isWave) {
+                drawWaveLine(painter, p1, p2, standardPen);
+            } else {
+                drawZigzagLine(painter, p1, p2, standardPen);
+            }
         }
-        path.closeSubpath();
-        painter.drawPath(path);
     }
     else {
         // Стандартная отрисовка
         painter.setPen(standardPen);
         painter.drawEllipse(center, rx, ry);
+    }
+}
+
+void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double radius,
+                                double startAngle, double spanAngle,
+                                int typeId, const QColor& color, bool isSelected) const
+{
+    // Determine if special line type
+    bool isWave = false;
+    bool isZigzag = false;
+    if (typeId < 1000) {
+        LineType type = static_cast<LineType>(typeId);
+        if (type == LineType::SolidWave) isWave = true;
+        if (type == LineType::SolidKink) isZigzag = true;
+    }
+
+    if (!isWave && !isZigzag) {
+        // Standard arc drawing
+        QRectF rect(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
+        int startAngle16 = static_cast<int>(startAngle * 16);
+        int spanAngle16 = static_cast<int>(spanAngle * 16);
+
+        QPen pen = getPen(typeId, color, false);
+
+        if (isSelected) {
+            QPen hPen = pen;
+            hPen.setWidthF(pen.widthF() + 8.0);
+            QColor hColor = color;
+            hColor.setAlpha(100);
+            hPen.setColor(hColor);
+            painter.setPen(hPen);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawArc(rect, startAngle16, spanAngle16);
+        }
+
+        painter.setPen(pen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawArc(rect, startAngle16, spanAngle16);
+        return;
+    }
+
+    // For wave/zigzag, break arc into segments and draw each
+    double startRad = startAngle * M_PI / 180.0;
+    double spanRad = spanAngle * M_PI / 180.0;
+    
+    // Number of segments depends on arc length
+    double arcLength = std::abs(radius * spanRad);
+    int numSegments = std::max(8, static_cast<int>(arcLength / 10.0));
+    
+    QPen pen = getPen(typeId, color, false);
+    pen.setStyle(Qt::SolidLine);
+
+    for (int i = 0; i < numSegments; ++i) {
+        double t1 = static_cast<double>(i) / numSegments;
+        double t2 = static_cast<double>(i + 1) / numSegments;
+        
+        double angle1 = startRad + t1 * spanRad;
+        double angle2 = startRad + t2 * spanRad;
+        
+        QPointF p1(center.x() + radius * std::cos(angle1), center.y() + radius * std::sin(angle1));
+        QPointF p2(center.x() + radius * std::cos(angle2), center.y() + radius * std::sin(angle2));
+        
+        // Draw using same wave/zigzag as line segment
+        if (isSelected) {
+            QPen hPen = pen;
+            hPen.setWidthF(pen.widthF() + 8.0);
+            QColor hColor = color;
+            hColor.setAlpha(100);
+            hPen.setColor(hColor);
+            if (isWave) drawWaveLine(painter, p1, p2, hPen);
+            else drawZigzagLine(painter, p1, p2, hPen);
+        }
+        
+        if (isWave) drawWaveLine(painter, p1, p2, pen);
+        else drawZigzagLine(painter, p1, p2, pen);
+    }
+}
+
+void LineStyleManager::drawPath(QPainter& painter, const QPainterPath& path,
+                                 int typeId, const QColor& color, bool isSelected) const
+{
+    // Determine if special line type
+    bool isWave = false;
+    bool isZigzag = false;
+    if (typeId < 1000) {
+        LineType type = static_cast<LineType>(typeId);
+        if (type == LineType::SolidWave) isWave = true;
+        if (type == LineType::SolidKink) isZigzag = true;
+    }
+
+    if (!isWave && !isZigzag) {
+        // Standard path drawing
+        QPen pen = getPen(typeId, color, false);
+
+        if (isSelected) {
+            QPen hPen = pen;
+            hPen.setWidthF(pen.widthF() + 8.0);
+            QColor hColor = color;
+            hColor.setAlpha(100);
+            hPen.setColor(hColor);
+            painter.setPen(hPen);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(path);
+        }
+
+        painter.setPen(pen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(path);
+        return;
+    }
+
+    // For wave/zigzag, convert path to polygon and draw segments
+    // Flatten curves into line segments
+    QList<QPolygonF> polygons = path.toSubpathPolygons();
+    
+    QPen pen = getPen(typeId, color, false);
+    pen.setStyle(Qt::SolidLine);
+
+    for (const QPolygonF& poly : polygons) {
+        for (int i = 0; i < poly.size() - 1; ++i) {
+            QPointF p1 = poly[i];
+            QPointF p2 = poly[i + 1];
+            
+            if (isSelected) {
+                QPen hPen = pen;
+                hPen.setWidthF(pen.widthF() + 8.0);
+                QColor hColor = color;
+                hColor.setAlpha(100);
+                hPen.setColor(hColor);
+                if (isWave) drawWaveLine(painter, p1, p2, hPen);
+                else drawZigzagLine(painter, p1, p2, hPen);
+            }
+            
+            if (isWave) drawWaveLine(painter, p1, p2, pen);
+            else drawZigzagLine(painter, p1, p2, pen);
+        }
     }
 }

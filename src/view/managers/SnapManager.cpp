@@ -664,7 +664,7 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
             QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, radius);
             
             for (const auto& pt : tangentPoints) {
-                // NEW APPROACH: Check if the line from basePoint toward mousePos 
+                // Check if the line from basePoint toward mousePos 
                 // is approximately aligned with the line to tangent point
                 QLineF lineToMouse(basePoint, mousePos);
                 QLineF lineToTangent(basePoint, pt);
@@ -676,13 +676,28 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                 double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
                 if (angleDiff > 180) angleDiff = 360 - angleDiff;
                 
-                // If angle is within 15 degrees, snap to tangent point
+                // If angle is within 15 degrees, project mousePos onto the tangent LINE
                 if (angleDiff < 15.0) {
+                    // Project mousePos onto the tangent line (basePoint -> pt direction)
+                    // The user can place the point anywhere along this line
+                    QPointF direction = pt - basePoint;
+                    double lineLen2 = QPointF::dotProduct(direction, direction);
+                    if (lineLen2 < 1e-10) continue;
+                    
+                    // Project mousePos onto the line
+                    QPointF toMouse = mousePos - basePoint;
+                    double t = QPointF::dotProduct(toMouse, direction) / lineLen2;
+                    
+                    // Only allow projection beyond basePoint (t > 0)
+                    if (t < 0.1) continue;
+                    
+                    QPointF projectedPoint = basePoint + t * direction;
+                    
                     SnapPoint sp;
-                    sp.position = pt;
+                    sp.position = projectedPoint;
                     sp.type = SnapType::Tangent;
                     sp.source = prim;
-                    sp.distance = angleDiff; // Use angle as priority (smaller = better)
+                    sp.distance = angleDiff; // Use angle as priority
                     out.append(sp);
                 }
             }
@@ -716,8 +731,20 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                     if (angleDiff > 180) angleDiff = 360 - angleDiff;
                     
                     if (angleDiff < 15.0) {
+                        // Project mousePos onto the tangent line
+                        QPointF direction = pt - basePoint;
+                        double lineLen2 = QPointF::dotProduct(direction, direction);
+                        if (lineLen2 < 1e-10) continue;
+                        
+                        QPointF toMouse = mousePos - basePoint;
+                        double t = QPointF::dotProduct(toMouse, direction) / lineLen2;
+                        
+                        if (t < 0.1) continue;
+                        
+                        QPointF projectedPoint = basePoint + t * direction;
+                        
                         SnapPoint sp;
-                        sp.position = pt;
+                        sp.position = projectedPoint;
                         sp.type = SnapType::Tangent;
                         sp.source = prim;
                         sp.distance = angleDiff;
