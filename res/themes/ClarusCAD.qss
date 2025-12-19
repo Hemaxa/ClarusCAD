@@ -162,3 +162,69 @@ QSpinBox::down-button, QDoubleSpinBox::down-button {
 QSpinBox, QDoubleSpinBox {
     width: 114px;
 }
+
+/* --- Панель свойств примитивов --- */
+
+/* Поля ввода в панели свойств */
+BasePropertiesWidget QLineEdit,
+SegmentPropertiesWidget QLineEdit,
+CirclePropertiesWidget QLineEdit,
+ArcPropertiesWidget QLineEdit,
+EllipsePropertiesWidget QLineEdit,
+RectanglePropertiesWidget QLineEdit,
+PolygonPropertiesWidget QLineEdit,
+SplinePropertiesWidget QLineEdit {
+    min-width: 80px;
+    max-width: 120px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 4px;
+}
+
+/* Комбобоксы в панели свойств */
+BasePropertiesWidget QComboBox,
+CirclePropertiesWidget QComboBox {
+    min-width: 100px;
+    max-width: 140px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+/* Кнопки в панели свойств */
+BasePropertiesWidget QPushButton {
+    min-height: 28px;
+}
+
+/* Метки в панели свойств */
+BasePropertiesWidget QLabel {
+    min-height: 20px;
+}
+
+/* Стили для ScrollArea в настройках */
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
+
+/* Скроллбары */
+QScrollBar:vertical {
+    border: none;
+    background: #2a2a2a;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #00ff7f;
+    border-radius: 5px;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+

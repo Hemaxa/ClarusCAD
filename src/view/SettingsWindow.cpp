@@ -16,13 +16,14 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QScrollArea>
 
 SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
     //настройки окна
     setWindowTitle("Настройки");
     setMinimumWidth(580);
-    setMinimumHeight(700); //Увеличили для новых настроек
+    setMinimumHeight(850); // Увеличили для стилей линий
 
     //создание табов
     m_tabWidget = new QTabWidget();
@@ -129,8 +130,13 @@ QWidget* SettingsWindow::createViewportTab()
 
 QWidget* SettingsWindow::createLineStylesTab()
 {
-    auto* widget = new QWidget();
-    auto* mainLayout = new QVBoxLayout(widget);
+    // Создаём ScrollArea для прокрутки содержимого
+    auto* scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    
+    auto* contentWidget = new QWidget();
+    auto* mainLayout = new QVBoxLayout(contentWidget);
     mainLayout->setSpacing(10);
     mainLayout->setContentsMargins(15, 15, 15, 15);
 
@@ -313,8 +319,10 @@ QWidget* SettingsWindow::createLineStylesTab()
     customLayout->addLayout(actionLayout);
 
     mainLayout->addWidget(customGroup);
+    mainLayout->addStretch(); // Прижать содержимое к верху
 
-    return widget;
+    scrollArea->setWidget(contentWidget);
+    return scrollArea;
 }
 
 // --- Логика конструктора паттерна ---
