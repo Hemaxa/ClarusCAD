@@ -1,3 +1,5 @@
+//EllipseDrawingTool - отрисовщик объекта "Эллипс"
+
 #pragma once
 #include "BaseDrawingTool.h"
 

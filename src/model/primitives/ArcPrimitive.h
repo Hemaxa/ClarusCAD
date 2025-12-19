@@ -1,3 +1,5 @@
+//ArcPrimitive - модель дуги
+
 #pragma once
 #include "BasePrimitive.h"
 #include "PointPrimitive.h"

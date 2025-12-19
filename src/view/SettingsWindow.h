@@ -84,7 +84,7 @@ private:
     QDoubleSpinBox* m_customThicknessSpinBox;
     QCheckBox* m_useCustomThicknessCheck;
 
-    //Временное хранилище паттерна при создании
+    //хранилище паттерна для конструктора стилей
     QVector<qreal> m_currentPattern;
     int m_editingStyleId = -1; // ID редактируемого стиля (-1 = создание нового)
 };

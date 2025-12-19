@@ -1,3 +1,5 @@
+//LineStyleManager - менеджер стилей линий и их отрисовки
+
 #pragma once
 
 #include "EnumManager.h"

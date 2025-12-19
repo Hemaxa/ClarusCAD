@@ -63,6 +63,7 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     colorRow->setSpacing(5);
     auto* colorLabel = new QLabel("Цвет:");
     m_colorButton = new QPushButton();
+    m_colorButton->setObjectName("ColorButton");
     m_colorButton->setFixedSize(24, 24);
     m_colorButton->setCursor(Qt::PointingHandCursor);
     connect(m_colorButton, &QPushButton::clicked, this, &BasePropertiesWidget::onColorButtonClicked);
@@ -161,10 +162,12 @@ void BasePropertiesWidget::updateColor(const QColor& color, bool isMixed)
     m_selectedColor = color;
 
     if (isMixed) {
-        m_colorButton->setStyleSheet("background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 red, stop:0.5 green, stop:1 blue); border-radius: 12px; border: 1px solid gray;");
+        //градиент для индикации разных цветов
+        m_colorButton->setStyleSheet("background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 red, stop:0.5 green, stop:1 blue);");
         m_colorButton->setText("?");
     } else {
-        m_colorButton->setStyleSheet(QString("background-color: %1; border-radius: 12px; border: 1px solid gray;").arg(m_selectedColor.name()));
+        //динамический цвет фона
+        m_colorButton->setStyleSheet(QString("background-color: %1;").arg(m_selectedColor.name()));
         m_colorButton->setText("");
     }
 }

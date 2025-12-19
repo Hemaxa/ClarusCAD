@@ -1,4 +1,4 @@
-// src/view/panels/NavigationPanelWidget.h
+//NavigationPanelWidget - панель навигации по сцене
 
 #pragma once
 

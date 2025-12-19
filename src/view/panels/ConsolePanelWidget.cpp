@@ -39,7 +39,7 @@ void ConsolePanelWidget::onReturnPressed()
 
         }
         else {
-            // TODO: (в будущем) можно выводить ошибку в саму консоль
+            //вывод сообщения об ошибке в отладочную консоль
             qDebug() << "Ошибка парсинга:" << command.errorDescription;
         }
 

@@ -76,6 +76,25 @@ QLineEdit {
     border: 1px solid #F7C8E0;
     padding: 4px;
     border-radius: 4px;
+    min-width: 25px;
+    height: 20px;
+}
+
+/* --- Комбо бокс типа линии в панели свойств --- */
+QComboBox#LineTypeComboBox {
+    background-color: #FFFFFF;
+    border: 1px solid #F7C8E0;
+    padding: 4px;
+    border-radius: 4px;
+    height: 20px;
+}
+
+QComboBox::drop-down#LineTypeComboBox {
+    width: 15px;
+    border: none;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background-color: #F7C8E0;
 }
 
 /* --- Список объектов --- */
@@ -111,7 +130,7 @@ QGroupBox::title {
     color: #3D2431;
 }
 
-QComboBox, QSpinBox {
+QComboBox, QSpinBox, QDoubleSpinBox {
     background-color: #FADCEB;
     border: 1px solid #DE62A7;
     border-radius: 6px;
@@ -130,24 +149,190 @@ QComboBox {
     width: 110px;
 }
 
-QComboBox::down-arrow {
-
-}
-
-QSpinBox::up-button {
+QSpinBox::up-button, QDoubleSpinBox::up-button {
     width: 15px;
     border: none;
     border-top-right-radius: 4px;
     background-color: #DE62A7;
 }
 
-QSpinBox::down-button {
+QSpinBox::down-button, QDoubleSpinBox::down-button {
     width: 15px;
     border: none;
     border-bottom-right-radius: 4px;
     background-color: #DE62A7;
 }
 
-QSpinBox {
+QSpinBox, QDoubleSpinBox {
     width: 114px;
+}
+
+/* ======================================================= */
+/* --- ПАНЕЛЬ СВОЙСТВ ПРИМИТИВОВ --- */
+/* ======================================================= */
+
+QLineEdit#PropertiesInput {
+    min-width: 70px;
+    max-width: 100px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 6px;
+    border: 1px solid #F7C8E0;
+    border-radius: 4px;
+}
+
+QLineEdit#PropertiesInput:focus {
+    border: 1px solid #DE62A7;
+}
+
+QComboBox#PropertiesComboBox {
+    min-width: 100px;
+    max-width: 130px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 6px;
+}
+
+BasePropertiesWidget QLineEdit,
+SegmentPropertiesWidget QLineEdit,
+CirclePropertiesWidget QLineEdit,
+ArcPropertiesWidget QLineEdit,
+EllipsePropertiesWidget QLineEdit,
+RectanglePropertiesWidget QLineEdit,
+PolygonPropertiesWidget QLineEdit,
+SplinePropertiesWidget QLineEdit {
+    min-width: 70px;
+    max-width: 100px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 2px 6px;
+}
+
+BasePropertiesWidget QComboBox,
+CirclePropertiesWidget QComboBox,
+RectanglePropertiesWidget QComboBox,
+ArcPropertiesWidget QComboBox {
+    min-width: 100px;
+    max-width: 130px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+BasePropertiesWidget QPushButton {
+    min-height: 28px;
+}
+
+BasePropertiesWidget QLabel {
+    min-height: 20px;
+}
+
+/* Чекбоксы */
+QCheckBox {
+    spacing: 5px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #F7C8E0;
+    border-radius: 3px;
+    background-color: #FFFFFF;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #DE62A7;
+    border-color: #DE62A7;
+}
+
+/* ======================================================= */
+/* --- SCROLLAREA --- */
+/* ======================================================= */
+
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
+
+QScrollBar:vertical {
+    border: none;
+    background: #FADCEB;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #DE62A7;
+    border-radius: 5px;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #FADCEB;
+    height: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #DE62A7;
+    border-radius: 5px;
+    min-width: 20px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* ======================================================= */
+/* --- ВКЛАДКИ (TABWIDGET) --- */
+/* ======================================================= */
+
+QTabWidget::pane {
+    border: 1px solid #F7C8E0;
+    border-bottom: 1px solid #DE62A7;
+}
+
+QTabBar::tab {
+    background: #FADCEB;
+    color: #3D2431;
+    padding: 8px 12px;
+    border: 1px solid #F7C8E0;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background: #FCEFF5;
+    color: #DE62A7;
+    border-color: #DE62A7;
+    border-top: 1px solid #FCEFF5;
+}
+
+QTabBar::tab:hover {
+    background: #F7C8E0;
+}
+
+/* ======================================================= */
+/* --- СПЕЦИАЛЬНЫЕ МЕТКИ --- */
+/* ======================================================= */
+
+QLabel#PatternPreviewLabel {
+    color: #DE62A7;
+    font-weight: bold;
+}
+
+/* ======================================================= */
+/* --- КНОПКА ВЫБОРА ЦВЕТА --- */
+/* ======================================================= */
+
+QPushButton#ColorButton {
+    border-radius: 12px;
+    border: 1px solid gray;
 }

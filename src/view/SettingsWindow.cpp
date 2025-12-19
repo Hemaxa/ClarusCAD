@@ -29,13 +29,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     m_tabWidget = new QTabWidget();
     m_tabWidget->setTabPosition(QTabWidget::South); //Вкладки снизу
 
-    //Стилизация табов "в тему" приложения (зеленый акцент)
-    m_tabWidget->setStyleSheet(
-        "QTabWidget::pane { border: 1px solid #3c3c3c; border-bottom: 1px solid #00ff7f; }"
-        "QTabBar::tab { background: #2a2a2a; color: #e0e0e0; padding: 8px 12px; border: 1px solid #3c3c3c; margin-right: 2px; }"
-        "QTabBar::tab:selected { background: #1e1e1e; color: #00ff7f; border-color: #00ff7f; border-top: 1px solid #1e1e1e; }"
-        "QTabBar::tab:hover { background: #3c3c3c; }"
-        );
+    //стилизация табов вынесена в файл темы ClarusCAD.qss
 
     m_tabWidget->addTab(createAppearanceTab(), "Оформление");
     m_tabWidget->addTab(createViewportTab(), "Рабочая область");
@@ -281,7 +275,7 @@ QWidget* SettingsWindow::createLineStylesTab()
     builderLayout->addWidget(clearBtn);
 
     m_patternPreviewLabel = new QLabel("Шаблон: (пусто)");
-    m_patternPreviewLabel->setStyleSheet("color: #00ff7f; font-weight: bold;");
+    m_patternPreviewLabel->setObjectName("PatternPreviewLabel");
 
     // Индивидуальная толщина
     auto* thicknessLayout = new QHBoxLayout();

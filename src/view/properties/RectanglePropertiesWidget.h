@@ -1,3 +1,5 @@
+//RectanglePropertiesWidget - виджет свойств примитива "Прямоугольник"
+
 #pragma once
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"

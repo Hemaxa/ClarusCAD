@@ -643,6 +643,68 @@ void SnapManager::collectPerpendiculars(const QPointF& mousePos, const QPointF& 
                 }
             }
         }
+        //перпендикуляр к граням прямоугольника
+        else if (prim->getType() == PrimitiveType::Rectangle) {
+            auto* rect = static_cast<RectanglePrimitive*>(prim);
+            
+            //получение 4 вершин с учетом поворота
+            double cx = rect->getCenter().getX();
+            double cy = rect->getCenter().getY();
+            double hw = rect->getWidth() / 2.0;
+            double hh = rect->getHeight() / 2.0;
+            double angle = rect->getRotation() * M_PI / 180.0;
+            
+            double cosA = std::cos(angle);
+            double sinA = std::sin(angle);
+            
+            //4 вершины в локальных координатах, затем поворот
+            QVector<QPointF> corners;
+            corners << QPointF(cx + (-hw) * cosA - (-hh) * sinA, cy + (-hw) * sinA + (-hh) * cosA);
+            corners << QPointF(cx + ( hw) * cosA - (-hh) * sinA, cy + ( hw) * sinA + (-hh) * cosA);
+            corners << QPointF(cx + ( hw) * cosA - ( hh) * sinA, cy + ( hw) * sinA + ( hh) * cosA);
+            corners << QPointF(cx + (-hw) * cosA - ( hh) * sinA, cy + (-hw) * sinA + ( hh) * cosA);
+            
+            //проверка перпендикуляра к каждой из 4 граней
+            for (int i = 0; i < 4; ++i) {
+                QPointF p1 = corners[i];
+                QPointF p2 = corners[(i + 1) % 4];
+                
+                QPointF perpPt = findPerpendicularToSegment(basePoint, p1, p2);
+                
+                double dist = QLineF(mousePos, perpPt).length();
+                if (dist <= tolerance) {
+                    SnapPoint sp;
+                    sp.position = perpPt;
+                    sp.type = SnapType::Perpendicular;
+                    sp.source = prim;
+                    sp.distance = dist;
+                    out.append(sp);
+                }
+            }
+        }
+        //перпендикуляр к граням многоугольника
+        else if (prim->getType() == PrimitiveType::Polygon) {
+            auto* poly = static_cast<PolygonPrimitive*>(prim);
+            QVector<QPointF> vertices = poly->getVertices();
+            
+            //проверка перпендикуляра к каждой грани
+            for (int i = 0; i < vertices.size(); ++i) {
+                QPointF p1 = vertices[i];
+                QPointF p2 = vertices[(i + 1) % vertices.size()];
+                
+                QPointF perpPt = findPerpendicularToSegment(basePoint, p1, p2);
+                
+                double dist = QLineF(mousePos, perpPt).length();
+                if (dist <= tolerance) {
+                    SnapPoint sp;
+                    sp.position = perpPt;
+                    sp.type = SnapType::Perpendicular;
+                    sp.source = prim;
+                    sp.distance = dist;
+                    out.append(sp);
+                }
+            }
+        }
     }
 }
 
@@ -676,8 +738,8 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                 double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
                 if (angleDiff > 180) angleDiff = 360 - angleDiff;
                 
-                // If angle is within 15 degrees, project mousePos onto the tangent LINE
-                if (angleDiff < 15.0) {
+                // If angle is within 8 degrees, project mousePos onto the tangent LINE
+                if (angleDiff < 8.0) {
                     // Project mousePos onto the tangent line (basePoint -> pt direction)
                     // The user can place the point anywhere along this line
                     QPointF direction = pt - basePoint;
@@ -716,11 +778,20 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
             
             for (const auto& pt : tangentPoints) {
                 double ptAngle = std::atan2(pt.y() - center.y(), pt.x() - center.x());
-                // Normalize angles
-                while (ptAngle < startAngle) ptAngle += 2 * M_PI;
-                while (ptAngle > startAngle + 2 * M_PI) ptAngle -= 2 * M_PI;
                 
-                if (ptAngle >= startAngle && ptAngle <= endAngle) {
+                //нормализация углов для корректной проверки принадлежности точки дуге
+                double normPtAngle = ptAngle - startAngle;
+                while (normPtAngle < 0) normPtAngle += 2 * M_PI;
+                while (normPtAngle >= 2 * M_PI) normPtAngle -= 2 * M_PI;
+                
+                double normSpan = spanAngle;
+                if (normSpan < 0) normSpan += 2 * M_PI;
+                
+                //проверка: точка на дуге если нормализованный угол в пределах span
+                bool isOnArc = (normPtAngle >= 0 && normPtAngle <= normSpan) ||
+                               (normSpan < 0 && normPtAngle >= normSpan && normPtAngle <= 0);
+                
+                if (isOnArc) {
                     // Check angle alignment
                     QLineF lineToMouse(basePoint, mousePos);
                     QLineF lineToTangent(basePoint, pt);
@@ -730,7 +801,7 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                     double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
                     if (angleDiff > 180) angleDiff = 360 - angleDiff;
                     
-                    if (angleDiff < 15.0) {
+                    if (angleDiff < 8.0) {
                         // Project mousePos onto the tangent line
                         QPointF direction = pt - basePoint;
                         double lineLen2 = QPointF::dotProduct(direction, direction);
@@ -753,16 +824,55 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                 }
             }
         }
-        // Handle Ellipse - approximate using average radius
+        //касательная к эллипсу - численный метод поиска точек касания
         else if (prim->getType() == PrimitiveType::Ellipse) {
             auto* ellipse = static_cast<EllipsePrimitive*>(prim);
             QPointF center(ellipse->getCenter().getX(), ellipse->getCenter().getY());
-            // Use average radius for tangent approximation
-            double avgRadius = (ellipse->getRadiusX() + ellipse->getRadiusY()) / 2.0;
+            double rx = ellipse->getRadiusX();
+            double ry = ellipse->getRadiusY();
+            double rotation = ellipse->getRotation() * M_PI / 180.0;
             
-            QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, avgRadius);
+            //поиск точек касания путем сэмплирования контура эллипса
+            //касательная - это когда вектор от basePoint к точке перпендикулярен нормали эллипса
+            QVector<QPointF> tangentCandidates;
             
-            for (const auto& pt : tangentPoints) {
+            const int samples = 72; //каждые 5 градусов
+            for (int i = 0; i < samples; ++i) {
+                double t = 2.0 * M_PI * i / samples;
+                
+                //точка на эллипсе (локальные координаты)
+                double localX = rx * std::cos(t);
+                double localY = ry * std::sin(t);
+                
+                //поворот и смещение
+                double worldX = center.x() + localX * std::cos(rotation) - localY * std::sin(rotation);
+                double worldY = center.y() + localX * std::sin(rotation) + localY * std::cos(rotation);
+                QPointF pt(worldX, worldY);
+                
+                //нормаль эллипса в этой точке (градиент функции x²/rx² + y²/ry² = 1)
+                double nx = localX / (rx * rx);
+                double ny = localY / (ry * ry);
+                //поворот нормали
+                double rotNx = nx * std::cos(rotation) - ny * std::sin(rotation);
+                double rotNy = nx * std::sin(rotation) + ny * std::cos(rotation);
+                
+                //вектор от basePoint к точке на эллипсе
+                double dx = pt.x() - basePoint.x();
+                double dy = pt.y() - basePoint.y();
+                double len = std::sqrt(dx * dx + dy * dy);
+                if (len < 1e-10) continue;
+                
+                //скалярное произведение = косинус угла между вектором и нормалью
+                double dot = (dx * rotNx + dy * rotNy) / (len * std::sqrt(rotNx * rotNx + rotNy * rotNy));
+                
+                //если dot близок к 0, то вектор почти перпендикулярен нормали = касательная
+                if (std::abs(dot) < 0.15) { //толерантность ~8.5 градусов
+                    tangentCandidates.append(pt);
+                }
+            }
+            
+            //выбираем точки, направление к которым близко к направлению мыши
+            for (const auto& pt : tangentCandidates) {
                 QLineF lineToMouse(basePoint, mousePos);
                 QLineF lineToTangent(basePoint, pt);
                 
@@ -771,7 +881,7 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                 double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
                 if (angleDiff > 180) angleDiff = 360 - angleDiff;
                 
-                if (angleDiff < 15.0) {
+                if (angleDiff < 8.0) {
                     QPointF direction = pt - basePoint;
                     double lineLen2 = QPointF::dotProduct(direction, direction);
                     if (lineLen2 < 1e-10) continue;

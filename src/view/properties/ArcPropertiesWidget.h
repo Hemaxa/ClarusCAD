@@ -1,3 +1,5 @@
+//ArcPropertiesWidget - виджет свойств примитива "Дуга"
+
 #pragma once
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"

@@ -1,3 +1,5 @@
+//DeleteTool - инструмент удаления объектов со сцены
+
 #pragma once
 #include "BaseCreationTool.h"
 

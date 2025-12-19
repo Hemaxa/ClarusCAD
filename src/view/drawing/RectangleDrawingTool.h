@@ -1,3 +1,5 @@
+//RectangleDrawingTool - отрисовщик объекта "Прямоугольник"
+
 #pragma once
 
 #include "BaseDrawingTool.h"

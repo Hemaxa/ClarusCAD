@@ -1,3 +1,5 @@
+//RectangleCreationTool - инструмент создания прямоугольника
+
 #pragma once
 #include "BaseCreationTool.h"
 #include "PointPrimitive.h"

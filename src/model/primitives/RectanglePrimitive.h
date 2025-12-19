@@ -1,4 +1,4 @@
-//RectanglePrimitive.h
+//RectanglePrimitive - модель прямоугольника
 
 #pragma once
 #include "BasePrimitive.h"

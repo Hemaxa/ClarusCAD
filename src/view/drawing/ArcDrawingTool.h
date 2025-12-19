@@ -1,3 +1,5 @@
+//ArcDrawingTool - отрисовщик объекта "Дуга"
+
 #pragma once
 
 #include "BaseDrawingTool.h"

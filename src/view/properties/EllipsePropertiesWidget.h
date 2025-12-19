@@ -1,3 +1,5 @@
+//EllipsePropertiesWidget - виджет свойств примитива "Эллипс"
+
 #pragma once
 #include "BasePropertiesWidget.h"
 #include "PointPrimitive.h"

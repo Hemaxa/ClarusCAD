@@ -1,3 +1,5 @@
+//ArcCreationTool - инструмент создания дуги
+
 #pragma once
 #include "BaseCreationTool.h"
 #include "PointPrimitive.h"

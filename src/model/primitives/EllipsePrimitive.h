@@ -1,4 +1,4 @@
-//EllipsePrimitive.h
+//EllipsePrimitive - модель эллипса
 
 #pragma once
 #include "BasePrimitive.h"

@@ -293,3 +293,51 @@ QScrollBar::handle:horizontal {
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     width: 0px;
 }
+
+/* ======================================================= */
+/* --- ВКЛАДКИ (TABWIDGET) --- */
+/* ======================================================= */
+
+QTabWidget::pane {
+    border: 1px solid #3c3c3c;
+    border-bottom: 1px solid #00ff7f;
+}
+
+QTabBar::tab {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    padding: 8px 12px;
+    border: 1px solid #3c3c3c;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background: #1e1e1e;
+    color: #00ff7f;
+    border-color: #00ff7f;
+    border-top: 1px solid #1e1e1e;
+}
+
+QTabBar::tab:hover {
+    background: #3c3c3c;
+}
+
+/* ======================================================= */
+/* --- СПЕЦИАЛЬНЫЕ МЕТКИ --- */
+/* ======================================================= */
+
+/* Метка предпросмотра паттерна в настройках */
+QLabel#PatternPreviewLabel {
+    color: #00ff7f;
+    font-weight: bold;
+}
+
+/* ======================================================= */
+/* --- КНОПКА ВЫБОРА ЦВЕТА --- */
+/* ======================================================= */
+
+QPushButton#ColorButton {
+    border-radius: 12px;
+    border: 1px solid gray;
+}
+
