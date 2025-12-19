@@ -396,15 +396,24 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
         highlightPen.setColor(hColor);
 
         if (isWave || isZigzag) {
-            highlightPen.setStyle(Qt::SolidLine); // Для кастомной отрисовки нужен Solid
-            painter.setPen(highlightPen);
-            painter.setBrush(Qt::NoBrush);
-            // Рисуем аппроксимацию для подсветки
-            // Можно упростить и рисовать просто эллипс для скорости,
-            // но для точности лучше повторять форму.
-            // Для простоты здесь рисуем обычный эллипс с толстой обводкой,
-            // так как волна идет "вдоль" него.
-            painter.drawEllipse(center, rx, ry);
+            // Use segment-based approach for consistent appearance
+            highlightPen.setStyle(Qt::SolidLine);
+            double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
+            int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
+            
+            for (int i = 0; i < numSegments; ++i) {
+                double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
+                double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
+                
+                QPointF p1(center.x() + rx * std::cos(angle1), center.y() + ry * std::sin(angle1));
+                QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
+                
+                if (isWave) {
+                    drawWaveLine(painter, p1, p2, highlightPen);
+                } else {
+                    drawZigzagLine(painter, p1, p2, highlightPen);
+                }
+            }
         } else {
             painter.setPen(highlightPen);
             painter.setBrush(Qt::NoBrush);

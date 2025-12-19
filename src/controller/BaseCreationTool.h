@@ -49,5 +49,5 @@ public:
     virtual QColor getColor() const { return Qt::white; }
 
     //виртуальный метод для получения типа линии
-    virtual LineType getLineType() const { return LineType::SolidThin; }
+    virtual LineType getLineType() const { return LineType::SolidMain; }
 };

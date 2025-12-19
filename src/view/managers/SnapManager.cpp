@@ -753,6 +753,45 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
                 }
             }
         }
+        // Handle Ellipse - approximate using average radius
+        else if (prim->getType() == PrimitiveType::Ellipse) {
+            auto* ellipse = static_cast<EllipsePrimitive*>(prim);
+            QPointF center(ellipse->getCenter().getX(), ellipse->getCenter().getY());
+            // Use average radius for tangent approximation
+            double avgRadius = (ellipse->getRadiusX() + ellipse->getRadiusY()) / 2.0;
+            
+            QVector<QPointF> tangentPoints = findTangentPointsToCircle(basePoint, center, avgRadius);
+            
+            for (const auto& pt : tangentPoints) {
+                QLineF lineToMouse(basePoint, mousePos);
+                QLineF lineToTangent(basePoint, pt);
+                
+                if (lineToMouse.length() < 10.0) continue;
+                
+                double angleDiff = std::abs(lineToMouse.angle() - lineToTangent.angle());
+                if (angleDiff > 180) angleDiff = 360 - angleDiff;
+                
+                if (angleDiff < 15.0) {
+                    QPointF direction = pt - basePoint;
+                    double lineLen2 = QPointF::dotProduct(direction, direction);
+                    if (lineLen2 < 1e-10) continue;
+                    
+                    QPointF toMouse = mousePos - basePoint;
+                    double t = QPointF::dotProduct(toMouse, direction) / lineLen2;
+                    
+                    if (t < 0.1) continue;
+                    
+                    QPointF projectedPoint = basePoint + t * direction;
+                    
+                    SnapPoint sp;
+                    sp.position = projectedPoint;
+                    sp.type = SnapType::Tangent;
+                    sp.source = prim;
+                    sp.distance = angleDiff;
+                    out.append(sp);
+                }
+            }
+        }
     }
 }
 

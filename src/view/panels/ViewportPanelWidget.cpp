@@ -160,6 +160,17 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             return true;
         }
 
+        case QEvent::Wheel: {
+            auto* wheelEvent = static_cast<QWheelEvent*>(event);
+            QPoint angleDelta = wheelEvent->angleDelta();
+            if (angleDelta.y() > 0) {
+                zoomIn(wheelEvent->position().toPoint());
+            } else if (angleDelta.y() < 0) {
+                zoomOut(wheelEvent->position().toPoint());
+            }
+            return true;
+        }
+
         case QEvent::MouseButtonRelease: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
 

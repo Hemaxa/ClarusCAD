@@ -61,5 +61,5 @@ public:
 private:
     QString m_name; //имя примитива
     QColor m_color = Qt::white; //цвет примитива
-    int m_lineTypeId = static_cast<int>(LineType::SolidThin); //тип линии примитва
+    int m_lineTypeId = static_cast<int>(LineType::SolidMain); //тип линии примитва
 };
