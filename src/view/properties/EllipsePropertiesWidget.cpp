@@ -1,25 +1,34 @@
 #include "EllipsePropertiesWidget.h"
 #include "EllipsePrimitive.h"
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QDoubleValidator>
 #include <QPushButton>
+#include <QLabel>
 
 EllipsePropertiesWidget::EllipsePropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
     auto* validator = new QDoubleValidator(this);
-    auto* layout = static_cast<QFormLayout*>(m_cartesianWidgets->layout());
+    auto* layout = static_cast<QGridLayout*>(m_cartesianWidgets->layout());
 
-    m_centerX = new QLineEdit("0.0"); m_centerX->setValidator(validator);
-    m_centerY = new QLineEdit("0.0"); m_centerY->setValidator(validator);
-    m_radiusX = new QLineEdit("0.0"); m_radiusX->setValidator(validator);
-    m_radiusY = new QLineEdit("0.0"); m_radiusY->setValidator(validator);
-    m_rotation = new QLineEdit("0.0"); m_rotation->setValidator(validator);
+    m_centerX = new QLineEdit("0.0"); m_centerX->setValidator(validator); m_centerX->setObjectName("PropertiesInput");
+    m_centerY = new QLineEdit("0.0"); m_centerY->setValidator(validator); m_centerY->setObjectName("PropertiesInput");
+    m_radiusX = new QLineEdit("0.0"); m_radiusX->setValidator(validator); m_radiusX->setObjectName("PropertiesInput");
+    m_radiusY = new QLineEdit("0.0"); m_radiusY->setValidator(validator); m_radiusY->setObjectName("PropertiesInput");
+    m_rotation = new QLineEdit("0.0"); m_rotation->setValidator(validator); m_rotation->setObjectName("PropertiesInput");
 
-    layout->addRow("Центр X:", m_centerX);
-    layout->addRow("Центр Y:", m_centerY);
-    layout->addRow("Радиус X:", m_radiusX);
-    layout->addRow("Радиус Y:", m_radiusY);
-    layout->addRow("Поворот:", m_rotation);
+    //компактный grid: 2 поля в ряд
+    layout->addWidget(new QLabel("X:"), 0, 0);
+    layout->addWidget(m_centerX, 0, 1);
+    layout->addWidget(new QLabel("Y:"), 0, 2);
+    layout->addWidget(m_centerY, 0, 3);
+    
+    layout->addWidget(new QLabel("RX:"), 1, 0);
+    layout->addWidget(m_radiusX, 1, 1);
+    layout->addWidget(new QLabel("RY:"), 1, 2);
+    layout->addWidget(m_radiusY, 1, 3);
+    
+    layout->addWidget(new QLabel("Угол:"), 2, 0);
+    layout->addWidget(m_rotation, 2, 1);
 
     connect(m_applyButton, &QPushButton::clicked, this, &EllipsePropertiesWidget::onApplyButtonClicked);
 }
@@ -37,11 +46,11 @@ void EllipsePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primiti
 void EllipsePropertiesWidget::updateFieldValues()
 {
     if(m_currentEllipse) {
-        m_centerX->setText(QString::number(m_currentEllipse->getCenter().getX()));
-        m_centerY->setText(QString::number(m_currentEllipse->getCenter().getY()));
-        m_radiusX->setText(QString::number(m_currentEllipse->getRadiusX()));
-        m_radiusY->setText(QString::number(m_currentEllipse->getRadiusY()));
-        m_rotation->setText(QString::number(m_currentEllipse->getRotation()));
+        m_centerX->setText(QString::number(m_currentEllipse->getCenter().getX(), 'f', 2));
+        m_centerY->setText(QString::number(m_currentEllipse->getCenter().getY(), 'f', 2));
+        m_radiusX->setText(QString::number(m_currentEllipse->getRadiusX(), 'f', 2));
+        m_radiusY->setText(QString::number(m_currentEllipse->getRadiusY(), 'f', 2));
+        m_rotation->setText(QString::number(m_currentEllipse->getRotation(), 'f', 2));
     }
 }
 

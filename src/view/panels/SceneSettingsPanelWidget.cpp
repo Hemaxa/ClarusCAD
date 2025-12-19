@@ -73,5 +73,5 @@ SceneSettingsPanelWidget::SceneSettingsPanelWidget(const QString& title, QWidget
     connect(m_tangentSnapBtn, &QToolButton::toggled, this, &SceneSettingsPanelWidget::tangentSnapToggled);
 
     //минимальная ширина окна
-    setMinimumWidth(200);
+    setMinimumWidth(160);
 }

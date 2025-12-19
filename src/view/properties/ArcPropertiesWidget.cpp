@@ -1,25 +1,34 @@
 #include "ArcPropertiesWidget.h"
 #include "ArcPrimitive.h"
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QDoubleValidator>
 #include <QPushButton>
+#include <QLabel>
 
 ArcPropertiesWidget::ArcPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
     auto* validator = new QDoubleValidator(this);
-    auto* layout = static_cast<QFormLayout*>(m_cartesianWidgets->layout());
+    auto* layout = static_cast<QGridLayout*>(m_cartesianWidgets->layout());
 
-    m_centerX = new QLineEdit("0.0"); m_centerX->setValidator(validator);
-    m_centerY = new QLineEdit("0.0"); m_centerY->setValidator(validator);
-    m_radius  = new QLineEdit("0.0"); m_radius->setValidator(validator);
-    m_startAngle = new QLineEdit("0.0"); m_startAngle->setValidator(validator);
-    m_spanAngle  = new QLineEdit("0.0"); m_spanAngle->setValidator(validator);
+    m_centerX = new QLineEdit("0.0"); m_centerX->setValidator(validator); m_centerX->setObjectName("PropertiesInput");
+    m_centerY = new QLineEdit("0.0"); m_centerY->setValidator(validator); m_centerY->setObjectName("PropertiesInput");
+    m_radius  = new QLineEdit("0.0"); m_radius->setValidator(validator); m_radius->setObjectName("PropertiesInput");
+    m_startAngle = new QLineEdit("0.0"); m_startAngle->setValidator(validator); m_startAngle->setObjectName("PropertiesInput");
+    m_spanAngle  = new QLineEdit("0.0"); m_spanAngle->setValidator(validator); m_spanAngle->setObjectName("PropertiesInput");
 
-    layout->addRow("Центр X:", m_centerX);
-    layout->addRow("Центр Y:", m_centerY);
-    layout->addRow("Радиус:", m_radius);
-    layout->addRow("Нач. угол:", m_startAngle);
-    layout->addRow("Сектор:", m_spanAngle);
+    //компактный grid: 2 поля в ряд
+    layout->addWidget(new QLabel("X:"), 0, 0);
+    layout->addWidget(m_centerX, 0, 1);
+    layout->addWidget(new QLabel("Y:"), 0, 2);
+    layout->addWidget(m_centerY, 0, 3);
+    
+    layout->addWidget(new QLabel("R:"), 1, 0);
+    layout->addWidget(m_radius, 1, 1);
+    layout->addWidget(new QLabel("Старт:"), 1, 2);
+    layout->addWidget(m_startAngle, 1, 3);
+    
+    layout->addWidget(new QLabel("Сектор:"), 2, 0);
+    layout->addWidget(m_spanAngle, 2, 1);
 
     connect(m_applyButton, &QPushButton::clicked, this, &ArcPropertiesWidget::onApplyButtonClicked);
 }
@@ -37,11 +46,11 @@ void ArcPropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives)
 void ArcPropertiesWidget::updateFieldValues()
 {
     if(m_currentArc) {
-        m_centerX->setText(QString::number(m_currentArc->getCenter().getX()));
-        m_centerY->setText(QString::number(m_currentArc->getCenter().getY()));
-        m_radius->setText(QString::number(m_currentArc->getRadius()));
-        m_startAngle->setText(QString::number(m_currentArc->getStartAngle()));
-        m_spanAngle->setText(QString::number(m_currentArc->getSpanAngle()));
+        m_centerX->setText(QString::number(m_currentArc->getCenter().getX(), 'f', 2));
+        m_centerY->setText(QString::number(m_currentArc->getCenter().getY(), 'f', 2));
+        m_radius->setText(QString::number(m_currentArc->getRadius(), 'f', 2));
+        m_startAngle->setText(QString::number(m_currentArc->getStartAngle(), 'f', 2));
+        m_spanAngle->setText(QString::number(m_currentArc->getSpanAngle(), 'f', 2));
     }
 }
 

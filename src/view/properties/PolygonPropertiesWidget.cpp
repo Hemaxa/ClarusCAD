@@ -2,40 +2,42 @@
 #include "PolygonPrimitive.h"
 #include "ThemeManager.h"
 
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QSpinBox>
 #include <QComboBox>
 #include <QPushButton>
+#include <QLabel>
 
 PolygonPropertiesWidget::PolygonPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
-    //заполнение панели декартовых координат (используем для параметров многоугольника)
-    auto* cartesianLayout = static_cast<QFormLayout*>(m_cartesianWidgets->layout());
+    auto* layout = static_cast<QGridLayout*>(m_cartesianWidgets->layout());
     
     //количество углов
     m_sidesSpinBox = new QSpinBox();
     m_sidesSpinBox->setRange(3, 100);
     m_sidesSpinBox->setValue(6);
-    m_sidesSpinBox->setFixedWidth(80);
-    cartesianLayout->addRow("Кол-во углов:", m_sidesSpinBox);
+    m_sidesSpinBox->setFixedWidth(70);
+    m_sidesSpinBox->setObjectName("PropertiesInput");
     
     //тип многоугольника
     m_typeComboBox = new QComboBox();
     m_typeComboBox->addItem("Вписанный", static_cast<int>(PolygonCreationMode::Inscribed));
     m_typeComboBox->addItem("Описанный", static_cast<int>(PolygonCreationMode::Circumscribed));
-    m_typeComboBox->setFixedWidth(130);
-    cartesianLayout->addRow("Тип:", m_typeComboBox);
+    m_typeComboBox->setObjectName("PropertiesComboBox");
 
-    //подключение сигналов от контролов для обновления инструмента в реальном времени
+    //компактный grid
+    layout->addWidget(new QLabel("Углы:"), 0, 0);
+    layout->addWidget(m_sidesSpinBox, 0, 1);
+    layout->addWidget(new QLabel("Тип:"), 0, 2);
+    layout->addWidget(m_typeComboBox, 0, 3);
+
+    //подключение сигналов
     connect(m_sidesSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), 
             this, &PolygonPropertiesWidget::onSidesChanged);
     connect(m_typeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &PolygonPropertiesWidget::onTypeChanged);
-
-    //подключение сигнала от кнопки
     connect(m_applyButton, &QPushButton::clicked, this, &PolygonPropertiesWidget::onApplyButtonClicked);
 
-    //установка системы координат по-умолчанию
     setCoordinateSystem(CoordinateSystemType::Cartesian);
 }
 
@@ -53,7 +55,6 @@ void PolygonPropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primiti
 
 void PolygonPropertiesWidget::updateFieldValues()
 {
-    //если существующий объект
     if (m_currentPolygon) {
         m_sidesSpinBox->setValue(m_currentPolygon->getSides());
         
@@ -61,7 +62,6 @@ void PolygonPropertiesWidget::updateFieldValues()
         int index = (pType == PolygonType::Inscribed) ? 0 : 1;
         m_typeComboBox->setCurrentIndex(index);
     }
-    //если новый объект - оставляем текущие значения (последние использованные)
 }
 
 void PolygonPropertiesWidget::onApplyButtonClicked()

@@ -41,5 +41,5 @@ NavigationPanelWidget::NavigationPanelWidget(const QString& title, QWidget* pare
     connect(m_rotateCCWBtn, &QToolButton::clicked, this, &NavigationPanelWidget::rotateCCWClicked);
 
     //минимальная ширина окна
-    setMinimumWidth(200);
+    setMinimumWidth(160);
 }

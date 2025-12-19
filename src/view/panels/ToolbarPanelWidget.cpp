@@ -98,7 +98,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
         emit arcToolActivated(static_cast<ArcCreationMode>(modeId));
     });
 
-    setMinimumWidth(200);
+    setMinimumWidth(160);
 }
 
 void ToolbarPanelWidget::clearSelection()

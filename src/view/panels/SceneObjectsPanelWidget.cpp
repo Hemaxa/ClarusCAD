@@ -21,7 +21,7 @@ SceneObjectsPanelWidget::SceneObjectsPanelWidget(const QString& title, QWidget* 
     connect(m_listWidget, &QListWidget::itemSelectionChanged, this, &SceneObjectsPanelWidget::onSelectionChanged);
 
     //минимальная ширина окна
-    setMinimumWidth(200);
+    setMinimumWidth(160);
 }
 
 void SceneObjectsPanelWidget::update(const Scene* scene)

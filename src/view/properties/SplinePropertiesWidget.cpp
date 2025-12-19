@@ -2,11 +2,12 @@
 #include "SplinePrimitive.h"
 #include "ThemeManager.h"
 
-#include <QFormLayout>
+#include <QGridLayout>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QCheckBox>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QHBoxLayout>
 #include <QDoubleValidator>
 #include <QLabel>
 
@@ -14,13 +15,13 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
 {
     auto* validator = new QDoubleValidator(this);
     
-    //заполнение панели декартовых координат (используем для параметров сплайна)
-    auto* cartesianLayout = static_cast<QFormLayout*>(m_cartesianWidgets->layout());
+    //получаем grid layout декартовых координат
+    auto* cartesianLayout = static_cast<QGridLayout*>(m_cartesianWidgets->layout());
     
     //замкнутый/разомкнутый
-    m_closedCheckBox = new QCheckBox("Замкнутый сплайн");
+    m_closedCheckBox = new QCheckBox("Замкнутый");
     m_closedCheckBox->setChecked(false);
-    cartesianLayout->addRow("", m_closedCheckBox);
+    cartesianLayout->addWidget(m_closedCheckBox, 0, 0, 1, 4);
 
     //подключение сигнала для обновления инструмента в реальном времени
     connect(m_closedCheckBox, &QCheckBox::toggled, this, &SplinePropertiesWidget::onClosedChanged);
@@ -28,9 +29,8 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
     //создание прокручиваемой области для контрольных точек
     m_pointsScrollArea = new QScrollArea();
     m_pointsScrollArea->setWidgetResizable(true);
-    m_pointsScrollArea->setMinimumHeight(180);
-    m_pointsScrollArea->setMaximumHeight(250);
-    m_pointsScrollArea->setMinimumWidth(250);
+    m_pointsScrollArea->setMinimumHeight(120);
+    m_pointsScrollArea->setMaximumHeight(180);
     m_pointsScrollArea->setFrameShape(QFrame::NoFrame);
     
     m_pointsContainer = new QWidget();
@@ -41,12 +41,9 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
     
     m_pointsScrollArea->setWidget(m_pointsContainer);
     
-    //добавляем в центральную колонку
-    auto* centralLayout = static_cast<QVBoxLayout*>(m_centralColumn->layout());
-    
-    QLabel* pointsLabel = new QLabel("Контрольные точки:");
-    centralLayout->addWidget(pointsLabel);
-    centralLayout->addWidget(m_pointsScrollArea);
+    //добавляем область прокрутки в layout
+    cartesianLayout->addWidget(new QLabel("Точки:"), 1, 0);
+    cartesianLayout->addWidget(m_pointsScrollArea, 2, 0, 1, 4);
 
     //подключение сигнала от кнопки
     connect(m_applyButton, &QPushButton::clicked, this, &SplinePropertiesWidget::onApplyButtonClicked);
@@ -69,12 +66,10 @@ void SplinePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitiv
 
 void SplinePropertiesWidget::updateFieldValues()
 {
-    //если существующий объект
     if (m_currentSpline) {
         m_closedCheckBox->setChecked(m_currentSpline->isClosed());
         rebuildControlPointsUI();
     } else {
-        //очистка полей для нового объекта
         for (auto& row : m_pointRows) {
             delete row.container;
         }
@@ -84,7 +79,6 @@ void SplinePropertiesWidget::updateFieldValues()
 
 void SplinePropertiesWidget::rebuildControlPointsUI()
 {
-    //удаляем старые поля
     for (auto& row : m_pointRows) {
         delete row.container;
     }
@@ -127,7 +121,6 @@ void SplinePropertiesWidget::rebuildControlPointsUI()
         hLayout->addWidget(row.yEdit);
         hLayout->addWidget(row.deleteBtn);
         
-        //вставляем перед stretch
         m_pointsLayout->insertWidget(m_pointsLayout->count() - 1, row.container);
         m_pointRows.append(row);
     }
@@ -152,21 +145,17 @@ void SplinePropertiesWidget::onDeletePointClicked()
     int index = btn->property("pointIndex").toInt();
     
     if (index >= 0 && index < m_pointRows.size()) {
-        //удаляем поля
         delete m_pointRows[index].container;
         m_pointRows.removeAt(index);
         
-        //обновляем индексы и метки
         for (int i = 0; i < m_pointRows.size(); ++i) {
             m_pointRows[i].deleteBtn->setProperty("pointIndex", i);
-            //обновляем метку с номером
             QLabel* label = m_pointRows[i].container->findChild<QLabel*>();
             if (label) {
                 label->setText(QString::number(i + 1) + ":");
             }
         }
         
-        //автоматически применяем изменения к сплайну
         if (m_currentSpline && m_pointRows.size() >= 2) {
             onApplyButtonClicked();
         }
