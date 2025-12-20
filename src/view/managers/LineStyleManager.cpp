@@ -502,79 +502,119 @@ void LineStyleManager::drawEllipse(QPainter& painter, const QPointF& center, dou
         if (type == LineType::SolidKink) isZigzag = true;
     }
 
-    // 1. ПОДЛОЖКА ПРИ ВЫДЕЛЕНИИ
-    if (isSelected) {
-        QPen highlightPen = getPen(typeId, color, false);
-        highlightPen.setWidthF(highlightPen.widthF() + 8.0);
-        QColor hColor = color;
-        hColor.setAlpha(100);
-        highlightPen.setColor(hColor);
-
-        if (isWave || isZigzag) {
-            // Use segment-based approach for consistent appearance
-            highlightPen.setStyle(Qt::SolidLine);
-            double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
-            int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
-            
-            double phase = 0.0;
-            for (int i = 0; i < numSegments; ++i) {
-                double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
-                double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
-                
-                QPointF p1(center.x() + rx * std::cos(angle1), center.y() + ry * std::sin(angle1));
-                QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
-                
-                if (isWave) {
-                    phase = drawWaveLineWithPhase(painter, p1, p2, highlightPen, phase);
-                } else {
-                    phase = drawZigzagLineWithPhase(painter, p1, p2, highlightPen, phase);
-                }
-            }
-        } else {
+    // Если обычная линия, используем стандартную отрисовку
+    if (!isWave && !isZigzag) {
+        if (isSelected) {
+            QPen highlightPen = getPen(typeId, color, false);
+            highlightPen.setWidthF(highlightPen.widthF() + 8.0);
+            QColor hColor = color;
+            hColor.setAlpha(100);
+            highlightPen.setColor(hColor);
             painter.setPen(highlightPen);
             painter.setBrush(Qt::NoBrush);
             painter.drawEllipse(center, rx, ry);
         }
+
+        QPen standardPen = getPen(typeId, color, false);
+        painter.setPen(standardPen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawEllipse(center, rx, ry);
+        return;
     }
 
-    // 2. ОСНОВНАЯ ЛИНИЯ
-    QPen standardPen = getPen(typeId, color, false);
-    painter.setBrush(Qt::NoBrush);
+    // ДЛЯ ВОЛНЫ И ЗИГЗАГА ИСПОЛЬЗУЕМ РАДИАЛЬНЫЙ АЛГОРИТМ
+    // Генерируем путь, модулируя радиус в зависимости от угла
 
-    if (isWave || isZigzag) {
-        // Break ellipse into segments and draw each with wave/zigzag using continuous phase
-        standardPen.setStyle(Qt::SolidLine);
+    double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
+    double amplitude = isWave ? m_waveAmplitude : m_kinkAmplitude;
+    double period = isWave ? m_wavePeriod : (2 * m_kinkLength + m_kinkStraight);
+    
+    // Количество циклов волны на весь периметр
+    double cycles = perimeter / period;
+    // Округляем до целого, чтобы волна замкнулась идеально
+    cycles = std::round(cycles);
+    if (cycles < 1.0) cycles = 1.0;
+    
+    // Пересчитываем реальный период (угловой)
+    // 2*PI = cycles * anglePerPeriod
+    double anglePerPeriod = 2 * M_PI / cycles;
+    
+    QPainterPath path;
+    
+    // Шаг дискретизации - достаточно малый для плавности
+    // Например, 40 точек на один период волны
+    int stepsPerPeriod = 40;
+    int totalSteps = static_cast<int>(cycles * stepsPerPeriod);
+    
+    for (int i = 0; i <= totalSteps; ++i) {
+        double t = static_cast<double>(i) / totalSteps; // от 0 до 1
+        double angle = t * 2 * M_PI; // от 0 до 2PI
         
-        double perimeter = 2 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
-        int numSegments = std::max(16, static_cast<int>(perimeter / 10.0));
+        // Вычисляем смещение радиуса
+        double offset = 0.0;
         
-        double phase = 0.0;
-        for (int i = 0; i < numSegments; ++i) {
-            double angle1 = static_cast<double>(i) / numSegments * 2 * M_PI;
-            double angle2 = static_cast<double>(i + 1) / numSegments * 2 * M_PI;
+        if (isWave) {
+            // Sinusoidal wave: offset = A * sin(angle * cycles)
+            // Но angle идет от 0 до 2PI, значит аргумент синуса от 0 до cycles*2PI
+            offset = amplitude * std::sin(angle * cycles);
+        } else {
+            // Zigzag (triangle wave)
+            // Фаза внутри одного цикла (от 0 до 1)
+            double phase = t * cycles; 
+            phase -= std::floor(phase); // frac part
             
-            QPointF p1(center.x() + rx * std::cos(angle1), center.y() + ry * std::sin(angle1));
-            QPointF p2(center.x() + rx * std::cos(angle2), center.y() + ry * std::sin(angle2));
+            // Triangle shape: 0 -> A -> -A -> 0 (или подобное)
+            // Реализуем симметричный зигзаг: 0 -> 1 -> 0 -> -1 -> 0
+            // phase 0..0.25: 0 to A
+            // phase 0.25..0.75: A to -A
+            // phase 0.75..1.0: -A to 0
             
-            if (isWave) {
-                phase = drawWaveLineWithPhase(painter, p1, p2, standardPen, phase);
+            if (phase < 0.25) {
+                offset = amplitude * (phase / 0.25);
+            } else if (phase < 0.75) {
+                offset = amplitude * (1.0 - (phase - 0.25) / 0.25); // A -> -A
             } else {
-                phase = drawZigzagLineWithPhase(painter, p1, p2, standardPen, phase);
+                offset = -amplitude * (1.0 - (phase - 0.75) / 0.25); // -A -> 0
             }
         }
+        
+        // Модулируем радиус
+        double rX = rx + offset;
+        double rY = ry + offset;
+        
+        double x = center.x() + rX * std::cos(angle);
+        double y = center.y() + rY * std::sin(angle);
+        
+        if (i == 0) path.moveTo(x, y);
+        else path.lineTo(x, y);
     }
-    else {
-        // Стандартная отрисовка
-        painter.setPen(standardPen);
-        painter.drawEllipse(center, rx, ry);
+    path.closeSubpath();
+    
+    // ОТРИСОВКА
+    painter.setBrush(Qt::NoBrush);
+    
+    if (isSelected) {
+        QPen highlightPen = getPen(typeId, color, false);
+        highlightPen.setWidthF(highlightPen.widthF() + 8.0);
+        highlightPen.setStyle(Qt::SolidLine); // Рисуем саму геометрию сплошной толстой линией
+        QColor hColor = color;
+        hColor.setAlpha(100);
+        highlightPen.setColor(hColor);
+        painter.setPen(highlightPen);
+        painter.drawPath(path);
     }
+    
+    QPen standardPen = getPen(typeId, color, false);
+    standardPen.setStyle(Qt::SolidLine);
+    painter.setPen(standardPen);
+    painter.drawPath(path);
 }
 
 void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double radius,
                                 double startAngle, double spanAngle,
                                 int typeId, const QColor& color, bool isSelected) const
 {
-    // Determine if special line type
+    // Определяем, является ли стиль "сложным" (волна или зигзаг)
     bool isWave = false;
     bool isZigzag = false;
     if (typeId < 1000) {
@@ -608,56 +648,107 @@ void LineStyleManager::drawArc(QPainter& painter, const QPointF& center, double 
         return;
     }
 
-    // For wave/zigzag, break arc into segments and draw each with continuous phase
+    // ДЛЯ ВОЛНЫ И ЗИГЗАГА НА ДУГЕ - РАДИАЛЬНЫЙ АЛГОРИТМ
+    
     double startRad = startAngle * M_PI / 180.0;
     double spanRad = spanAngle * M_PI / 180.0;
     
-    // Number of segments depends on arc length
-    double arcLength = std::abs(radius * spanRad);
-    int numSegments = std::max(8, static_cast<int>(arcLength / 10.0));
+    // Qt углы: положительные = против часовой. 
+    // Но экран Y вниз. Обычно в Qt: 0 = 3 часа, + = против часовой.
+    // Отрисовка через cos/sin работает стандартно: x = cx + r*cos(a), y = cy - r*sin(a) (для Y вверх)
+    // Но здесь у нас QPointF и экранные координаты.
+    // x = cx + r*cos(a), y = cy + r*sin(a) — это по часовой, если a растет.
+    // drawArc в Qt принимает startAngle в градусах (CCW on screen? No, CCW in mathematical sense usually leads to CW on Y-down screen unless transform is applied).
+    // Стандартное поведение QPainter::drawArc: 0 градусов - 3 часа, положительные - против часовой стрелки.
+    // Поскольку у нас Y направлен вниз, "против часовой" на экране выглядит "по часовой" математически?
+    // Нет, Qt абстрагирует это. angle=90 - это 12 часов.
+    // x = cos(-angle), y = sin(-angle) для экранных координат?
+    // Проще: используем отрицательный угол в sin, так как Y инвертирован?
+    // Давайте следовать той же логике, что и в drawEllipse выше: x = cos(a), y = sin(a). 
+    // Если выше работало (а там полный круг), то и тут сработает, нужно только правильно интерпретировать углы.
+    // QPainter::drawArc argument is in 1/16th degrees. Positive is counter-clockwise.
+    // Значит angle идет: 0 (Right), 90 (Top/Up), 180 (Left), 270 (Bottom).
+    // Формула: x = cx + r * cos(-angleRad), y = cy + r * sin(-angleRad) ??
+    // Учитывая Y вниз: 
+    // 0 deg: (1, 0) -> Right. Correct.
+    // 90 deg: (0, -1) -> Top. Correct.
+    // Значит формула: x = cx + r * cos(-angle), y = cy + r * sin(-angle). 
     
-    QPen pen = getPen(typeId, color, false);
-    pen.setStyle(Qt::SolidLine);
+    // Однако, выше в drawEllipse я использовал просто cos(angle), sin(angle).
+    // При angle 0..2PI это рисует круг по часовой (из-за Y вниз). 
+    // 0 -> (1,0) Right.
+    // PI/2 -> (0,1) Bottom!
+    // Значит мой drawEllipse рисует "математически по часовой" (визуально на экране).
+    
+    // Для дуги нужно совпадать с drawArc. DrawArc (Qt) рисует CCW.
+    // Значит нам нужно итерироваться от startAngle до startAngle+spanAngle.
+    // И использовать формулу для CCW в экранных координатах (Y-down).
+    // X = cx + r * cos(-theta)
+    // Y = cy + r * sin(-theta) 
+    
+    double arcLen = std::abs(radius * spanRad);
+    double amplitude = isWave ? m_waveAmplitude : m_kinkAmplitude;
+    double period = isWave ? m_wavePeriod : (2 * m_kinkLength + m_kinkStraight);
+    
+    double cycles = arcLen / period;
+    // Здесь не обязательно округлять до целого, так как дуга не замкнута
+    
+    double totalAngle = std::abs(spanRad);
+    int totalSteps = std::max(10, static_cast<int>(cycles * 40)); 
+    
+    QPainterPath path;
+    
+    for (int i = 0; i <= totalSteps; ++i) {
+        double t = static_cast<double>(i) / totalSteps;
+        
+        // Текущий угол в радианах (математический CCW)
+        double currentAngleRad = startRad + t * spanRad;
+        
+        // Вычисляем смещение
+        double offset = 0.0;
+        
+        // Линейная фаза вдоль дуги
+        double phase = t * cycles;
+        
+        if (isWave) {
+             offset = amplitude * std::sin(phase * 2 * M_PI);
+        } else {
+             // Zigzag logic
+             double p = phase - std::floor(phase);
+             if (p < 0.25) offset = amplitude * (p / 0.25);
+             else if (p < 0.75) offset = amplitude * (1.0 - (p - 0.25) / 0.25);
+             else offset = -amplitude * (1.0 - (p - 0.75) / 0.25);
+        }
+        
+        double r = radius + offset;
+        
+        // Преобразуем полярные CCW координаты в экранные (Y-down)
+        // Angle 0 -> Right (1,0)
+        // Angle 90 -> Top (0,-1)
+        double x = center.x() + r * std::cos(-currentAngleRad);
+        double y = center.y() + r * std::sin(-currentAngleRad);
+        
+        if (i == 0) path.moveTo(x, y);
+        else path.lineTo(x, y);
+    }
+    
+    painter.setBrush(Qt::NoBrush);
 
-    // Draw selection highlight with phase tracking
     if (isSelected) {
-        QPen hPen = pen;
-        hPen.setWidthF(pen.widthF() + 8.0);
+        QPen highlightPen = getPen(typeId, color, false);
+        highlightPen.setWidthF(highlightPen.widthF() + 8.0);
+        highlightPen.setStyle(Qt::SolidLine);
         QColor hColor = color;
         hColor.setAlpha(100);
-        hPen.setColor(hColor);
-        
-        double phase = 0.0;
-        for (int i = 0; i < numSegments; ++i) {
-            double t1 = static_cast<double>(i) / numSegments;
-            double t2 = static_cast<double>(i + 1) / numSegments;
-            
-            double angle1 = startRad + t1 * spanRad;
-            double angle2 = startRad + t2 * spanRad;
-            
-            QPointF p1(center.x() + radius * std::cos(angle1), center.y() + radius * std::sin(angle1));
-            QPointF p2(center.x() + radius * std::cos(angle2), center.y() + radius * std::sin(angle2));
-            
-            if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, hPen, phase);
-            else phase = drawZigzagLineWithPhase(painter, p1, p2, hPen, phase);
-        }
+        highlightPen.setColor(hColor);
+        painter.setPen(highlightPen);
+        painter.drawPath(path);
     }
-
-    // Draw main line with phase tracking
-    double phase = 0.0;
-    for (int i = 0; i < numSegments; ++i) {
-        double t1 = static_cast<double>(i) / numSegments;
-        double t2 = static_cast<double>(i + 1) / numSegments;
-        
-        double angle1 = startRad + t1 * spanRad;
-        double angle2 = startRad + t2 * spanRad;
-        
-        QPointF p1(center.x() + radius * std::cos(angle1), center.y() + radius * std::sin(angle1));
-        QPointF p2(center.x() + radius * std::cos(angle2), center.y() + radius * std::sin(angle2));
-        
-        if (isWave) phase = drawWaveLineWithPhase(painter, p1, p2, pen, phase);
-        else phase = drawZigzagLineWithPhase(painter, p1, p2, pen, phase);
-    }
+    
+    QPen standardPen = getPen(typeId, color, false);
+    standardPen.setStyle(Qt::SolidLine);
+    painter.setPen(standardPen);
+    painter.drawPath(path);
 }
 
 void LineStyleManager::drawPath(QPainter& painter, const QPainterPath& path,

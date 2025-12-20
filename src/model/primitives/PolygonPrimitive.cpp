@@ -61,7 +61,7 @@ void PolygonPrimitive::draw(QPainter& painter, bool isSelected) const
         for (int i = 0; i < vertices.size(); ++i) {
             QPointF p1 = vertices[i];
             QPointF p2 = vertices[(i + 1) % vertices.size()];
-            lsm.drawLine(painter, p1, p2, lineType, getColor());
+            lsm.drawLine(painter, p1, p2, lineType, getColor(), isSelected);
         }
     } else {
         // Обычная отрисовка
