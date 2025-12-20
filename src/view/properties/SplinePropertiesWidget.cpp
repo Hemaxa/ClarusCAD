@@ -21,7 +21,7 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
     //замкнутый/разомкнутый
     m_closedCheckBox = new QCheckBox("Замкнутый");
     m_closedCheckBox->setChecked(false);
-    cartesianLayout->addWidget(m_closedCheckBox, 0, 0, 1, 4);
+    cartesianLayout->addWidget(m_closedCheckBox, 0, 0, 1, 8);
 
     //подключение сигнала для обновления инструмента в реальном времени
     connect(m_closedCheckBox, &QCheckBox::toggled, this, &SplinePropertiesWidget::onClosedChanged);
@@ -43,7 +43,7 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
     
     //добавляем область прокрутки в layout
     cartesianLayout->addWidget(new QLabel("Точки:"), 1, 0);
-    cartesianLayout->addWidget(m_pointsScrollArea, 2, 0, 1, 4);
+    cartesianLayout->addWidget(m_pointsScrollArea, 2, 0, 1, 8);
 
     //подключение сигнала от кнопки
     connect(m_applyButton, &QPushButton::clicked, this, &SplinePropertiesWidget::onApplyButtonClicked);

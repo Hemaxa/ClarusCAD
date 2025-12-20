@@ -30,18 +30,15 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     m_endXEdit->setObjectName("PropertiesInput");
     m_endYEdit->setObjectName("PropertiesInput");
 
-    //компактное размещение: 2 ряда по 4 элемента
-    //ряд 0: X1, поле, Y1, поле
+    //компактное размещение: 1 ряд по 4 элемента (4 пары)
     cartesianLayout->addWidget(new QLabel("X1:"), 0, 0);
     cartesianLayout->addWidget(m_startXEdit, 0, 1);
     cartesianLayout->addWidget(new QLabel("Y1:"), 0, 2);
     cartesianLayout->addWidget(m_startYEdit, 0, 3);
-    
-    //ряд 1: X2, поле, Y2, поле
-    cartesianLayout->addWidget(new QLabel("X2:"), 1, 0);
-    cartesianLayout->addWidget(m_endXEdit, 1, 1);
-    cartesianLayout->addWidget(new QLabel("Y2:"), 1, 2);
-    cartesianLayout->addWidget(m_endYEdit, 1, 3);
+    cartesianLayout->addWidget(new QLabel("X2:"), 0, 4);
+    cartesianLayout->addWidget(m_endXEdit, 0, 5);
+    cartesianLayout->addWidget(new QLabel("Y2:"), 0, 6);
+    cartesianLayout->addWidget(m_endYEdit, 0, 7);
 
     //полярные координаты
     auto* polarLayout = static_cast<QGridLayout*>(m_polarWidgets->layout());
@@ -62,11 +59,10 @@ SegmentPropertiesWidget::SegmentPropertiesWidget(QWidget* parent) : BaseProperti
     polarLayout->addWidget(m_startRadiusEdit, 0, 1);
     polarLayout->addWidget(new QLabel("A1:"), 0, 2);
     polarLayout->addWidget(m_startAngleEdit, 0, 3);
-    
-    polarLayout->addWidget(new QLabel("R2:"), 1, 0);
-    polarLayout->addWidget(m_endRadiusEdit, 1, 1);
-    polarLayout->addWidget(new QLabel("A2:"), 1, 2);
-    polarLayout->addWidget(m_endAngleEdit, 1, 3);
+    polarLayout->addWidget(new QLabel("R2:"), 0, 4);
+    polarLayout->addWidget(m_endRadiusEdit, 0, 5);
+    polarLayout->addWidget(new QLabel("A2:"), 0, 6);
+    polarLayout->addWidget(m_endAngleEdit, 0, 7);
 
     connect(m_applyButton, &QPushButton::clicked, this, &SegmentPropertiesWidget::onApplyButtonClicked);
 

@@ -18,8 +18,8 @@ NavigationPanelWidget::NavigationPanelWidget(const QString& title, QWidget* pare
     m_zoomExtentsBtn = new AnimationManager(":/icons/icons/navigation/zoom_extents.svg", "Вписать все [F]", Qt::Key_F, false);
 
     // Новые кнопки (горячие клавиши [ и ] как в других CAD)
-    m_rotateCWBtn = new AnimationManager(":/icons/icons/navigation/rotate_right.svg", "Повернуть против часовой [}]", Qt::Key_BracketRight, false);
-    m_rotateCCWBtn = new AnimationManager(":/icons/icons/navigation/rotate_left.svg", "Повернуть по часовой [{]", Qt::Key_BracketLeft, false);
+    m_rotateCWBtn = new AnimationManager(":/icons/icons/navigation/rotate_left.svg", "Повернуть против часовой [}]", Qt::Key_BracketRight, false);
+    m_rotateCCWBtn = new AnimationManager(":/icons/icons/navigation/rotate_right.svg", "Повернуть по часовой [{]", Qt::Key_BracketLeft, false);
 
     //--- Добавление в шаблон ---
     // (Расположим их компактно 2x3)

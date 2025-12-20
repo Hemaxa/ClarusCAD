@@ -32,7 +32,7 @@ CirclePropertiesWidget::CirclePropertiesWidget(QWidget* parent) : BaseProperties
     //StackedWidget для смены полей
     m_modeStack = new QStackedWidget();
 
-    // --- СТРАНИЦА 1: Центр + Радиус (компактно: 2 поля в ряд) ---
+    // --- СТРАНИЦА 1: Центр + Радиус (компактно: 3 пары в ряд) ---
     m_pageCenterRadius = new QWidget();
     auto* l1 = new QGridLayout(m_pageCenterRadius);
     l1->setContentsMargins(0,4,0,0);
@@ -44,8 +44,8 @@ CirclePropertiesWidget::CirclePropertiesWidget(QWidget* parent) : BaseProperties
     l1->addWidget(m_crCenterX, 0, 1);
     l1->addWidget(new QLabel("Y:"), 0, 2);
     l1->addWidget(m_crCenterY, 0, 3);
-    l1->addWidget(new QLabel("R:"), 1, 0);
-    l1->addWidget(m_crRadius, 1, 1);
+    l1->addWidget(new QLabel("R:"), 0, 4);
+    l1->addWidget(m_crRadius, 0, 5);
     m_modeStack->addWidget(m_pageCenterRadius);
 
     // --- СТРАНИЦА 2: Центр + Диаметр ---
@@ -60,8 +60,8 @@ CirclePropertiesWidget::CirclePropertiesWidget(QWidget* parent) : BaseProperties
     l2->addWidget(m_cdCenterX, 0, 1);
     l2->addWidget(new QLabel("Y:"), 0, 2);
     l2->addWidget(m_cdCenterY, 0, 3);
-    l2->addWidget(new QLabel("D:"), 1, 0);
-    l2->addWidget(m_cdDiameter, 1, 1);
+    l2->addWidget(new QLabel("D:"), 0, 4);
+    l2->addWidget(m_cdDiameter, 0, 5);
     m_modeStack->addWidget(m_pageCenterDiameter);
 
     // --- СТРАНИЦА 3: Две точки ---
@@ -77,10 +77,10 @@ CirclePropertiesWidget::CirclePropertiesWidget(QWidget* parent) : BaseProperties
     l3->addWidget(m_tpX1, 0, 1);
     l3->addWidget(new QLabel("Y1:"), 0, 2);
     l3->addWidget(m_tpY1, 0, 3);
-    l3->addWidget(new QLabel("X2:"), 1, 0);
-    l3->addWidget(m_tpX2, 1, 1);
-    l3->addWidget(new QLabel("Y2:"), 1, 2);
-    l3->addWidget(m_tpY2, 1, 3);
+    l3->addWidget(new QLabel("X2:"), 0, 4);
+    l3->addWidget(m_tpX2, 0, 5);
+    l3->addWidget(new QLabel("Y2:"), 0, 6);
+    l3->addWidget(m_tpY2, 0, 7);
     m_modeStack->addWidget(m_pageTwoPoints);
 
     // --- СТРАНИЦА 4: Три точки ---
@@ -98,14 +98,14 @@ CirclePropertiesWidget::CirclePropertiesWidget(QWidget* parent) : BaseProperties
     l4->addWidget(m_thpX1, 0, 1);
     l4->addWidget(new QLabel("Y1:"), 0, 2);
     l4->addWidget(m_thpY1, 0, 3);
-    l4->addWidget(new QLabel("X2:"), 1, 0);
-    l4->addWidget(m_thpX2, 1, 1);
-    l4->addWidget(new QLabel("Y2:"), 1, 2);
-    l4->addWidget(m_thpY2, 1, 3);
-    l4->addWidget(new QLabel("X3:"), 2, 0);
-    l4->addWidget(m_thpX3, 2, 1);
-    l4->addWidget(new QLabel("Y3:"), 2, 2);
-    l4->addWidget(m_thpY3, 2, 3);
+    l4->addWidget(new QLabel("X2:"), 0, 4);
+    l4->addWidget(m_thpX2, 0, 5);
+    l4->addWidget(new QLabel("Y2:"), 0, 6);
+    l4->addWidget(m_thpY2, 0, 7);
+    l4->addWidget(new QLabel("X3:"), 1, 0);
+    l4->addWidget(m_thpX3, 1, 1);
+    l4->addWidget(new QLabel("Y3:"), 1, 2);
+    l4->addWidget(m_thpY3, 1, 3);
     m_modeStack->addWidget(m_pageThreePoints);
 
     mainLayout->addWidget(m_modeStack, 1, 0, 1, 4);

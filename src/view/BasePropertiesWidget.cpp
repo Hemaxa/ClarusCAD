@@ -77,7 +77,7 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     lineRow->setSpacing(5);
     auto* lineLabel = new QLabel("Линия:");
     m_lineTypeComboBox = new QComboBox();
-    m_lineTypeComboBox->setFixedWidth(120);
+    m_lineTypeComboBox->setFixedWidth(160);
     m_lineTypeComboBox->setIconSize(QSize(80, 16));
     m_lineTypeComboBox->setObjectName("LineTypeComboBox");
     m_lineTypeComboBox->setCursor(Qt::PointingHandCursor);

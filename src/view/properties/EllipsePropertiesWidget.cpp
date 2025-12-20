@@ -16,19 +16,18 @@ EllipsePropertiesWidget::EllipsePropertiesWidget(QWidget* parent) : BaseProperti
     m_radiusY = new QLineEdit("0.0"); m_radiusY->setValidator(validator); m_radiusY->setObjectName("PropertiesInput");
     m_rotation = new QLineEdit("0.0"); m_rotation->setValidator(validator); m_rotation->setObjectName("PropertiesInput");
 
-    //компактный grid: 2 поля в ряд
+    //компактный grid: 1 ряд по 4 элемента (4 пары)
     layout->addWidget(new QLabel("X:"), 0, 0);
     layout->addWidget(m_centerX, 0, 1);
     layout->addWidget(new QLabel("Y:"), 0, 2);
     layout->addWidget(m_centerY, 0, 3);
+    layout->addWidget(new QLabel("RX:"), 0, 4);
+    layout->addWidget(m_radiusX, 0, 5);
+    layout->addWidget(new QLabel("RY:"), 0, 6);
+    layout->addWidget(m_radiusY, 0, 7);
     
-    layout->addWidget(new QLabel("RX:"), 1, 0);
-    layout->addWidget(m_radiusX, 1, 1);
-    layout->addWidget(new QLabel("RY:"), 1, 2);
-    layout->addWidget(m_radiusY, 1, 3);
-    
-    layout->addWidget(new QLabel("Угол:"), 2, 0);
-    layout->addWidget(m_rotation, 2, 1);
+    layout->addWidget(new QLabel("Угол:"), 1, 0);
+    layout->addWidget(m_rotation, 1, 1);
 
     connect(m_applyButton, &QPushButton::clicked, this, &EllipsePropertiesWidget::onApplyButtonClicked);
 }

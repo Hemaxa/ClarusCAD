@@ -16,19 +16,18 @@ ArcPropertiesWidget::ArcPropertiesWidget(QWidget* parent) : BasePropertiesWidget
     m_startAngle = new QLineEdit("0.0"); m_startAngle->setValidator(validator); m_startAngle->setObjectName("PropertiesInput");
     m_spanAngle  = new QLineEdit("0.0"); m_spanAngle->setValidator(validator); m_spanAngle->setObjectName("PropertiesInput");
 
-    //компактный grid: 2 поля в ряд
+    //компактный grid: 1 ряд по 4 элемента (4 пары)
     layout->addWidget(new QLabel("X:"), 0, 0);
     layout->addWidget(m_centerX, 0, 1);
     layout->addWidget(new QLabel("Y:"), 0, 2);
     layout->addWidget(m_centerY, 0, 3);
+    layout->addWidget(new QLabel("R:"), 0, 4);
+    layout->addWidget(m_radius, 0, 5);
+    layout->addWidget(new QLabel("Старт:"), 0, 6);
+    layout->addWidget(m_startAngle, 0, 7);
     
-    layout->addWidget(new QLabel("R:"), 1, 0);
-    layout->addWidget(m_radius, 1, 1);
-    layout->addWidget(new QLabel("Старт:"), 1, 2);
-    layout->addWidget(m_startAngle, 1, 3);
-    
-    layout->addWidget(new QLabel("Сектор:"), 2, 0);
-    layout->addWidget(m_spanAngle, 2, 1);
+    layout->addWidget(new QLabel("Сектор:"), 1, 0);
+    layout->addWidget(m_spanAngle, 1, 1);
 
     connect(m_applyButton, &QPushButton::clicked, this, &ArcPropertiesWidget::onApplyButtonClicked);
 }

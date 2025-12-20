@@ -21,7 +21,7 @@ RectanglePropertiesWidget::RectanglePropertiesWidget(QWidget* parent) : BaseProp
     m_modeComboBox->setObjectName("PropertiesComboBox");
     connect(m_modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &RectanglePropertiesWidget::onModeChanged);
-    layout->addWidget(m_modeComboBox, 0, 1, 1, 3);
+    layout->addWidget(m_modeComboBox, 0, 1, 1, 7);
 
     //StackedWidget для переключаемых полей
     m_modeStack = new QStackedWidget();
@@ -39,10 +39,10 @@ RectanglePropertiesWidget::RectanglePropertiesWidget(QWidget* parent) : BaseProp
     l0->addWidget(m_p1X, 0, 1);
     l0->addWidget(new QLabel("Y1:"), 0, 2);
     l0->addWidget(m_p1Y, 0, 3);
-    l0->addWidget(new QLabel("X2:"), 1, 0);
-    l0->addWidget(m_p2X, 1, 1);
-    l0->addWidget(new QLabel("Y2:"), 1, 2);
-    l0->addWidget(m_p2Y, 1, 3);
+    l0->addWidget(new QLabel("X2:"), 0, 4);
+    l0->addWidget(m_p2X, 0, 5);
+    l0->addWidget(new QLabel("Y2:"), 0, 6);
+    l0->addWidget(m_p2Y, 0, 7);
     m_modeStack->addWidget(pageTwoPoints);
 
     // --- СТРАНИЦА 1: Центр + размер ---
@@ -58,10 +58,10 @@ RectanglePropertiesWidget::RectanglePropertiesWidget(QWidget* parent) : BaseProp
     l1->addWidget(m_centerX, 0, 1);
     l1->addWidget(new QLabel("Y:"), 0, 2);
     l1->addWidget(m_centerY, 0, 3);
-    l1->addWidget(new QLabel("W:"), 1, 0);
-    l1->addWidget(m_width, 1, 1);
-    l1->addWidget(new QLabel("H:"), 1, 2);
-    l1->addWidget(m_height, 1, 3);
+    l1->addWidget(new QLabel("W:"), 0, 4);
+    l1->addWidget(m_width, 0, 5);
+    l1->addWidget(new QLabel("H:"), 0, 6);
+    l1->addWidget(m_height, 0, 7);
     m_modeStack->addWidget(pageCenterSize);
 
     // --- СТРАНИЦА 2: Точка + размер ---
@@ -77,13 +77,13 @@ RectanglePropertiesWidget::RectanglePropertiesWidget(QWidget* parent) : BaseProp
     l2->addWidget(m_pointX, 0, 1);
     l2->addWidget(new QLabel("Y:"), 0, 2);
     l2->addWidget(m_pointY, 0, 3);
-    l2->addWidget(new QLabel("W:"), 1, 0);
-    l2->addWidget(m_widthPS, 1, 1);
-    l2->addWidget(new QLabel("H:"), 1, 2);
-    l2->addWidget(m_heightPS, 1, 3);
+    l2->addWidget(new QLabel("W:"), 0, 4);
+    l2->addWidget(m_widthPS, 0, 5);
+    l2->addWidget(new QLabel("H:"), 0, 6);
+    l2->addWidget(m_heightPS, 0, 7);
     m_modeStack->addWidget(pagePointSize);
 
-    layout->addWidget(m_modeStack, 1, 0, 1, 4);
+    layout->addWidget(m_modeStack, 1, 0, 1, 8);
 
     //угол поворота и скругление (общие для всех режимов)
     m_rotation = new QLineEdit("0.0"); m_rotation->setValidator(validator); m_rotation->setObjectName("PropertiesInput");
@@ -100,8 +100,8 @@ RectanglePropertiesWidget::RectanglePropertiesWidget(QWidget* parent) : BaseProp
     layout->addWidget(m_rotation, 2, 1);
     layout->addWidget(new QLabel("Углы:"), 2, 2);
     layout->addWidget(m_cornerTypeCombo, 2, 3);
-    layout->addWidget(new QLabel("R:"), 3, 0);
-    layout->addWidget(m_cornerRadiusEdit, 3, 1);
+    layout->addWidget(new QLabel("R:"), 2, 4);
+    layout->addWidget(m_cornerRadiusEdit, 2, 5);
 
     //полярные координаты (минимальные)
     auto* polarLayout = static_cast<QGridLayout*>(m_polarWidgets->layout());
