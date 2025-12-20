@@ -22,29 +22,32 @@ class SplinePropertiesWidget : public BasePropertiesWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор виджета свойств сплайна.
+     */
     explicit SplinePropertiesWidget(QWidget* parent = nullptr);
 
-    //переопределение метода установки объектов
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
-    //сигнал для создания или обновления примитива "Сплайн"
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(SplinePrimitive* spline, bool closed, 
                            const QVector<QPointF>& controlPoints,
                            const QColor& color, LineType lineType);
     
-    //сигнал для обновления параметра инструмента
+    /**
+     * @brief Сигнал изменения замкнутости (для инструмента).
+     */
     void closedChanged(bool closed);
 
 private slots:
-    //слот для обработки нажатия кнопки "Создать"
     void onApplyButtonClicked();
-    
-    //слот для обновления инструмента при изменении параметра
     void onClosedChanged(bool checked);
-    
-    //слоты для редактирования точек
     void onDeletePointClicked();
 
 private:

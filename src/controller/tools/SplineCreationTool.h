@@ -13,6 +13,10 @@ class SplineCreationTool : public BaseCreationTool
     Q_OBJECT
 
 public:
+public:
+    /**
+     * @brief Конструктор инструмента сплайна.
+     */
     explicit SplineCreationTool(QObject* parent = nullptr);
 
     // Переопределение методов мыши
@@ -30,14 +34,26 @@ public:
     void setLineType(LineType type) override;
     QColor getColor() const override;
 
-    // Завершить построение сплайна
+    /**
+     * @brief Принудительно завершить построение сплайна (например, по Enter).
+     */
     void finishSpline();
 
-    // Настройка замкнутости сплайна
+    /**
+     * @brief Установить режим замкнутости сплайна.
+     */
     void setClosed(bool closed) { m_closed = closed; }
+
+    /**
+     * @brief Проверить, будет ли сплайн замкнут.
+     */
     bool isClosed() const { return m_closed; }
 
 signals:
+    /**
+     * @brief Сигнал готовности сплайна.
+     * @param spline Указатель на созданный примитив.
+     */
     void splineDataReady(SplinePrimitive* spline);
 
 private:

@@ -13,10 +13,20 @@ class RectanglePropertiesWidget : public BasePropertiesWidget
 {
     Q_OBJECT
 public:
+    /**
+     * @brief Конструктор виджета свойств прямоугольника.
+     */
     explicit RectanglePropertiesWidget(QWidget* parent = nullptr);
+
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, 
                            double w, double h, double rotation, 
                            CornerType cornerType, double cornerRadius,

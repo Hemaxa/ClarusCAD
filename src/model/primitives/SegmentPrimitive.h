@@ -9,7 +9,11 @@ class SegmentPrimitive : public BasePrimitive
 {
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор отрезка.
+     * @param start Начальная точка.
+     * @param end Конечная точка.
+     */
     SegmentPrimitive(const PointPrimitive& start, const PointPrimitive& end);
 
     //переопределение методов получения типа для объекта "Отрезок"
@@ -24,12 +28,24 @@ public:
     bool inside(const QRectF& rect) const override;
     QVector<QPointF> getSnapPoints() const override;
 
-    //геттер и сеттер начальной точки
+    /**
+     * @brief Получить начальную точку.
+     */
     const PointPrimitive& getStart() const;
+
+    /**
+     * @brief Установить начальную точку.
+     */
     void setStart(const PointPrimitive& point);
 
-    //геттер и сеттер конечной точки
+    /**
+     * @brief Получить конечную точку.
+     */
     const PointPrimitive& getEnd() const;
+
+    /**
+     * @brief Установить конечную точку.
+     */
     void setEnd(const PointPrimitive& point);
 
 private:

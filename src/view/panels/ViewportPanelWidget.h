@@ -25,15 +25,37 @@ class ViewportPanelWidget : public BasePanelWidget
     Q_OBJECT
 
 public:
-    //конструктор и деструктор
+    /**
+     * @brief Конструктор панели вьюпорта.
+     */
     explicit ViewportPanelWidget(const QString& title, QWidget* parent = nullptr);
     ~ViewportPanelWidget();
 
-    //этими методами MainWindow настраивает и управляет вьюпортом
+    // Методы управления вьюпортом (вызываются из MainWindow)
+    
+    /**
+     * @brief Установить активную сцену.
+     */
     void setScene(Scene* scene);
+
+    /**
+     * @brief Установить активный инструмент создания/редактирования.
+     */
     void setActiveTool(BaseCreationTool* tool);
+
+    /**
+     * @brief Установить шаг сетки.
+     */
     void setGridStep(int step);
+
+    /**
+     * @brief Установить список выделенных примитивов (для отображения).
+     */
     void setSelectedPrimitives(const QList<BasePrimitive*>& primitives);
+    
+    /**
+     * @brief Получить список выделенных примитивов (через инструмент рамки).
+     */
     QList<BasePrimitive*> getSelectedPrimitives() const;
 
     int getGridStep() const;
@@ -41,13 +63,27 @@ public:
     double getZoomFactor() const;
     QWidget* getCanvas() const;
 
-    //Геттер для точки привязки (теперь просто делегирует в ObjectBindingManager)
+    /**
+     * @brief Получить точку с учетом всех активных привязок.
+     * @param worldPos Исходная точка в мире (обычно под курсором).
+     */
     QPointF getSnappedPoint(const QPointF& worldPos) const;
 
-    //методы для трансформации координат
+    // Методы трансформации координат
+    
+    /**
+     * @brief Преобразовать координаты Мир -> Экран.
+     */
     QPointF worldToScreen(const QPointF& worldPos) const;
+
+    /**
+     * @brief Преобразовать координаты Экран -> Мир.
+     */
     QPointF screenToWorld(const QPointF& screenPos) const;
 
+    /**
+     * @brief Принудительно перерисовать холст.
+     */
     void update();
 
 public slots:

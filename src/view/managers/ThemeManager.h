@@ -15,25 +15,41 @@ class ThemeManager : public QObject
     Q_OBJECT
 
 public:
-    //static означает, что метод можно вызвать без создания экземпляра класса (1 экземпляр)
+    /**
+     * @brief Получить доступ к синглтону.
+     */
     static ThemeManager& instance();
 
-    //метод применения новой темы
+    /**
+     * @brief Применить тему оформления.
+     * @param themeName Имя темы (например, "Dark", "Light").
+     */
     void applyTheme(const QString& themeName);
 
-    //перегруженный метод для перекрашивания svg-файлов
-    //1) для простых файлов с одним цветом (возвращает QIcon)
+    /**
+     * @brief Перекрасить SVG иконку в один цвет.
+     * @param path Путь к файлу.
+     * @param color Цвет.
+     * @return Перекрашенная иконка (QIcon).
+     */
     static QIcon colorizeSvg(const QString& path, const QColor& color);
 
-    //2) для сложных файлов с несколькими цветами (возвращает QPixmap)
+    /**
+     * @brief Перекрасить SVG иконку с заменой цветов по карте.
+     * @param path Путь к файлу.
+     * @param colorMap Карта замены цветов (ключ -> цвет).
+     * @return Перекрашенное изображение (QPixmap).
+     */
     static QPixmap colorizeSvg(const QString& path, const QMap<QString, QColor>& colorMap);
 
-    //геттеры цвета иконок и цветов из мапы цветов
+    // Геттеры цвета иконок и цветов из мапы цветов
     QColor getIconColor() const;
     QColor getColor(const QString& key) const;
 
 signals:
-    //сигнал о том, что тема была применена
+    /**
+     * @brief Сигнал завершения применения темы.
+     */
     void themeApplied();
 
 private:

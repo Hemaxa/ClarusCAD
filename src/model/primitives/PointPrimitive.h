@@ -1,5 +1,5 @@
 //PointPrimitive - класс-контейнер для хранения координат точки
-//НЕ является примитивом сцены, просто хранит координаты (x, y)
+//не является примитивом сцены, просто хранит координаты (x, y)
 
 #pragma once
 
@@ -12,7 +12,11 @@ class PointPrimitive
 {
 
 public:
-    //конструктор с параметрами по умолчанию
+    /**
+     * @brief Конструктор точки.
+     * @param x Координата X.
+     * @param y Координата Y.
+     */
     PointPrimitive(double x = 0.0, double y = 0.0);
 
     //получение типа (для совместимости, но это НЕ примитив сцены)
@@ -22,8 +26,14 @@ public:
     //получение габаритов (точка не имеет размера)
     QRectF getBoundingBox() const;
 
-    //методы для установки глобальных единиц измерения углов
+    /**
+     * @brief Установить глобальную единицу измерения углов (Градусы/Радианы).
+     */
     static void setAngleUnit(AngleUnit unit);
+
+    /**
+     * @brief Получить текущую единицу измерения углов.
+     */
     static AngleUnit getAngleUnit();
 
     //геттеры и сеттеры
@@ -34,16 +44,31 @@ public:
     void setY(double y);
 
     //полярная система координат
+    /**
+     * @brief Получить полярный радиус.
+     */
     double getRadius() const;
+
+    /**
+     * @brief Получить полярный угол (в текущих единицах).
+     */
     double getAngle() const;
 
-    //метод конвертации полярных координат в декартовы
+    /**
+     * @brief Установить координаты через полярные значения.
+     * @param radius Полярный радиус.
+     * @param angle Полярный угол.
+     */
     void setPolar(double radius, double angle);
 
-    //конвертация в QPointF для удобства
+    /**
+     * @brief Конвертировать в QPointF.
+     */
     QPointF toPointF() const { return QPointF(m_x, m_y); }
 
-    //создание из QPointF
+    /**
+     * @brief Создать из QPointF.
+     */
     static PointPrimitive fromPointF(const QPointF& pt) { return PointPrimitive(pt.x(), pt.y()); }
 
 private:

@@ -11,17 +11,18 @@ class BasePrimitive;
 class Scene;
 
 // Типы привязок
+// Типы привязок
 enum class SnapType {
     None = 0,
-    Endpoint = 1 << 0,      // Концы отрезков, дуг
-    Midpoint = 1 << 1,      // Середина отрезка/дуги
-    Center = 1 << 2,        // Центр окружности/дуги/эллипса
-    Intersection = 1 << 3, // Пересечения примитивов
-    Perpendicular = 1 << 4,// Перпендикуляр к линии
-    Tangent = 1 << 5,      // Касательная к окружности/дуге
-    Quadrant = 1 << 6,     // Квадранты окружности (0°, 90°, 180°, 270°)
-    Grid = 1 << 7,         // Привязка к сетке
-    All = 0xFF             // Все типы
+    Endpoint = 1 << 0,      ///< Концы отрезков, дуг
+    Midpoint = 1 << 1,      ///< Середина отрезка/дуги
+    Center = 1 << 2,        ///< Центр окружности/дуги/эллипса
+    Intersection = 1 << 3,  ///< Пересечения примитивов
+    Perpendicular = 1 << 4, ///< Перпендикуляр к линии
+    Tangent = 1 << 5,       ///< Касательная к окружности/дуге
+    Quadrant = 1 << 6,      ///< Квадранты окружности (0°, 90°, 180°, 270°)
+    Grid = 1 << 7,          ///< Привязка к сетке
+    All = 0xFF              ///< Все типы
 };
 
 // Структура точки привязки
@@ -45,11 +46,19 @@ class SnapManager : public QObject
 public:
     static SnapManager& instance();
     
-    // Поиск ближайшей точки привязки
+    /**
+     * @brief Найти ближайшую точку привязки.
+     * @param mousePos Позиция мыши в мировых координатах.
+     * @param scene Сцена.
+     * @param zoomFactor Масштаб.
+     * @param tolerance Допуск (в пикселях).
+     */
     SnapPoint findNearestSnapPoint(const QPointF& mousePos, Scene* scene, 
                                     double zoomFactor, double tolerance = 15.0);
     
-    // Получить все точки привязки в радиусе
+    /**
+     * @brief Получить все точки привязки в радиусе.
+     */
     QVector<SnapPoint> findSnapPointsInRadius(const QPointF& mousePos, Scene* scene,
                                                double zoomFactor, double radius = 30.0);
     

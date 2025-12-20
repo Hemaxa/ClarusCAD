@@ -18,37 +18,43 @@ class PolygonPropertiesWidget : public BasePropertiesWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор виджета свойств многоугольника.
+     */
     explicit PolygonPropertiesWidget(QWidget* parent = nullptr);
 
-    //переопределение метода установки объектов
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
-    //сигнал для создания или обновления примитива "Многоугольник"
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(PolygonPrimitive* polygon, int sides, PolygonCreationMode type, 
                            const QColor& color, LineType lineType);
     
-    //сигналы для обновления параметров инструмента в реальном времени
+    /**
+     * @brief Сигнал изменения количества сторон (для инструмента).
+     */
     void sidesChanged(int sides);
+
+    /**
+     * @brief Сигнал изменения типа построения (для инструмента).
+     */
     void polygonTypeChanged(PolygonCreationMode type);
 
 private slots:
-    //слот для обработки нажатия кнопки "Создать"
     void onApplyButtonClicked();
-    
-    //слоты для обновления инструмента при изменении параметров
     void onSidesChanged(int value);
     void onTypeChanged(int index);
 
 private:
-    //реализация виртуального метода из BasePropertiesWidget
     void updateFieldValues() override;
 
-    //указатель на текущий редактируемый объект
-    PolygonPrimitive* m_currentPolygon = nullptr;
+    PolygonPrimitive* m_currentPolygon = nullptr; ///< Текущий редактируемый многоугольник
 
-    //поля объекта "Многоугольник"
-    QSpinBox* m_sidesSpinBox;      //количество углов
-    QComboBox* m_typeComboBox;     //тип (вписанный/описанный)
+    QSpinBox* m_sidesSpinBox;      ///< Количество углов
+    QComboBox* m_typeComboBox;     ///< Тип (вписанный/описанный)
 };

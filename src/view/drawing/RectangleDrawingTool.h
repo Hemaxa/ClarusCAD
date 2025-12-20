@@ -8,6 +8,11 @@
 class RectangleDrawingTool : public BaseDrawingTool
 {
 public:
-    // Объявление метода draw
+    /**
+     * @brief Отрисовать прямоугольник.
+     * @param painter QPainter.
+     * @param primitive Указатель на RectanglePrimitive.
+     * @param isSelected Флаг выделения.
+     */
     void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const override;
 };

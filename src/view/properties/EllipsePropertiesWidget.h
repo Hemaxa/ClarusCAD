@@ -11,10 +11,20 @@ class EllipsePropertiesWidget : public BasePropertiesWidget
 {
     Q_OBJECT
 public:
+    /**
+     * @brief Конструктор виджета свойств эллипса.
+     */
     explicit EllipsePropertiesWidget(QWidget* parent = nullptr);
+
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
 
 private slots:
@@ -23,7 +33,7 @@ private slots:
 private:
     void updateFieldValues() override;
 
-    EllipsePrimitive* m_currentEllipse = nullptr;
+    EllipsePrimitive* m_currentEllipse = nullptr; ///< Текущий редактируемый эллипс
 
     QLineEdit* m_centerX;
     QLineEdit* m_centerY;

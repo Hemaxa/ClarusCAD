@@ -10,22 +10,38 @@ class AnimationManager : public QToolButton
 {
     Q_OBJECT
 
-    //объявляется собственное свойство для анимации (будет вызывать метод iconScale)
+    // Объявляется собственное свойство для анимации (будет вызывать метод iconScale)
     Q_PROPERTY(qreal iconScale READ getIconScale WRITE setIconScale)
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор.
+     * @param iconPath Путь к иконке.
+     * @param toolTip Подсказка.
+     * @param shortcut Горячая клавиша.
+     * @param isCheckable Можно ли "нажать" (toggle).
+     * @param parent Родительский виджет.
+     */
     explicit AnimationManager(const QString& iconPath, const QString& toolTip, const QKeySequence& shortcut, bool isCheckable = true, QWidget* parent = nullptr);
 
-    //метод изменения цвета иконки
+    /**
+     * @brief Обновить цвет иконки.
+     * @param color Новый цвет.
+     */
     void updateIconColor(const QColor& color);
 
-    //геттер и сеттер
+    /**
+     * @brief Установить масштаб отображения иконки.
+     */
     void setIconScale(qreal scale);
+
+    /**
+     * @brief Получить текущий масштаб отображения иконки.
+     */
     qreal getIconScale() const;
 
 protected:
-    //переопределение методов работы с мышью
+    // Переопределение методов работы с мышью
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
 

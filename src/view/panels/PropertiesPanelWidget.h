@@ -34,32 +34,46 @@ class PropertiesPanelWidget : public BasePanelWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор.
+     */
     explicit PropertiesPanelWidget(const QString& title, QWidget* parent = nullptr);
 
 public slots:
-    //перегрузка слота showPropertiesFor
-    //слот, определяющий параметры какого объекта необходимо показать
-    //Теперь принимает СПИСОК
+    /**
+     * @brief Показать свойства для списка примитивов.
+     * @param primitives Список выделенных примитивов.
+     */
     void showPropertiesFor(const QList<BasePrimitive*>& primitives);
 
-    //слот, показывающий пустые параметры при создании нового объекта (при активации инструмента создания объекта)
+    /**
+     * @brief Показать пустые свойства для нового объекта определенного типа.
+     * @param type Тип создаваемого примитива.
+     */
     void showPropertiesFor(PrimitiveType type);
 
-    //слот, определяющий какую систему координат использовать
+    /**
+     * @brief Установить текущую систему координат.
+     */
     void setCoordinateSystem(CoordinateSystemType type);
 
-    //слот для обновления цветов иконок при смене темы
+    /**
+     * @brief Обновить иконки при смене темы.
+     */
     void updateColors();
 
 signals:
-    //сигнал, информирующий MainWindow о смене цвета в режиме создания объекта
+    /**
+     * @brief Сигнал смены цвета при создании нового объекта.
+     */
     void colorChanged(const QColor& color);
 
-    //сигнал, информирующий MainWindow о смене типа линии в режиме создания объекта
+    /**
+     * @brief Сигнал смены типа линии при создании нового объекта.
+     */
     void lineTypeChanged(LineType type);
 
-    //сигналы, информирующие MainWindow о создании или изменении объекта
+    // Сигналы, информирующие MainWindow о создании или изменении объекта (проксируются от виджетов свойств)
     void segmentPropertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
     void circlePropertiesApplied(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType);
     void rectanglePropertiesApplied(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, CornerType cornerType, double cornerRadius, const QColor& c, LineType t);
@@ -68,23 +82,25 @@ signals:
     void polygonPropertiesApplied(PolygonPrimitive* polygon, int sides, PolygonCreationMode type, const QColor& color, LineType lineType);
     void splinePropertiesApplied(SplinePrimitive* spline, bool closed, const QVector<QPointF>& controlPoints, const QColor& color, LineType lineType);
     
-    //сигналы для обновления параметров инструментов
+    // Сигналы для обновления параметров инструментов
     void polygonSidesChanged(int sides);
     void polygonTypeChanged(PolygonCreationMode type);
     void splineClosedChanged(bool closed);
     
-    //сигнал для применения общих свойств ко всем выделенным объектам
+    /**
+     * @brief Сигнал применения общих свойств (цвет, тип линии) для нескольких объектов.
+     */
     void commonPropertiesApplied(const QColor& color, int lineTypeId);
 
 private:
-    QStackedWidget* m_stack; //панель виджетов без содержимого
-    QWidget* m_emptyWidget; //пустой виджет
-    SegmentPropertiesWidget* m_segmentProperties; //виджет свойств объекта "Отрезок"
-    CirclePropertiesWidget* m_circleProperties; //виджет свойств объекта "Окружность"
+    QStackedWidget* m_stack;              ///< Стек виджетов свойств
+    QWidget* m_emptyWidget;               ///< Пустой виджет (когда ничего не выбрано)
+    SegmentPropertiesWidget* m_segmentProperties;
+    CirclePropertiesWidget* m_circleProperties;
     RectanglePropertiesWidget* m_rectProperties;
     ArcPropertiesWidget* m_arcProperties;
     EllipsePropertiesWidget* m_ellipseProperties;
     PolygonPropertiesWidget* m_polygonProperties;
     SplinePropertiesWidget* m_splineProperties;
-    CommonPropertiesWidget* m_commonProperties; //виджет общих свойств для мультивыделения
+    CommonPropertiesWidget* m_commonProperties; ///< Виджет общих свойств для мультивыделения
 };

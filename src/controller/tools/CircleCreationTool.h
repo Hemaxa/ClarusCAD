@@ -14,12 +14,19 @@ class CircleCreationTool : public BaseCreationTool
     Q_OBJECT
 
 public:
+public:
+    /**
+     * @brief Конструктор инструмента.
+     */
     explicit CircleCreationTool(QObject* parent = nullptr);
 
-    // Установка режима построения
+    /**
+     * @brief Установить режим построения окружности.
+     * @param mode Режим (Центр-Радиус, 2 точки, 3 точки, и т.д.).
+     */
     void setCreationMode(CircleCreationMode mode);
 
-    // Переопределение методов действий мыши
+    // Переопределение методов действия мыши
     void onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
     void onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
     void onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) override;
@@ -32,7 +39,10 @@ public:
     QColor getColor() const override;
 
 signals:
-    // Сигнал готовности данных (передает созданный примитив)
+    /**
+     * @brief Сигнал завершения создания окружности.
+     * @param circle Указатель на созданный примитив.
+     */
     void circleDataReady(CirclePrimitive* circle);
 
 private:

@@ -16,12 +16,20 @@ class CirclePropertiesWidget : public BasePropertiesWidget
     Q_OBJECT
 
 public:
+    /**
+     * @brief Конструктор виджета свойств окружности.
+     */
     explicit CirclePropertiesWidget(QWidget* parent = nullptr);
 
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
-    // Сигнал для обновления существующей окружности
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(CirclePrimitive* circle, const PointPrimitive& center, double radius, const QColor& color, LineType lineType);
 
 private slots:

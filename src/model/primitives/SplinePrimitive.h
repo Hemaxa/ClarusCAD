@@ -10,7 +10,14 @@
 class SplinePrimitive : public BasePrimitive
 {
 public:
+    /**
+     * @brief Конструктор сплайна (пустой).
+     */
     SplinePrimitive();
+
+    /**
+     * @brief Конструктор сплайна из контрольных точек.
+     */
     explicit SplinePrimitive(const QVector<QPointF>& controlPoints);
 
     // Переопределение типа
@@ -29,15 +36,36 @@ public:
     QVector<QPointF> getControlPoints() const { return m_controlPoints; }
     void setControlPoints(const QVector<QPointF>& points) { m_controlPoints = points; }
     
+    /**
+     * @brief Добавить контрольную точку в конец.
+     */
     void addControlPoint(const QPointF& point);
+
+    /**
+     * @brief Вставить контрольную точку по индексу.
+     */
     void insertControlPoint(int index, const QPointF& point);
+
+    /**
+     * @brief Удалить контрольную точку по индексу.
+     */
     void removeControlPoint(int index);
+
+    /**
+     * @brief Переместить контрольную точку.
+     */
     void moveControlPoint(int index, const QPointF& newPos);
     
     int getControlPointCount() const { return m_controlPoints.size(); }
 
-    // Флаг замкнутости
+    /**
+     * @brief Проверить, замкнут ли сплайн.
+     */
     bool isClosed() const { return m_closed; }
+
+    /**
+     * @brief Установить замкнутость сплайна.
+     */
     void setClosed(bool closed) { m_closed = closed; }
 
 private:

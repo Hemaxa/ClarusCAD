@@ -1,5 +1,3 @@
-// src/view/panels/NavigationPanelWidget.cpp
-
 #include "NavigationPanelWidget.h"
 #include "AnimationManager.h"
 

@@ -16,35 +16,38 @@ class SegmentPropertiesWidget : public BasePropertiesWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор виджета свойств отрезка.
+     */
     explicit SegmentPropertiesWidget(QWidget* parent = nullptr);
 
-    //переопределение метода установки объектов
+    /**
+     * @brief Установить редактируемые примитивы.
+     */
     void setPrimitives(const QList<BasePrimitive*>& primitives) override;
 
 signals:
-    //сигнал, для создания или обновления примитива "Отрезок"
+    /**
+     * @brief Сигнал применения данных (для создания или обновления).
+     */
     void propertiesApplied(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private slots:
-    //слот для обработки нажатия кнопки "Создать"
     void onApplyButtonClicked();
 
 private:
-    //реализация виртуального метода заполнения значениями полей ввода из BasePropertiesWidget
     void updateFieldValues() override;
 
-    //указатель на текущий редактируемый объект "Отрезок" (главный из выделенных)
-    SegmentPrimitive* m_currentSegment = nullptr;
+    SegmentPrimitive* m_currentSegment = nullptr; ///< Текущий редактируемый отрезок (главный из выделенных)
 
-    //поля объекта "Отрезок"
-    //декартова система координат
+    // Поля объекта "Отрезок"
+    // Декартова система координат
     QLineEdit* m_startXEdit;
     QLineEdit* m_startYEdit;
     QLineEdit* m_endXEdit;
     QLineEdit* m_endYEdit;
 
-    //полярная система координат
+    // Полярная система координат
     QLineEdit* m_startRadiusEdit;
     QLineEdit* m_startAngleEdit;
     QLineEdit* m_endRadiusEdit;

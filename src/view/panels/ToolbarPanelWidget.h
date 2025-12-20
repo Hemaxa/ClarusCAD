@@ -15,13 +15,17 @@ class ToolbarPanelWidget : public BasePanelWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор панели инструментов.
+     */
     explicit ToolbarPanelWidget(const QString& title, QWidget* parent = nullptr);
 
-    //метод снятия выделения с инструментов
+    /**
+     * @brief Снять визуальное выделение со всех инструментов.
+     */
     void clearSelection();
 
-    //геттры для указателей на кнопки
+    // Геттеры для доступа к кнопкам (например, для настройки горячих клавиш)
     QToolButton* getDeleteButton() const;
     QToolButton* getMoveButton() const;
     QToolButton* getCreateSegmentButton() const;
@@ -33,7 +37,7 @@ public:
     QToolButton* getCreateSplineButton() const;
 
 signals:
-    //сигналы нажатия соответствующих кнопок
+    // Сигналы активации инструментов
     void deleteToolActivated();
     void moveToolActivated();
     void segmentToolActivated();
@@ -45,10 +49,9 @@ signals:
     void splineToolActivated();
 
 private:
-    //группа для кнопок на панели инструментов
-    QButtonGroup* m_buttonGroup;
+    QButtonGroup* m_buttonGroup; ///< Группа кнопок для эксклюзивного выбора
 
-    //указатели на соответствующие кнопки
+    // Указатели на кнопки
     QToolButton* m_deleteBtn;
     QToolButton* m_moveBtn;
     QToolButton* m_createSegmentBtn;

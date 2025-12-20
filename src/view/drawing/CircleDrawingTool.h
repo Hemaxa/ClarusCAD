@@ -8,6 +8,11 @@
 class CircleDrawingTool : public BaseDrawingTool
 {
 public:
-    //переопределение метода draw
+    /**
+     * @brief Отрисовать окружность.
+     * @param painter QPainter.
+     * @param primitive Указатель на CirclePrimitive.
+     * @param isSelected Флаг выделения.
+     */
     void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const override;
 };

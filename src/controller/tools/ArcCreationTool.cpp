@@ -2,6 +2,7 @@
 #include "ArcPrimitive.h"
 #include "ViewportPanelWidget.h"
 #include "LineStyleManager.h"
+
 #include <QMouseEvent>
 #include <QtMath>
 #include <QPainter>

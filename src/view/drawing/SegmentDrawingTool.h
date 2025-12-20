@@ -9,6 +9,11 @@ class SegmentDrawingTool : public BaseDrawingTool
 {
 
 public:
-    //переопределние метода draw
+    /**
+     * @brief Отрисовать отрезок.
+     * @param painter QPainter.
+     * @param primitive Указатель на SegmentPrimitive.
+     * @param isSelected Флаг выделения.
+     */
     void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const override;
 };

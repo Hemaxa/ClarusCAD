@@ -7,7 +7,11 @@
 class EllipseCreationTool : public BaseCreationTool {
     Q_OBJECT
 public:
+    /**
+     * @brief Конструктор инструмента создания эллипса.
+     */
     explicit EllipseCreationTool(QObject* parent = nullptr);
+
     void onMousePress(QMouseEvent* e, Scene* s, ViewportPanelWidget* v) override;
     void onMouseMove(QMouseEvent* e, Scene* s, ViewportPanelWidget* v) override;
     void onMouseRelease(QMouseEvent* e, Scene* s, ViewportPanelWidget* v) override;
@@ -18,7 +22,13 @@ public:
     void setLineType(LineType t) override { m_currentLineType = t; }
 
 signals:
-    // Передаем параметры для создания
+    /**
+     * @brief Сигнал готовности параметров нового эллипса.
+     * @param center Центр.
+     * @param rx Радиус X.
+     * @param ry Радиус Y.
+     * @param rot Угол поворота.
+     */
     void ellipseDataReady(const PointPrimitive& center, double rx, double ry, double rot);
 
 private:

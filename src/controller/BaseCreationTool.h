@@ -19,35 +19,82 @@ class BaseCreationTool : public QObject
     Q_OBJECT
 
 public:
-    //конструктор и виртуальный деструктор
+    /**
+     * @brief Конструктор.
+     * @param parent Родительский объект.
+     */
     explicit BaseCreationTool(QObject* parent = nullptr) : QObject(parent) {}
+
+    /**
+     * @brief Виртуальный деструктор.
+     */
     virtual ~BaseCreationTool() = default;
 
-    //виртальные методы действий мыши
+    /**
+     * @brief Обработка нажатия кнопки мыши.
+     * @param event Событие мыши.
+     * @param scene Указатель на сцену.
+     * @param viewport Указатель на виджет просмотра.
+     */
     virtual void onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) = 0;
+
+    /**
+     * @brief Обработка перемещения мыши.
+     * @param event Событие мыши.
+     * @param scene Указатель на сцену.
+     * @param viewport Указатель на виджет просмотра.
+     */
     virtual void onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) = 0;
+
+    /**
+     * @brief Обработка отпускания кнопки мыши.
+     * @param event Событие мыши.
+     * @param scene Указатель на сцену.
+     * @param viewport Указатель на виджет просмотра.
+     */
     virtual void onMouseRelease(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) = 0;
 
-    //виртуальный метод очистки инструмента
+    /**
+     * @brief Сброс состояния инструмента.
+     * Вызывается при отмене операции или переключении инструментов.
+     */
     virtual void reset() {}
 
-    //виртуальный метод обработки клавиш
+    /**
+     * @brief Обработка нажатия клавиши клавиатуры.
+     * @param event Событие клавиатуры.
+     * @param scene Указатель на сцену.
+     * @param viewport Указатель на виджет просмотра.
+     */
     virtual void onKeyPress(QKeyEvent* event, Scene* scene, ViewportPanelWidget* viewport) {
         Q_UNUSED(event); Q_UNUSED(scene); Q_UNUSED(viewport);
     }
 
-    //виртуальный вспомогательный метод для дополнительной геометрии
+    /**
+     * @brief Отрисовка временной геометрии инструмента (предпросмотр).
+     * @param painter Объект QPainter для рисования.
+     */
     virtual void onPaint(QPainter& painter) { Q_UNUSED(painter); }
 
-    //виртуальный метод для установки цвета
+    /**
+     * @brief Установить текущий цвет для создаваемых объектов.
+     * @param color Цвет.
+     */
     virtual void setColor(const QColor& color) { Q_UNUSED(color); }
 
-    //виртуальный метод для установки типа линии
+    /**
+     * @brief Установить текущий тип линии для создаваемых объектов.
+     * @param type Тип линии.
+     */
     virtual void setLineType(LineType type) { Q_UNUSED(type); }
 
-    //виртуальный метод для получения установленного цвета
+    /**
+     * @brief Получить текущий цвет.
+     */
     virtual QColor getColor() const { return Qt::white; }
 
-    //виртуальный метод для получения типа линии
+    /**
+     * @brief Получить текущий тип линии.
+     */
     virtual LineType getLineType() const { return LineType::SolidMain; }
 };

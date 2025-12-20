@@ -24,24 +24,45 @@ public:
     explicit FlyoutToolButton(QWidget* parent = nullptr);
     ~FlyoutToolButton();
 
-    // Добавление режима в flyout панель
+    /**
+     * @brief Добавить режим во всплывающее меню.
+     * @param modeId ID режима.
+     * @param iconPath Путь к иконке.
+     * @param tooltip Подсказка.
+     */
     void addMode(int modeId, const QString& iconPath, const QString& tooltip);
     
-    // Установка текущего режима (меняет иконку основной кнопки)
+    /**
+     * @brief Установить текущий активный режим.
+     * Менят иконку основной кнопки.
+     */
     void setCurrentMode(int modeId);
+
+    /**
+     * @brief Получить текущий активный режим.
+     */
     int getCurrentMode() const;
 
-    // Задержка перед появлением flyout (мс)
+    /**
+     * @brief Установить задержку перед появлением меню (в мс).
+     */
     void setFlyoutDelay(int ms);
     
-    // Есть ли несколько режимов (для отрисовки треугольника)
+    /**
+     * @brief Проверить, есть ли несколько режимов (нужно ли рисовать индикатор).
+     */
     bool hasMultipleModes() const { return m_modes.size() > 1; }
 
 signals:
-    // Сигнал выбора режима (id режима)
+    /**
+     * @brief Сигнал выбора режима из меню.
+     * @param modeId ID выбранного режима.
+     */
     void modeActivated(int modeId);
     
-    // Сигнал клика по основной кнопке (без зажатия)
+    /**
+     * @brief Сигнал клика по основной кнопке (без долгого нажатия).
+     */
     void clicked();
 
 protected:

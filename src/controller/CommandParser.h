@@ -11,21 +11,27 @@
 #include <QColor>
 
 //структура для хранения информации о команде
+/**
+ * @brief Структура для хранения информации о синтаксисе команды.
+ */
 struct CommandInfo
 {
-    QString syntaxCartesian; //подсказка для декартовой системы координат
-    QString syntaxPolar; //подсказка для полярной системы координат
-    int argCount; //количество аргументов
+    QString syntaxCartesian; ///< Подсказка для декартовой системы
+    QString syntaxPolar;     ///< Подсказка для полярной системы
+    int argCount;            ///< Ожидаемое количество аргументов
 };
 
 //структура для хранения разобранной команды
+/**
+ * @brief Результат парсинга команды.
+ */
 struct ParsedCommand
 {
-    bool isValid = false; //флаг удачной обработки команды
-    QString name; //имя команды
-    QList<double> args; //список числовых аргументов команды
-    QColor color; //заданный цвет объекта
-    QString errorDescription; //текстовое описание ошибки
+    bool isValid = false;     ///< Успешен ли парсинг
+    QString name;             ///< Имя команды
+    QList<double> args;       ///< Числовые аргументы
+    QColor color;             ///< Цвет для создаваемого объекта (если указан)
+    QString errorDescription; ///< Текст ошибки
 };
 
 class CommandParser : public QObject
@@ -33,16 +39,26 @@ class CommandParser : public QObject
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор парсера.
+     */
     explicit CommandParser(QObject* parent = nullptr);
 
-    //главный метод парсинга строки
+    /**
+     * @brief Распарсить строку команды.
+     * @param commandString Строка ввода от пользователя.
+     * @return Структура ParsedCommand с результатом.
+     */
     ParsedCommand parse(const QString& commandString) const;
 
-    //геттер для подсказки
+    /**
+     * @brief Получить подсказку по синтаксису команды.
+     * @param commandName Имя команды.
+     * @param coordSystem Текущая система координат.
+     * @return Строка подсказки.
+     */
     QString getHint(const QString& commandName, CoordinateSystemType coordSystem) const;
 
 private:
-    //хранилище с информацией о всех известных командах
-    QMap<QString, CommandInfo> m_commandInfos;
+    QMap<QString, CommandInfo> m_commandInfos; ///< Реестр команд
 };

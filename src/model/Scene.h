@@ -13,22 +13,31 @@ class Scene
 {
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор сцены.
+     */
     Scene();
 
-    //метод добавления примитива в сцену
+    /**
+     * @brief Добавить примитив в сцену.
+     * @param primitive Уникальный указатель на добавляемый примитив.
+     * Сцена берет на себя владение объектом.
+     */
     void addPrimitive(std::unique_ptr<BasePrimitive> primitive);
 
-    //метод удаления примитива из сцены
+    /**
+     * @brief Удалить примитив из сцены.
+     * @param primitive Указатель на удаляемый примитив.
+     */
     void removePrimitive(BasePrimitive* primitive);
 
-    //метод получения доступа ко всем примитивам
+    /**
+     * @brief Получить список всех примитивов сцены.
+     * @return Константная ссылка на вектор уникальных указателей примитивов.
+     */
     const std::vector<std::unique_ptr<BasePrimitive>>& getPrimitives() const;
 
 private:
-    //хранилище всех объектов
-    std::vector<std::unique_ptr<BasePrimitive>> m_primitives;
-
-    //хранилище количетсва всех объектов для генерации уникальных имен
-    QMap<PrimitiveType, int> m_primitiveCounters;
+    std::vector<std::unique_ptr<BasePrimitive>> m_primitives; ///< Хранилище всех объектов
+    QMap<PrimitiveType, int> m_primitiveCounters;             ///< Счетчики объектов для генерации имен
 };

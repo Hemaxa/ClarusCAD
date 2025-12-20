@@ -15,7 +15,9 @@ class SegmentCreationTool : public BaseCreationTool
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор.
+     */
     explicit SegmentCreationTool(QObject* parent = nullptr);
 
     //переопределение методов действий мыши
@@ -39,7 +41,14 @@ public:
     void onPaint(QPainter& painter) override;
 
 signals:
-    //сигнал, сообщающий об окончании ввода параметров и передающий координаты
+    /**
+     * @brief Сигнал готовности данных отрезка.
+     * @param segment Указатель на созданный примитив (может быть nullptr).
+     * @param start Начальная точка.
+     * @param end Конечная точка.
+     * @param color Цвет.
+     * @param lineType Тип линии.
+     */
     void segmentDataReady(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private:

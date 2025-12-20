@@ -1,6 +1,7 @@
 //ArcCreationTool - инструмент создания дуги
 
 #pragma once
+
 #include "BaseCreationTool.h"
 #include "PointPrimitive.h"
 #include <QColor>
@@ -11,8 +12,15 @@ class ArcCreationTool : public BaseCreationTool
 {
     Q_OBJECT
 public:
+    /**
+     * @brief Конструктор инструмента создания дуги.
+     */
     explicit ArcCreationTool(QObject* parent = nullptr);
 
+    /**
+     * @brief Установить режим создания дуги.
+     * @param mode Режим (например, Центр-Старт-Конец или 3 точки).
+     */
     void setCreationMode(ArcCreationMode mode);
 
     void onMousePress(QMouseEvent* e, Scene* s, ViewportPanelWidget* v) override;
@@ -25,7 +33,10 @@ public:
     void setLineType(LineType type) override { m_currentLineType = type; }
 
 signals:
-    // Передаем готовый объект, так как расчеты дуги сложны
+    /**
+     * @brief Сигнал готовности новой дуги.
+     * @param arc Указатель на созданный примитив дуги.
+     */
     void arcDataReady(ArcPrimitive* arc);
 
 private:

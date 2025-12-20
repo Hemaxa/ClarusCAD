@@ -9,6 +9,11 @@
 class CirclePrimitive : public BasePrimitive
 {
 public:
+    /**
+     * @brief Конструктор окружности.
+     * @param center Центр окружности.
+     * @param radius Радиус окружности.
+     */
     CirclePrimitive(const PointPrimitive& center, double radius);
 
     PrimitiveType getType() const override { return PrimitiveType::Circle; };
@@ -25,16 +30,38 @@ public:
     QVector<QPointF> getSnapPoints() const override;
 
     // Геттеры/Сеттеры
+
+    /**
+     * @brief Получить центр окружности.
+     */
     const PointPrimitive& getCenter() const;
+
+    /**
+     * @brief Установить центр окружности.
+     */
     void setCenter(const PointPrimitive& center);
 
+    /**
+     * @brief Получить радиус.
+     */
     double getRadius() const;
+
+    /**
+     * @brief Установить радиус.
+     */
     void setRadius(double radius);
 
+    /**
+     * @brief Получить диаметр.
+     */
     double getDiameter() const;
+
+    /**
+     * @brief Установить диаметр (меняет радиус).
+     */
     void setDiameter(double diameter);
 
 private:
-    PointPrimitive m_center;
-    double m_radius;
+    PointPrimitive m_center; ///< Центр окружности
+    double m_radius;         ///< Радиус
 };

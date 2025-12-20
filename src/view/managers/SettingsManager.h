@@ -13,19 +13,32 @@ class SettingsManager : public QObject
     Q_OBJECT
 
 public:
-    //static означает, что метод можно вызвать без создания экземпляра класса (1 экземпляр)
+    /**
+     * @brief Получить доступ к синглтону.
+     */
     static SettingsManager& instance();
 
-    //методы загрузки и сохранения всех настроек
+    /**
+     * @brief Загрузить все настройки из хранилища.
+     */
     void loadSettings();
+
+    /**
+     * @brief Сохранить все текущие настройки.
+     */
     void saveSettings();
 
-    //геттеры и сеттеры для настроек
-    //тема приложения
+    // Геттеры и сеттеры для настроек
+    
+    /**
+     * @brief Установить имя текущей темы.
+     */
     void setThemeName(const QString& themeName);
     QString getThemeName() const;
 
-    //шаг сетки
+    /**
+     * @brief Установить шаг сетки.
+     */
     void setGridStep(int step);
     int getGridStep() const;
 

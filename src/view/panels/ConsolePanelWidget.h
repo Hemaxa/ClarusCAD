@@ -15,18 +15,28 @@ class ConsolePanelWidget : public BasePanelWidget
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор панели консоли.
+     * @param title Заголовок панели.
+     * @param parent Родительский виджет.
+     */
     explicit ConsolePanelWidget(const QString& title, QWidget* parent = nullptr);
 
 signals:
-    //сигнал отправки команды нажатием Enter
+    /**
+     * @brief Сигнал отправки команды.
+     * Инициируется нажатием Enter в поле ввода.
+     * @param command Распаршенная команда.
+     */
     void commandParsed(const ParsedCommand& command);
 
 private slots:
-    //слот обработки нажатия Enter
+    /**
+     * @brief Слот обработки нажатия Enter в поле ввода.
+     */
     void onReturnPressed();
 
 private:
-    QLineEdit* m_commandInput; //указатель на поле текста
-    CommandParser* m_commandParser; //указатель на парсер команд
+    QLineEdit* m_commandInput; ///< Поле ввода текста команды
+    CommandParser* m_commandParser; ///< Парсер команд
 };

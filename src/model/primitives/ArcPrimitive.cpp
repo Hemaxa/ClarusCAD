@@ -1,5 +1,6 @@
 #include "ArcPrimitive.h"
 #include "LineStyleManager.h"
+
 #include <cmath>
 
 ArcPrimitive::ArcPrimitive(const PointPrimitive& center, double radius, double startAngle, double spanAngle)

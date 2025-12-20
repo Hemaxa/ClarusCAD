@@ -14,7 +14,9 @@ class MoveTool : public BaseCreationTool
     Q_OBJECT
 
 public:
-    //конструктор
+    /**
+     * @brief Конструктор инструмента перемещения (панорамирования).
+     */
     explicit MoveTool(QObject* parent = nullptr);
 
     //переопределение методов действий мыши
@@ -25,21 +27,33 @@ public:
     //переопределение метода очистки инструмента
     void reset() override;
 
-    //метод активации активации инструмента
+    /**
+     * @brief Активировать инструмент перемещения.
+     * @param viewport Виджет, к которому привязывается перемещение.
+     */
     void activate(ViewportPanelWidget* viewport);
 
-    //метод деактивации инструмента
+    /**
+     * @brief Деактивировать инструмент.
+     */
     void deactivate();
 
-    //геттер для проверки состояния
+    /**
+     * @brief Проверить, активен ли инструмент.
+     */
     bool isActive() const;
 
 public slots:
-    //слот, получающий новую позицию мыши от ViewportPanelWidget
+    /**
+     * @brief Слот обновления позиции мыши (для авто-панорамирования у краев).
+     * @param screenPos Позиция курсора на экране.
+     */
     void updateMousePosition(const QPoint& screenPos);
 
 private slots:
-    //слот, понарамирующий сцену
+    /**
+     * @brief Слот таймер для плавного панорамирования.
+     */
     void onPanTimerTimeout();
 
 private:

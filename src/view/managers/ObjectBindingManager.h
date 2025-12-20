@@ -13,21 +13,42 @@ class ObjectBindingManager : public QObject
     Q_OBJECT
 
 public:
-    //доступ к единственному экземпляру
+    /**
+     * @brief Получить доступ к синглтону.
+     */
     static ObjectBindingManager& instance();
 
-    //основной метод: возвращает скорректированную точку (к сетке или объекту)
-    //excludePrimitive - примитив, который нужно игнорировать (например, тот, который сейчас перемещаем)
+    /**
+     * @brief Получить скорректированную точку с учетом привязок.
+     * @param currentPos Текущая позиция курсора.
+     * @param scene Сцена.
+     * @param zoomFactor Коэффициент зума.
+     * @param excludePrimitive Примитив, который нужно игнорировать (например, перемещаемый).
+     * @return Скорректированная точка (прилипшая к сетке или объекту).
+     */
     QPointF getSnappedPoint(const QPointF& currentPos, const Scene* scene, double zoomFactor, BasePrimitive* excludePrimitive = nullptr) const;
 
-    //методы управления состоянием привязок
+    // Методы управления состоянием привязок
+    
+    /**
+     * @brief Включить/выключить привязку к сетке.
+     */
     void setGridSnap(bool enabled);
+    
     bool isGridSnapEnabled() const;
 
+    /**
+     * @brief Включить/выключить привязку к примитивам.
+     */
     void setPrimitiveSnap(bool enabled);
+    
     bool isPrimitiveSnapEnabled() const;
 
+    /**
+     * @brief Установить шаг сетки.
+     */
     void setGridStep(int step);
+    
     int getGridStep() const;
 
     //расчет динамического шага сетки (для отрисовки во Viewport)

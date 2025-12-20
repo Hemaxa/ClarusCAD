@@ -12,10 +12,13 @@
 class QPainter;
 
 // Структура пользовательского стиля линии
+/**
+ * @brief Структура пользовательского стиля линии.
+ */
 struct CustomLineStyle {
-    QString name;
-    QVector<qreal> pattern;
-    double thickness = -1.0;  // -1 означает использование глобальной толщины
+    QString name;               ///< Имя стиля
+    QVector<qreal> pattern;     ///< Шаблон штрихов и пробелов
+    double thickness = -1.0;    ///< Толщина (-1.0 означает использование глобальной толщины)
 };
 
 class LineStyleManager : public QObject
@@ -23,24 +26,45 @@ class LineStyleManager : public QObject
     Q_OBJECT
 
 public:
+    /**
+     * @brief Получить доступ к синглтону.
+     */
     static LineStyleManager& instance();
 
+    /**
+     * @brief Отрисовка линии.
+     * @param painter QPainter.
+     * @param start Начало.
+     * @param end Конец.
+     * @param typeId ID стиля линии.
+     * @param color Цвет.
+     * @param isSelected Выделена ли.
+     */
     void drawLine(QPainter& painter, const QPointF& start, const QPointF& end,
                   int typeId, const QColor& color, bool isSelected = false) const;
 
+    /**
+     * @brief Отрисовка эллипса/окружности.
+     */
     void drawEllipse(QPainter& painter, const QPointF& center, double rx, double ry,
                      int typeId, const QColor& color, bool isSelected = false) const;
 
-    // Draws arc with wave/zigzag support
+    /**
+     * @brief Отрисовка дуги с поддержкой спецэффектов (волна/зигзаг).
+     */
     void drawArc(QPainter& painter, const QPointF& center, double radius,
                  double startAngle, double spanAngle,
                  int typeId, const QColor& color, bool isSelected = false) const;
 
-    // Draws path (for rectangles, polygons) with wave/zigzag support
+    /**
+     * @brief Отрисовка произвольного пути (для полигонов, прямоугольников).
+     */
     void drawPath(QPainter& painter, const QPainterPath& path,
                   int typeId, const QColor& color, bool isSelected = false) const;
 
-    // Получение пера для отрисовки
+    /**
+     * @brief Получить перо (QPen) для отрисовки.
+     */
     QPen getPen(int typeId, const QColor& color, bool isSelected) const;
 
     // Версии с поддержкой непрерывной фазы (для криволинейных примитивов)

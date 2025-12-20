@@ -20,52 +20,88 @@ class BasePropertiesWidget : public QWidget
     Q_OBJECT
 
 public:
-    //explicit запрещает неявное преобразование типов для конструктора
+    /**
+     * @brief Конструктор виджета свойств.
+     */
     explicit BasePropertiesWidget(QWidget* parent = nullptr);
 
-    //virtual означает, что деструктор создается автоматически из унаследованного класса
+    /**
+     * @brief Виртуальный деструктор.
+     */
     virtual ~BasePropertiesWidget() = default;
 
-    //установка списка примитивов для редактирования (множественное выделение)
+    /**
+     * @brief Установить список примитивов для редактирования.
+     * Поддерживает множественное выделение.
+     * @param primitives Список указателей на примитивы.
+     */
     virtual void setPrimitives(const QList<BasePrimitive*>& primitives);
 
-    //установка типа системы координат
+    /**
+     * @brief Переключить отображаемую систему координат.
+     * @param type Тип системы координат (Декартова/Полярная).
+     */
     virtual void setCoordinateSystem(CoordinateSystemType type);
 
-    //метод обновления цвета
+    /**
+     * @brief Обновить цвет в интерфейсе (вызывается извне).
+     * @param color Новый цвет.
+     * @param isMixed Если true, значит выбрано несколько объектов с разными цветами.
+     */
     void updateColor(const QColor& color, bool isMixed = false);
 
-    //метод обновления типа линии
+    /**
+     * @brief Обновить тип линии в интерфейсе (вызывается извне).
+     * @param typeId ID типа линии.
+     * @param isMixed Если true, значит выбрано несколько объектов с разными типами линий.
+     */
     void updateLineType(int typeId, bool isMixed = false);
 
 signals:
-    //сигнал, информирующий о выборе цвета для примитва
+    /**
+     * @brief Сигнал изменения цвета пользователем.
+     * @param color Выбранный цвет.
+     */
     void colorChanged(const QColor& color);
 
-    //сигнал, информирующий о выборе типа линии для примитва
+    /**
+     * @brief Сигнал изменения типа линии пользователем.
+     * @param type Выбранный тип линии.
+     */
     void lineTypeChanged(LineType type); //Оставляем LineType для обратной совместимости сигналов
 
 public slots:
-    //слот, вызываемый при смене темы для перекраски всех иконок
+    /**
+     * @brief Слот, вызываемый при смене темы для перекраски иконок.
+     */
     void updateColors();
 
 protected slots:
-    //слот нажатия на кнопку изменения цвета
+    /**
+     * @brief Слот обработки нажатия на кнопку выбора цвета.
+     */
     void onColorButtonClicked();
 
-    //слот нажатия на панель выбора типа линии
+    /**
+     * @brief Слот обработки выбора типа линии из выпадающего списка.
+     * @param index Индекс выбранного элемента.
+     */
     void onLineTypeBoxClicked(int index);
 
 protected:
-    //метод обновления полей ввода
+    /**
+     * @brief Чистый виртуальный метод обновления значений полей ввода.
+     * Реализуется в конкретных виджетах (круг, отрезок и т.д.) для заполнения полей данными из m_currentPrimitive.
+     */
     virtual void updateFieldValues() = 0;
 
-    //метод заполнения вкладки с типами линий
+    /**
+     * @brief Заполнить выпадающий список типов линий доступными стилями.
+     */
     void populateLineTypeComboBox();
 
-    //список редактируемых объектов
-    QList<BasePrimitive*> m_selectedPrimitives;
-    BasePrimitive* m_currentPrimitive = nullptr; //Указатель на "главный" объект (обычно последний) для чтения геометрии
+    QList<BasePrimitive*> m_selectedPrimitives; ///< Список редактируемых объектов
+    BasePrimitive* m_currentPrimitive = nullptr; ///< Указатель на "главный" объект (обычно последний) для чтения геометрии
 
     CoordinateSystemType m_selectedCoordSystem;
     QColor m_selectedColor;

@@ -7,6 +7,11 @@
 class ArcDrawingTool : public BaseDrawingTool
 {
 public:
-    // Реализация метода отрисовки
+    /**
+     * @brief Отрисовать дугу.
+     * @param painter QPainter.
+     * @param primitive Указатель на ArcPrimitive.
+     * @param isSelected Флаг выделения.
+     */
     void draw(QPainter& painter, BasePrimitive* primitive, bool isSelected = false) const override;
 };

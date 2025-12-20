@@ -12,6 +12,10 @@ class PolygonCreationTool : public BaseCreationTool
     Q_OBJECT
 
 public:
+public:
+    /**
+     * @brief Конструктор.
+     */
     explicit PolygonCreationTool(QObject* parent = nullptr);
 
     // Переопределение методов мыши
@@ -27,13 +31,32 @@ public:
     QColor getColor() const override;
 
     // Настройки построения
+    
+    /**
+     * @brief Установить количество сторон многоугольника.
+     */
     void setSides(int sides);
+
+    /**
+     * @brief Получить количество сторон.
+     */
     int getSides() const;
     
+    /**
+     * @brief Установить тип многоугольника (вписанный/описанный).
+     */
     void setPolygonType(PolygonCreationMode mode);
+
+    /**
+     * @brief Получить текущий тип многоугольника.
+     */
     PolygonCreationMode getPolygonType() const;
 
 signals:
+    /**
+     * @brief Сигнал завершения создания многоугольника.
+     * @param polygon Указатель на созданный примитив.
+     */
     void polygonDataReady(PolygonPrimitive* polygon);
 
 private:

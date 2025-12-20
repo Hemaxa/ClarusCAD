@@ -156,7 +156,7 @@ void CircleCreationTool::onPaint(QPainter& painter)
         painter.setPen(guidePen);
         QPointF opposite = center - (current - center);
         painter.drawLine(opposite, current);
-    }
+    } 
     else if (m_mode == CircleCreationMode::TwoPoints) {
         center = (p1Pt + current) / 2.0;
         radius = QLineF(p1Pt, current).length() / 2.0;

@@ -7,8 +7,16 @@
 class RectangleCreationTool : public BaseCreationTool {
     Q_OBJECT
 public:
+public:
+    /**
+     * @brief Конструктор инструмента.
+     */
     explicit RectangleCreationTool(QObject* parent = nullptr);
 
+    /**
+     * @brief Установить режим создания прямоугольника.
+     * @param mode Режим (например, по двум точкам).
+     */
     void setCreationMode(RectangleCreationMode mode);
 
     void onMousePress(QMouseEvent* e, Scene* s, ViewportPanelWidget* v) override;
@@ -21,7 +29,13 @@ public:
     void setLineType(LineType type) override { m_currentLineType = type; }
 
 signals:
-    // Сигнал передает параметры для создания прямоугольника в MainWindow
+    /**
+     * @brief Сигнал готовности данных прямоугольника.
+     * @param center Центр прямоугольника.
+     * @param width Ширина.
+     * @param height Высота.
+     * @param rotation Угол поворота.
+     */
     void rectangleDataReady(const PointPrimitive& center, double width, double height, double rotation);
 
 private:

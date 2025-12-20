@@ -15,51 +15,113 @@ class BasePrimitive
 {
 
 public:
-    //виртуальные деструктор
+    /**
+     * @brief Виртуальный деструктор.
+     */
     virtual ~BasePrimitive() = default;
 
-    //виртуальные методы получения общей характеристики примитива
+    /**
+     * @brief Получить тип примитива.
+     * @return Тип примитива из перечисления PrimitiveType.
+     */
     virtual PrimitiveType getType() const { return PrimitiveType::Generic; }
+
+    /**
+     * @brief Получить строковое название типа примитива.
+     * @return Название типа (например, "Отрезок", "Окружность").
+     */
     virtual QString getTypeName() const { return "Примитив"; }
 
-    //виртуальные методы задания и получения имени примитива
+    /**
+     * @brief Установить имя примитива.
+     * @param name Новое имя.
+     */
     virtual void setName(const QString& name) { m_name = name; }
+
+    /**
+     * @brief Получить имя примитива.
+     * @return Имя примитива.
+     */
     virtual QString getName() const { return m_name; }
 
-    //виртуальные методы задания и получения цвета примитива
+    /**
+     * @brief Установить цвет примитива.
+     * @param color Новый цвет.
+     */
     virtual void setColor(const QColor& color) { m_color = color; }
+
+    /**
+     * @brief Получить текущий цвет примитива.
+     * @return Цвет примитива.
+     */
     virtual QColor getColor() const { return m_color; }
 
-    //виртуальные методы задания и получения типа линии примитива
+    /**
+     * @brief Установить ID типа линии.
+     * @param typeId ID типа линии (из LineType или пользовательский).
+     */
     virtual void setLineType(int typeId) { m_lineTypeId = typeId; }
+
+    /**
+     * @brief Получить ID типа линии.
+     * @return ID типа линии.
+     */
     virtual int getLineType() const { return m_lineTypeId; }
 
-    //перегрузка метода задания типа линии для пользовательских стилей (enum)
+    /**
+     * @brief Установить тип линии через enum LineType.
+     * @param type Тип линии.
+     */
     void setLineType(LineType type) { m_lineTypeId = static_cast<int>(type); }
 
     // --- НОВЫЕ МЕТОДЫ SMART MODEL ---
 
-    //1. Отрисовка (примитив знает как рисовать себя через LineStyleManager)
-    //isSelected - флаг выделения (рисует подсветку)
+    /**
+     * @brief Отрисовка примитива.
+     * @param painter Объект QPainter для рисования.
+     * @param isSelected Флаг выделения (если true, рисуется с подсветкой).
+     */
     virtual void draw(QPainter& painter, bool isSelected) const = 0;
 
-    //2. Габариты (Axis Aligned Bounding Box)
+    /**
+     * @brief Получить ограничивающий прямоугольник (AABB).
+     * @return Прямоугольник QRectF, охватывающий примитив.
+     */
     virtual QRectF getBoundingBox() const = 0;
 
-    //3. Проверка попадания кликом (для удаления и точечного выделения)
+    /**
+     * @brief Проверка попадания точки в примитив.
+     * @param point Точка клика.
+     * @param tolerance Допуск (расстояние), в пределах которого считается попадание.
+     * @return true, если точка попадает в примитив, иначе false.
+     */
     virtual bool hitTest(const QPointF& point, double tolerance) const = 0;
 
-    //4. Проверка пересечения с рамкой (выделение Crossing / Зеленая рамка)
+    /**
+     * @brief Проверка пересечения примитива с прямоугольной областью.
+     * Используется для выделения рамкой (Crossing selection).
+     * @param rect Прямоугольная область.
+     * @return true, если примитив пересекается с областью или находится внутри неё.
+     */
     virtual bool intersects(const QRectF& rect) const = 0;
 
-    //5. Проверка нахождения внутри рамки (выделение Window / Синяя рамка)
+    /**
+     * @brief Проверка полного нахождения примитива внутри прямоугольной области.
+     * Используется для выделения рамкой (Window selection).
+     * @param rect Прямоугольная область.
+     * @return true, если примитив полностью внутри области.
+     */
     virtual bool inside(const QRectF& rect) const = 0;
 
-    //6. Точки привязки для SnapManager (концы, середины, центры)
+    /**
+     * @brief Получить ключевые точки привязки (Snap Points).
+     * Например: концы отрезка, середина, центр окружности, квадранты.
+     * @return Вектор точек привязки.
+     */
     virtual QVector<QPointF> getSnapPoints() const = 0;
 
 private:
-    QString m_name; //имя примитива
-    QColor m_color = Qt::white; //цвет примитива
-    int m_lineTypeId = static_cast<int>(LineType::SolidMain); //тип линии примитва
+    QString m_name;                                         ///< Имя примитива
+    QColor m_color = Qt::white;                             ///< Цвет примитива
+    int m_lineTypeId = static_cast<int>(LineType::SolidMain); ///< Тип линии примитива
 };
