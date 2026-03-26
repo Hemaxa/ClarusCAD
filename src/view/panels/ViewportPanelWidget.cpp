@@ -71,6 +71,20 @@ void ViewportPanelWidget::onCameraUpdated()
     update(); // (update() вызывает canvas()->update())
 }
 
+void ViewportPanelWidget::keyPressEvent(QKeyEvent* event)
+{
+    if (m_activeTool) {
+        // Qt creates events as accepted by default. 
+        // We ignore it so that if the tool doesn't explicitly accept it, it propagates to BasePanelWidget.
+        event->ignore();
+        m_activeTool->onKeyPress(event, m_scene, this);
+        if (event->isAccepted()) {
+            return;
+        }
+    }
+    BasePanelWidget::keyPressEvent(event);
+}
+
 bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
 {
     if (obj == canvas()) {

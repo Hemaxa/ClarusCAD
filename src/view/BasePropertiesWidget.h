@@ -14,6 +14,7 @@ class QFormLayout;
 class QStackedWidget;
 class QLabel;
 class QComboBox;
+class QLineEdit;
 
 class BasePropertiesWidget : public QWidget
 {
@@ -57,6 +58,13 @@ public:
      */
     void updateLineType(int typeId, bool isMixed = false);
 
+    /**
+     * @brief Обновить текст слоя в интерфейсе.
+     * @param name Название слоя.
+     * @param isMixed Если true, значит объекты на разных слоях.
+     */
+    void updateLayer(const QString& name, bool isMixed = false);
+
 signals:
     /**
      * @brief Сигнал изменения цвета пользователем.
@@ -69,6 +77,12 @@ signals:
      * @param type Выбранный тип линии.
      */
     void lineTypeChanged(LineType type); //Оставляем LineType для обратной совместимости сигналов
+
+    /**
+     * @brief Сигнал изменения слоя.
+     * @param name Название слоя.
+     */
+    void layerChanged(const QString& name);
 
 public slots:
     /**
@@ -88,6 +102,11 @@ protected slots:
      */
     void onLineTypeBoxClicked(int index);
 
+    /**
+     * @brief Слот обработки изменения имени слоя.
+     */
+    void onLayerNameChanged();
+
 protected:
     /**
      * @brief Чистый виртуальный метод обновления значений полей ввода.
@@ -106,6 +125,7 @@ protected:
     CoordinateSystemType m_selectedCoordSystem;
     QColor m_selectedColor;
     int m_selectedLineTypeId; //int для поддержки custom styles
+    QString m_selectedLayerName;
 
     //виджеты для колонок
     QWidget* m_centralColumn; //центральная колонка (параметры)
@@ -118,5 +138,6 @@ protected:
     //интерфейсы взаимодействия
     QPushButton* m_colorButton;
     QComboBox* m_lineTypeComboBox;
+    QLineEdit* m_layerLineEdit;
     QPushButton* m_applyButton;
 };

@@ -51,25 +51,8 @@ void RectanglePrimitive::draw(QPainter& painter, bool isSelected) const {
     t.rotate(m_rotation);
     path = t.map(path);
 
-    // Рисуем
-    // Для прямоугольников LineStyleManager пока не поддерживает "волны" на path,
-    // но мы можем использовать getPen.
-    QPen pen = LineStyleManager::instance().getPen(getLineType(), getColor(), false);
-
-    if (isSelected) {
-        QPen hPen = pen;
-        hPen.setWidthF(pen.widthF() + 8.0);
-        QColor c = getColor();
-        c.setAlpha(100);
-        hPen.setColor(c);
-        painter.setPen(hPen);
-        painter.setBrush(Qt::NoBrush);
-        painter.drawPath(path);
-    }
-
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
-    painter.drawPath(path);
+    // Рисуем используя LineStyleManager для поддержки всех типов линий (волны, зигзаги и т.д.)
+    LineStyleManager::instance().drawPath(painter, path, getLineType(), getColor(), isSelected);
 }
 
 bool RectanglePrimitive::hitTest(const QPointF& point, double tolerance) const {

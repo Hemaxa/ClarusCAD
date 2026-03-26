@@ -64,6 +64,10 @@ public slots:
 
 signals:
     /**
+     * @brief Сигнал изменения слоя.
+     */
+    void layerChanged(const QString& name);
+    /**
      * @brief Сигнал смены цвета при создании нового объекта.
      */
     void colorChanged(const QColor& color);

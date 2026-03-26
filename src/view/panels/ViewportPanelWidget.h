@@ -112,6 +112,9 @@ signals:
 private slots:
     void onCameraUpdated();
 
+protected:
+    void keyPressEvent(QKeyEvent* event) override;
+
 private:
     Scene* m_scene = nullptr;
     BasePrimitive* m_selectedPrimitive = nullptr;

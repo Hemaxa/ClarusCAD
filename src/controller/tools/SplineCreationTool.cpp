@@ -52,15 +52,22 @@ void SplineCreationTool::onKeyPress(QKeyEvent* event, Scene* scene, ViewportPane
     
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         finishSpline();
+        event->accept();
     }
     else if (event->key() == Qt::Key_Escape) {
-        reset();
-        if (viewport) viewport->update();
+        if (!m_controlPoints.isEmpty()) {
+            reset();
+            if (viewport) viewport->update();
+            event->accept();
+        } else {
+            event->ignore();
+        }
     }
     else if (event->key() == Qt::Key_Backspace && !m_controlPoints.isEmpty()) {
         // Удалить последнюю точку
         m_controlPoints.removeLast();
         if (viewport) viewport->update();
+        event->accept();
     }
 }
 

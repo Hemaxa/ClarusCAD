@@ -69,10 +69,22 @@ public:
     virtual int getLineType() const { return m_lineTypeId; }
 
     /**
-     * @brief Установить тип линии через enum LineType.
+     * @brief Установить ID типа линии через enum LineType.
      * @param type Тип линии.
      */
     void setLineType(LineType type) { m_lineTypeId = static_cast<int>(type); }
+
+    /**
+     * @brief Установить имя слоя.
+     * @param name Название слоя.
+     */
+    virtual void setLayerName(const QString& name) { m_layerName = name; }
+
+    /**
+     * @brief Получить имя слоя.
+     * @return Название слоя.
+     */
+    virtual QString getLayerName() const { return m_layerName; }
 
     // --- НОВЫЕ МЕТОДЫ SMART MODEL ---
 
@@ -122,6 +134,7 @@ public:
 
 private:
     QString m_name;                                         ///< Имя примитива
+    QString m_layerName = "0";                              ///< Имя слоя (по умолчанию "0")
     QColor m_color = Qt::white;                             ///< Цвет примитива
     int m_lineTypeId = static_cast<int>(LineType::SolidMain); ///< Тип линии примитива
 };

@@ -49,12 +49,8 @@ git clone https://github.com/Hemaxa/ClarusCAD.git
 cd ClarusCAD
 mkdir build && cd build
 cmake ..
-make -j$(nproc)
-```
-
-На macOS:
-```bash
-./ClarusCAD.app/Contents/MacOS/ClarusCAD
+cmake --build build -j$(sysctl -n hw.ncpu) 
+.build/ClarusCAD.app/Contents/MacOS/ClarusCAD
 ```
 
 ## Структура проекта

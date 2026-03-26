@@ -21,6 +21,11 @@
 #include "LineStyleManager.h"
 #include "ThemeManager.h"
 #include "SettingsManager.h"
+#include "DxfExporter.h"
+#include "DxfImporter.h"
+
+#include <QFileDialog>
+#include <QMessageBox>
 
 #include <QDockWidget>
 #include <QMenuBar>
@@ -151,6 +156,7 @@ void MainWindow::createConnections()
     //панель свойств сообщает об изменении данных (параметров) при создании нового примитива -> в главном окне вызываются слот установки параметра
     connect(m_propertiesPanel, &PropertiesPanelWidget::colorChanged, this, &MainWindow::onColorChanged);
     connect(m_propertiesPanel, &PropertiesPanelWidget::lineTypeChanged, this, &MainWindow::onLineTypeChanged);
+    connect(m_propertiesPanel, &PropertiesPanelWidget::layerChanged, this, &MainWindow::onLayerChanged);
 
     //- ToolbarPanelWidget -
     connect(m_toolbarPanel, &ToolbarPanelWidget::deleteToolActivated, this, &MainWindow::activateDeleteTool);
@@ -197,21 +203,20 @@ void MainWindow::createConnections()
     //- Tools -
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
     connect(m_circleCreationTool, &CircleCreationTool::circleDataReady, this, [this](CirclePrimitive* circle){
-        // Сигнал из тула передает уже готовый объект, используем общий метод добавления
-        // Или вызываем applyCircleChanges с nullptr?
-        // Лучше использовать addPrimitiveToScene, так как тул уже создал объект в куче
+        circle->setLayerName(m_currentLayer);
         addPrimitiveToScene(circle);
     });
     connect(m_rectCreationTool, &RectangleCreationTool::rectangleDataReady, this, [this](const PointPrimitive& center, double w, double h, double rot){
-        // Создаем примитив! Раньше тут было пусто.
         auto* rect = new RectanglePrimitive(center, w, h, rot);
         rect->setColor(m_rectCreationTool->getColor());
         rect->setLineType((int)m_rectCreationTool->getLineType());
+        rect->setLayerName(m_currentLayer);
         addPrimitiveToScene(rect);
     });
 
     // Коннект для ДУГИ (оставляем, он был верным)
     connect(m_arcCreationTool, &ArcCreationTool::arcDataReady, this, [this](ArcPrimitive* arc){
+        arc->setLayerName(m_currentLayer);
         addPrimitiveToScene(arc);
     });
 
@@ -220,6 +225,7 @@ void MainWindow::createConnections()
         auto* ell = new EllipsePrimitive(center, rx, ry, rot);
         ell->setColor(m_ellipseCreationTool->getColor());
         ell->setLineType((int)m_ellipseCreationTool->getLineType());
+        ell->setLayerName(m_currentLayer);
         addPrimitiveToScene(ell);
     });
 
@@ -234,14 +240,19 @@ void MainWindow::createConnections()
 
     // Коннект для МНОГОУГОЛЬНИКА
     connect(m_polygonCreationTool, &PolygonCreationTool::polygonDataReady, this, [this](PolygonPrimitive* polygon){
+        polygon->setLayerName(m_currentLayer);
         addPrimitiveToScene(polygon);
     });
 
     // Связь кнопки на панели инструментов с активацией многоугольника
     connect(m_toolbarPanel, &ToolbarPanelWidget::polygonToolActivated, this, &MainWindow::activatePolygonTool);
 
+    // Связь панели свойств с методом применения изменений многоугольника
+    connect(m_propertiesPanel, &PropertiesPanelWidget::polygonPropertiesApplied, this, &MainWindow::applyPolygonChanges);
+
     // Коннект для СПЛАЙНА
     connect(m_splineCreationTool, &SplineCreationTool::splineDataReady, this, [this](SplinePrimitive* spline){
+        spline->setLayerName(m_currentLayer);
         addPrimitiveToScene(spline);
     });
 
@@ -296,12 +307,21 @@ void MainWindow::createActions()
     m_settingsAction->setShortcut(QKeySequence::Preferences);
     m_settingsAction->setMenuRole(QAction::PreferencesRole);
     connect(m_settingsAction, &QAction::triggered, this, &MainWindow::openSettingsWindow);
+
+    m_exportDxfAction = new QAction("Экспорт в DXF...", this);
+    connect(m_exportDxfAction, &QAction::triggered, this, &MainWindow::onExportDxf);
+
+    m_importDxfAction = new QAction("Импорт из DXF...", this);
+    connect(m_importDxfAction, &QAction::triggered, this, &MainWindow::onImportDxf);
 }
 
 void MainWindow::createMenus()
 {
     //создание меню и добавление в них параметров
     QMenu* fileMenu = menuBar()->addMenu("Файл");
+    fileMenu->addAction(m_exportDxfAction);
+    fileMenu->addAction(m_importDxfAction);
+    fileMenu->addSeparator();
     fileMenu->addAction(m_settingsAction);
 }
 
@@ -321,6 +341,19 @@ void MainWindow::onLineTypeChanged(LineType type)
     //если какой-либо инструмент сейчас активен, ему передается новый тип линии
     if (m_currentTool) {
         m_currentTool->setLineType(type);
+    }
+}
+
+void MainWindow::onLayerChanged(const QString& name)
+{
+    m_currentLayer = name;
+    
+    // Применяем слой к выделенным объектам
+    if (!m_selectedPrimitives.isEmpty()) {
+        for (auto* prim : m_selectedPrimitives) {
+            prim->setLayerName(name);
+        }
+        emit sceneChanged(m_scene);
     }
 }
 
@@ -496,6 +529,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         auto* newSegment = new SegmentPrimitive(start, end);
         newSegment->setColor(color);
         newSegment->setLineType(static_cast<int>(lineType)); // Приведение к int
+        newSegment->setLayerName(m_currentLayer);
         addPrimitiveToScene(newSegment);
         return;
     }
@@ -546,6 +580,7 @@ void MainWindow::applyCircleChanges(CirclePrimitive* circle, const PointPrimitiv
         auto* newCircle = new CirclePrimitive(center, radius);
         newCircle->setColor(color);
         newCircle->setLineType(static_cast<int>(lineType));
+        newCircle->setLayerName(m_currentLayer);
         addPrimitiveToScene(newCircle);
         return;
     }
@@ -577,6 +612,7 @@ void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrim
         newRect->setCornerRadius(cornerRadius);
         newRect->setColor(color);
         newRect->setLineType((int)type);
+        newRect->setLayerName(m_currentLayer);
         addPrimitiveToScene(newRect);
         return;
     }
@@ -613,6 +649,7 @@ void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center
         auto* newArc = new ArcPrimitive(center, rad, start, span);
         newArc->setColor(color);
         newArc->setLineType((int)type);
+        newArc->setLayerName(m_currentLayer);
         addPrimitiveToScene(newArc);
         return;
     }
@@ -631,6 +668,7 @@ void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive
         auto* newEll = new EllipsePrimitive(center, rx, ry, rot);
         newEll->setColor(c);
         newEll->setLineType((int)t);
+        newEll->setLayerName(m_currentLayer);
         addPrimitiveToScene(newEll);
         return;
     }
@@ -664,7 +702,12 @@ void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const 
             newSpline->setClosed(closed);
             newSpline->setColor(c);
             newSpline->setLineType((int)t);
+            newSpline->setLayerName(m_currentLayer);
             addPrimitiveToScene(newSpline);
+        } else if (m_currentTool == m_splineCreationTool) {
+            // Если пытаемся создать через свойства, пока активен инструмент (и точек нет в UI),
+            // завершаем построение сплайна на холсте
+            m_splineCreationTool->finishSpline();
         }
         return;
     }
@@ -673,6 +716,24 @@ void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const 
     spline->setClosed(closed);
     spline->setColor(c);
     spline->setLineType((int)t);
+    emit sceneChanged(m_scene);
+}
+
+void MainWindow::applyPolygonChanges(PolygonPrimitive* polygon, int sides, PolygonCreationMode type, const QColor& color, LineType lineType) {
+    if (!polygon) return; // Cannot create polygon strictly via properties panel (no geometry fields)
+    if (m_selectedPrimitives.contains(polygon) && m_selectedPrimitives.size() > 1) {
+        for (auto* prim : m_selectedPrimitives) {
+            prim->setColor(color);
+            prim->setLineType((int)lineType);
+        }
+        polygon->setSides(sides);
+        polygon->setPolygonType(type == PolygonCreationMode::Inscribed ? PolygonType::Inscribed : PolygonType::Circumscribed);
+    } else {
+        polygon->setSides(sides);
+        polygon->setPolygonType(type == PolygonCreationMode::Inscribed ? PolygonType::Inscribed : PolygonType::Circumscribed);
+        polygon->setColor(color);
+        polygon->setLineType((int)lineType);
+    }
     emit sceneChanged(m_scene);
 }
 
@@ -729,7 +790,14 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     //2) esc
     if (event->key() == Qt::Key_Escape) {
-        deactivateCurrentTool();
+        if (m_currentTool) {
+            deactivateCurrentTool();
+        }
+        if (!m_selectedPrimitives.isEmpty()) {
+            m_selectedPrimitives.clear();
+            onSelectionChanged(m_selectedPrimitives); // Сбрасывает UI
+            emit sceneChanged(m_scene); // Обновляет холст и список объектов
+        }
         return;
     }
 
@@ -778,6 +846,46 @@ void MainWindow::openSettingsWindow()
 {
     SettingsWindow dialog(this);
     dialog.exec();
+}
+
+void MainWindow::onExportDxf()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "Экспорт в DXF", "", "DXF Files (*.dxf)");
+    if (!fileName.isEmpty()) {
+        if (!fileName.endsWith(".dxf", Qt::CaseInsensitive)) {
+            fileName += ".dxf";
+        }
+        if (DxfExporter::exportSceneToDxf(*m_scene, fileName)) {
+            QMessageBox::information(this, "Успех", "Объекты успешно экспортированы в DXF.");
+        } else {
+            QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл DXF.");
+        }
+    }
+}
+
+void MainWindow::onImportDxf()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Импорт из DXF", "", "DXF Files (*.dxf)");
+    if (!fileName.isEmpty()) {
+        auto reply = QMessageBox::question(this, "Очистка сцены", "Вы хотите очистить текущую сцену перед импортом?",
+                                          QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (reply == QMessageBox::Cancel) {
+            return;
+        }
+        
+        if (reply == QMessageBox::Yes) {
+            m_scene->clear();
+            onSelectionChanged(QList<BasePrimitive*>());
+        }
+
+        if (DxfImporter::importDxfToScene(*m_scene, fileName)) {
+            emit sceneChanged(m_scene);
+            QMessageBox::information(this, "Успех", "Объекты успешно импортированы из DXF.");
+            m_viewportPanel->zoomToExtents(); // Focus on imported objects
+        } else {
+            QMessageBox::warning(this, "Ошибка", "Не удалось прочитать файл DXF.");
+        }
+    }
 }
 
 // void MainWindow::showEvent(QShowEvent* event)

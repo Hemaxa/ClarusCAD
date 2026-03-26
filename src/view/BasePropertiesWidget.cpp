@@ -13,6 +13,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
+#include <QLineEdit>
 #include <QPainter>
 
 BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
@@ -87,6 +88,18 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
     lineRow->addStretch();
     rightLayout->addLayout(lineRow);
 
+    //строка со слоем
+    auto* layerRow = new QHBoxLayout();
+    layerRow->setSpacing(5);
+    auto* layerLabel = new QLabel("Слой:");
+    m_layerLineEdit = new QLineEdit("0");
+    m_layerLineEdit->setFixedWidth(160);
+    connect(m_layerLineEdit, &QLineEdit::editingFinished, this, &BasePropertiesWidget::onLayerNameChanged);
+    layerRow->addWidget(layerLabel);
+    layerRow->addWidget(m_layerLineEdit);
+    layerRow->addStretch();
+    rightLayout->addLayout(layerRow);
+
     //кнопка "Создать/Обновить"
     m_applyButton = new QPushButton();
     m_applyButton->setFixedHeight(26);
@@ -109,10 +122,12 @@ void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives
         m_currentPrimitive = nullptr;
         m_selectedColor = Qt::white;
         m_selectedLineTypeId = (int)LineType::SolidMain;
+        m_selectedLayerName = "0";
         m_applyButton->setText("Создать");
         populateLineTypeComboBox();
         updateColor(m_selectedColor, false);
         updateLineType(m_selectedLineTypeId, false);
+        updateLayer(m_selectedLayerName, false);
     }
     else {
         // Режим редактирования
@@ -121,21 +136,26 @@ void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives
 
         bool diffColors = false;
         bool diffTypes = false;
+        bool diffLayers = false;
 
         QColor firstColor = m_selectedPrimitives.first()->getColor();
         int firstType = m_selectedPrimitives.first()->getLineType();
+        QString firstLayer = m_selectedPrimitives.first()->getLayerName();
 
         for(auto* p : m_selectedPrimitives) {
             if(p->getColor() != firstColor) diffColors = true;
             if(p->getLineType() != firstType) diffTypes = true;
+            if(p->getLayerName() != firstLayer) diffLayers = true;
         }
 
         m_selectedColor = diffColors ? Qt::white : firstColor;
         m_selectedLineTypeId = diffTypes ? -1 : firstType;
+        m_selectedLayerName = diffLayers ? "" : firstLayer;
 
         populateLineTypeComboBox();
         updateColor(m_selectedColor, diffColors);
         updateLineType(m_selectedLineTypeId, diffTypes);
+        updateLayer(m_selectedLayerName, diffLayers);
     }
 
     updateFieldValues();
@@ -189,6 +209,16 @@ void BasePropertiesWidget::updateLineType(int typeId, bool isMixed)
     }
 }
 
+void BasePropertiesWidget::updateLayer(const QString& name, bool isMixed)
+{
+    m_selectedLayerName = name;
+    if (isMixed) {
+        m_layerLineEdit->setText("Разные...");
+    } else {
+        m_layerLineEdit->setText(name);
+    }
+}
+
 void BasePropertiesWidget::onColorButtonClicked()
 {
     QColor color = QColorDialog::getColor(m_selectedColor, this, "Выберите цвет");
@@ -212,6 +242,18 @@ void BasePropertiesWidget::onLineTypeBoxClicked(int index)
     if (!m_currentPrimitive && m_selectedPrimitives.isEmpty()) {
         emit lineTypeChanged(static_cast<LineType>(m_selectedLineTypeId));
     }
+}
+
+void BasePropertiesWidget::onLayerNameChanged()
+{
+    QString name = m_layerLineEdit->text();
+    if (name == "Разные..." || name.trimmed().isEmpty()) {
+        name = "0";
+        m_layerLineEdit->setText(name);
+    }
+    m_selectedLayerName = name;
+    
+    emit layerChanged(m_selectedLayerName);
 }
 
 void BasePropertiesWidget::populateLineTypeComboBox()

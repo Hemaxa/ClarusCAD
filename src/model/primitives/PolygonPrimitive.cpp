@@ -2,6 +2,7 @@
 #include "LineStyleManager.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <cmath>
 
 PolygonPrimitive::PolygonPrimitive(const PointPrimitive& center, double radius, int sides,
@@ -44,29 +45,16 @@ void PolygonPrimitive::draw(QPainter& painter, bool isSelected) const
     QVector<QPointF> vertices = getVertices();
     if (vertices.isEmpty()) return;
     
-    // Устанавливаем стиль через LineStyleManager
     LineStyleManager& lsm = LineStyleManager::instance();
-    QPen pen = lsm.getPen(getLineType(), getColor(), isSelected);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
     
-    // Рисуем полигон
-    QPolygonF polygon(vertices);
-    polygon.append(vertices.first()); // Замыкаем
-    
-    // Для специальных стилей линий рисуем по сторонам
-    int lineType = getLineType();
-    if (lineType >= static_cast<int>(LineType::SolidWave)) {
-        // Рисуем каждую сторону отдельно
-        for (int i = 0; i < vertices.size(); ++i) {
-            QPointF p1 = vertices[i];
-            QPointF p2 = vertices[(i + 1) % vertices.size()];
-            lsm.drawLine(painter, p1, p2, lineType, getColor(), isSelected);
-        }
-    } else {
-        // Обычная отрисовка
-        painter.drawPolygon(polygon);
+    QPainterPath path;
+    path.moveTo(vertices.first());
+    for (int i = 1; i < vertices.size(); ++i) {
+        path.lineTo(vertices[i]);
     }
+    path.closeSubpath();
+    
+    lsm.drawPath(painter, path, getLineType(), getColor(), isSelected);
 }
 
 QRectF PolygonPrimitive::getBoundingBox() const

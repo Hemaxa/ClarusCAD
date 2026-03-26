@@ -32,6 +32,11 @@ public:
     void removePrimitive(BasePrimitive* primitive);
 
     /**
+     * @brief Очистить сцену от всех объектов.
+     */
+    void clear();
+
+    /**
      * @brief Получить список всех примитивов сцены.
      * @return Константная ссылка на вектор уникальных указателей примитивов.
      */

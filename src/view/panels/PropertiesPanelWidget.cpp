@@ -45,29 +45,35 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_segmentProperties, &SegmentPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::segmentPropertiesApplied);
     connect(m_segmentProperties, &SegmentPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_segmentProperties, &SegmentPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_segmentProperties, &SegmentPropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     //"Окружность"
     connect(m_circleProperties, &CirclePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::circlePropertiesApplied);
     connect(m_circleProperties, &CirclePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_circleProperties, &CirclePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_circleProperties, &CirclePropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     connect(m_rectProperties, &RectanglePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::rectanglePropertiesApplied);
     connect(m_rectProperties, &RectanglePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_rectProperties, &RectanglePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_rectProperties, &RectanglePropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     connect(m_arcProperties, &ArcPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::arcPropertiesApplied);
     connect(m_arcProperties, &ArcPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_arcProperties, &ArcPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_arcProperties, &ArcPropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     // --- Коннекты ЭЛЛИПСА ---
     connect(m_ellipseProperties, &EllipsePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::ellipsePropertiesApplied);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_ellipseProperties, &EllipsePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_ellipseProperties, &EllipsePropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     // --- Коннекты МНОГОУГОЛЬНИКА ---
     connect(m_polygonProperties, &PolygonPropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::polygonPropertiesApplied);
     connect(m_polygonProperties, &PolygonPropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_polygonProperties, &PolygonPropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_polygonProperties, &PolygonPropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
     connect(m_polygonProperties, &PolygonPropertiesWidget::sidesChanged, this, &PropertiesPanelWidget::polygonSidesChanged);
     connect(m_polygonProperties, &PolygonPropertiesWidget::polygonTypeChanged, this, &PropertiesPanelWidget::polygonTypeChanged);
 
@@ -75,10 +81,12 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_splineProperties, &SplinePropertiesWidget::propertiesApplied, this, &PropertiesPanelWidget::splinePropertiesApplied);
     connect(m_splineProperties, &SplinePropertiesWidget::colorChanged, this, &PropertiesPanelWidget::colorChanged);
     connect(m_splineProperties, &SplinePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
+    connect(m_splineProperties, &SplinePropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
     connect(m_splineProperties, &SplinePropertiesWidget::closedChanged, this, &PropertiesPanelWidget::splineClosedChanged);
 
     // --- Коннекты ОБЩИХ СВОЙСТВ ---
     connect(m_commonProperties, &CommonPropertiesWidget::commonPropertiesApplied, this, &PropertiesPanelWidget::commonPropertiesApplied);
+    connect(m_commonProperties, &CommonPropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
 
     //минимальная высота окна
     setMinimumHeight(200);

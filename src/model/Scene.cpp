@@ -32,6 +32,12 @@ void Scene::removePrimitive(BasePrimitive* primitive)
         m_primitives.end());
 }
 
+void Scene::clear()
+{
+    m_primitives.clear();
+    m_primitiveCounters.clear();
+}
+
 const std::vector<std::unique_ptr<BasePrimitive>>& Scene::getPrimitives() const
 {
     return m_primitives;

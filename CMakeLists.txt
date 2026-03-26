@@ -64,6 +64,12 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/Scene.h
     ${SRC_DIR}/model/Scene.cpp
 
+    #io
+    ${SRC_DIR}/io/DxfExporter.h
+    ${SRC_DIR}/io/DxfExporter.cpp
+    ${SRC_DIR}/io/DxfImporter.h
+    ${SRC_DIR}/io/DxfImporter.cpp
+
     ${SRC_DIR}/model/primitives/CirclePrimitive.h
     ${SRC_DIR}/model/primitives/CirclePrimitive.cpp
     ${SRC_DIR}/model/primitives/PointPrimitive.h
@@ -150,6 +156,9 @@ target_include_directories(ClarusCAD PRIVATE
     #model
     ${SRC_DIR}/model
     ${SRC_DIR}/model/primitives
+
+    #io
+    ${SRC_DIR}/io
 
     #view
     ${SRC_DIR}/view

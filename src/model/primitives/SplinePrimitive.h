@@ -68,10 +68,10 @@ public:
      */
     void setClosed(bool closed) { m_closed = closed; }
 
-private:
-    // Вычисление точек сплайна для отрисовки
+    // Вычисление точек сплайна для отрисовки (используется и для экспорта DXF)
     QVector<QPointF> calculateSplinePoints(int segmentsPerCurve = 20) const;
-    
+
+private:
     // Кубический интерполяционный сплайн (Catmull-Rom)
     QPointF catmullRom(const QPointF& p0, const QPointF& p1, 
                        const QPointF& p2, const QPointF& p3, double t) const;

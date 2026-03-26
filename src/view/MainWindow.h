@@ -78,6 +78,9 @@ private slots:
     //слот установки типа линии для инструмента
     void onLineTypeChanged(LineType type);
 
+    //слот установки слоя для выбранных объектов и последующих
+    void onLayerChanged(const QString& name);
+
     void onRotateLeft();
 
     void onRotateRight();
@@ -99,6 +102,7 @@ private slots:
     void applyRectangleChanges(RectanglePrimitive* rect, const PointPrimitive& center, double w, double h, double r, CornerType cornerType, double cornerRadius, const QColor& c, LineType t);
     void applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& c, LineType t);
     void applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive& center, double rx, double ry, double rot, const QColor& c, LineType t);
+    void applyPolygonChanges(PolygonPrimitive* polygon, int sides, PolygonCreationMode type, const QColor& color, LineType lineType);
     void applySplineChanges(SplinePrimitive* spline, bool closed, const QVector<QPointF>& controlPoints, const QColor& c, LineType t);
 
     //слот применения общих свойств ко всем выделенным объектам
@@ -109,6 +113,12 @@ private slots:
 
     //слот вызова окна настроек
     void openSettingsWindow();
+
+    //слот экспорта в DXF
+    void onExportDxf();
+
+    //слот импорта из DXF
+    void onImportDxf();
 
 //то, что посылается
 signals:
@@ -141,6 +151,7 @@ private:
     bool m_isInitialResizeDone = false; //флаг для однократного выполнения кода в showEvent
     QList<BasePrimitive*> m_selectedPrimitives; //указатель на выбранные объекта
     QCursor m_previousCursor; //позиция курсора
+    QString m_currentLayer = "0"; //текущий слой
 
     //инструменты
     DeleteTool* m_deleteTool;
@@ -162,6 +173,8 @@ private:
     SceneSettingsPanelWidget* m_sceneSettingsPanel;
     ConsolePanelWidget* m_consolePanel;
 
-    //окно настроек
+    //окно настроек и экспорт
     QAction* m_settingsAction;
+    QAction* m_exportDxfAction;
+    QAction* m_importDxfAction;
 };
