@@ -12,6 +12,7 @@
 #include "SplinePrimitive.h"
 #include "RectanglePrimitive.h"
 #include "EnumManager.h"
+#include "LineStyleManager.h"
 
 #include <QFile>
 #include <QTextStream>
@@ -72,15 +73,196 @@ static int getTrueColor24Bit(const QColor& color) {
 static QString getDxfLineType(int typeId) {
     switch (static_cast<LineType>(typeId)) {
     case LineType::SolidMain:     return "CONTINUOUS";
-    case LineType::SolidThin:     return "CONTINUOUS"; // To make it visible as solid in T-Flex, actual type preserved in XDATA
-    case LineType::SolidWave:     return "CONTINUOUS"; // Preserved in XDATA
-    case LineType::SolidKink:     return "CONTINUOUS"; // Preserved in XDATA
+    case LineType::SolidThin:     return "CONTINUOUS";
+    case LineType::SolidWave:     return "CONTINUOUS"; // Геометрия волны экспортируется как POLYLINE
+    case LineType::SolidKink:     return "CONTINUOUS"; // Геометрия излома экспортируется как POLYLINE
     case LineType::Dashed:        return "DASHED";
     case LineType::DashDotThick:  return "DASHDOT";
     case LineType::DashDotThin:   return "DASHDOT";
-    case LineType::DashDotDot:    return "DIVIDE"; // DIVIDE is standard dash-dot-dot
+    case LineType::DashDotDot:    return "DIVIDE";
     default:                      return "CONTINUOUS";
     }
+}
+
+// Определение толщины линии в DXF (код 370, значение в сотых долях мм)
+static int getDxfLineWeight(int typeId) {
+    switch (static_cast<LineType>(typeId)) {
+    case LineType::SolidMain:
+    case LineType::DashDotThick:
+        return 50;  // 0.50 мм — толстая линия
+    default:
+        return 25;  // 0.25 мм — тонкая линия
+    }
+}
+
+// Проверка, является ли тип линии специальным (волна/зигзаг), требующим геометрической аппроксимации
+static bool isSpecialLineType(int typeId) {
+    LineType lt = static_cast<LineType>(typeId);
+    return lt == LineType::SolidWave || lt == LineType::SolidKink;
+}
+
+// ============================================================
+// Генерация точек волнистой линии для отрезка (start -> end)
+// ============================================================
+static QVector<QPointF> generateWavePoints(const QPointF& start, const QPointF& end) {
+    const auto& lsm = LineStyleManager::instance();
+    double amplitude = lsm.getWaveAmplitude();
+    double period = lsm.getWavePeriod();
+
+    QVector<QPointF> pts;
+    double dx = end.x() - start.x();
+    double dy = end.y() - start.y();
+    double length = std::sqrt(dx*dx + dy*dy);
+    if (length < 1e-6) { pts.append(start); pts.append(end); return pts; }
+
+    double px = -dy / length; // Перпендикуляр
+    double py =  dx / length;
+
+    double step = std::max(1.0, period / 10.0);
+    for (double i = 0; i <= length; i += step) {
+        double t = i / length;
+        double offset = amplitude * std::sin(i * 2.0 * M_PI / period);
+        double x = start.x() + dx * t + px * offset;
+        double y = start.y() + dy * t + py * offset;
+        pts.append(QPointF(x, y));
+    }
+    // Убеждаемся, что конечная точка включена
+    if (pts.isEmpty() || (pts.last() - end).manhattanLength() > 1e-6)
+        pts.append(end);
+    return pts;
+}
+
+// ============================================================
+// Генерация точек линии с изломами (зигзаг) для отрезка
+// ============================================================
+static QVector<QPointF> generateZigzagPoints(const QPointF& start, const QPointF& end) {
+    const auto& lsm = LineStyleManager::instance();
+    double amplitude = lsm.getKinkAmplitude();
+    double kinkLen = lsm.getKinkLength();
+    double straightLen = lsm.getKinkStraight();
+    double period = 2 * kinkLen + straightLen;
+
+    QVector<QPointF> pts;
+    double dx = end.x() - start.x();
+    double dy = end.y() - start.y();
+    double length = std::sqrt(dx*dx + dy*dy);
+    if (length < 1e-6) { pts.append(start); pts.append(end); return pts; }
+
+    double px = -dy / length;
+    double py =  dx / length;
+
+    pts.append(start);
+    double currentPos = 0;
+    while (currentPos < length) {
+        // 1. Точка вниз
+        double t1 = (currentPos + kinkLen / 2.0) / length;
+        if (t1 > 1.0) t1 = 1.0;
+        pts.append(QPointF(start.x() + dx * t1 - px * amplitude,
+                           start.y() + dy * t1 - py * amplitude));
+        // 2. Точка вверх
+        double t2 = (currentPos + kinkLen) / length;
+        if (t2 > 1.0) { pts.append(end); break; }
+        pts.append(QPointF(start.x() + dx * t2 + px * amplitude,
+                           start.y() + dy * t2 + py * amplitude));
+        // 3. Возврат на линию
+        double t3 = (currentPos + kinkLen + kinkLen / 2.0) / length;
+        if (t3 > 1.0) t3 = 1.0;
+        pts.append(QPointF(start.x() + dx * t3, start.y() + dy * t3));
+        // 4. Конец прямого участка
+        currentPos += period;
+        double t4 = currentPos / length;
+        if (t4 > 1.0) t4 = 1.0;
+        pts.append(QPointF(start.x() + dx * t4, start.y() + dy * t4));
+    }
+    if ((pts.last() - end).manhattanLength() > 1e-6)
+        pts.append(end);
+    return pts;
+}
+
+// ============================================================
+// Генерация точек волнистой/зигзаг-линии для окружности/эллипса (замкнутая)
+// ============================================================
+static QVector<QPointF> generateWaveEllipsePoints(const QPointF& center, double rx, double ry, bool isWave) {
+    const auto& lsm = LineStyleManager::instance();
+    double amplitude = isWave ? lsm.getWaveAmplitude() : lsm.getKinkAmplitude();
+    double period = isWave ? lsm.getWavePeriod() : (2.0 * lsm.getKinkLength() + lsm.getKinkStraight());
+
+    double perimeter = 2.0 * M_PI * std::sqrt((rx*rx + ry*ry) / 2.0);
+    double cycles = std::round(perimeter / period);
+    if (cycles < 1.0) cycles = 1.0;
+
+    int stepsPerPeriod = 40;
+    int totalSteps = static_cast<int>(cycles * stepsPerPeriod);
+
+    QVector<QPointF> pts;
+    pts.reserve(totalSteps + 2);
+
+    for (int i = 0; i <= totalSteps; ++i) {
+        double t = static_cast<double>(i) / totalSteps;
+        double angle = t * 2.0 * M_PI;
+        double offset = 0.0;
+
+        if (isWave) {
+            offset = amplitude * std::sin(angle * cycles);
+        } else {
+            // Зигзаг (треугольная волна)
+            double phase = t * cycles;
+            phase -= std::floor(phase);
+            if (phase < 0.25) offset = amplitude * (phase / 0.25);
+            else if (phase < 0.75) offset = amplitude * (1.0 - (phase - 0.25) / 0.25);
+            else offset = -amplitude * (1.0 - (phase - 0.75) / 0.25);
+        }
+
+        double rX = rx + offset;
+        double rY = ry + offset;
+        double x = center.x() + rX * std::cos(angle);
+        double y = center.y() + rY * std::sin(angle);
+        pts.append(QPointF(x, y));
+    }
+    return pts;
+}
+
+// ============================================================
+// Генерация точек волнистой/зигзаг-линии для дуги
+// ============================================================
+static QVector<QPointF> generateWaveArcPoints(const QPointF& center, double radius,
+                                               double startAngleDeg, double spanAngleDeg, bool isWave) {
+    const auto& lsm = LineStyleManager::instance();
+    double amplitude = isWave ? lsm.getWaveAmplitude() : lsm.getKinkAmplitude();
+    double period = isWave ? lsm.getWavePeriod() : (2.0 * lsm.getKinkLength() + lsm.getKinkStraight());
+
+    double startRad = startAngleDeg * M_PI / 180.0;
+    double spanRad = spanAngleDeg * M_PI / 180.0;
+    double arcLen = std::abs(radius * spanRad);
+    double cycles = arcLen / period;
+
+    int totalSteps = std::max(10, static_cast<int>(cycles * 40));
+
+    QVector<QPointF> pts;
+    pts.reserve(totalSteps + 2);
+
+    for (int i = 0; i <= totalSteps; ++i) {
+        double t = static_cast<double>(i) / totalSteps;
+        double currentAngleRad = startRad + t * spanRad;
+        double phase = t * cycles;
+        double offset = 0.0;
+
+        if (isWave) {
+            offset = amplitude * std::sin(phase * 2.0 * M_PI);
+        } else {
+            double p = phase - std::floor(phase);
+            if (p < 0.25) offset = amplitude * (p / 0.25);
+            else if (p < 0.75) offset = amplitude * (1.0 - (p - 0.25) / 0.25);
+            else offset = -amplitude * (1.0 - (p - 0.75) / 0.25);
+        }
+
+        double r = radius + offset;
+        // Qt экранные координаты: Y-down, углы CCW
+        double x = center.x() + r * std::cos(-currentAngleRad);
+        double y = center.y() + r * std::sin(-currentAngleRad);
+        pts.append(QPointF(x, y));
+    }
+    return pts;
 }
 
 bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) {
@@ -96,19 +278,22 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         out << code << "\n" << value << "\n";
     };
 
+    // Получаем текущие параметры штрихов из LineStyleManager
+    const auto& lsm = LineStyleManager::instance();
+    double dashLen = lsm.getDashLength();   // по умолчанию 10.0
+    double dashSpace = lsm.getDashSpace();  // по умолчанию 5.0
+
     // ================= HEADER SECTION =================
     writeCode(0, "SECTION");
     writeCode(2, "HEADER");
-    // Версия DXF (AutoCAD R12 - AC1009) для совместимости с парсерами DWGDirect (обход Null object Id из-за отсутствия Handles)
     writeCode(9, "$ACADVER");
     writeCode(1, "AC1009");
-    // $HANDLING (0 = no handles required, which is strictly honored in AC1009)
     writeCode(9, "$HANDLING");
     writeCode(70, 0);
+    // Глобальный масштаб типов линий ($LTSCALE)
+    writeCode(9, "$LTSCALE");
+    writeCode(40, 1.0);
     writeCode(0, "ENDSEC");
-
-    // ================= CLASSES SECTION =================
-    // Пропустим, объекты простые
 
     // ================= TABLES SECTION =================
     writeCode(0, "SECTION");
@@ -124,45 +309,65 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         layerNames.insert("0");
     }
 
-    // LTYPE TABLE
+    // LTYPE TABLE — масштабированные паттерны штрихов
     writeCode(0, "TABLE");
     writeCode(2, "LTYPE");
-    writeCode(70, 4); // Number of linetypes
+    writeCode(70, 4);
 
     auto writeLType = [&writeCode](const QString& name, const QString& desc) {
         writeCode(0, "LTYPE");
         writeCode(2, name);
-        writeCode(70, 0);       // standard flag
-        writeCode(3, desc);     // description
-        writeCode(72, 65);      // alignment code 'A' (65)
+        writeCode(70, 0);
+        writeCode(3, desc);
+        writeCode(72, 65);  // alignment 'A'
     };
 
-    writeLType("CONTINUOUS", "Solid main line");
+    // CONTINUOUS
+    writeLType("CONTINUOUS", "Solid line");
     writeCode(73, 0); writeCode(40, 0.0);
 
-    writeLType("DASHED", "Dashed __ __ __ __");
-    writeCode(73, 2); 
-    writeCode(40, 0.75); 
-    writeCode(49, 0.5); 
-    writeCode(49, -0.25); 
+    // DASHED: dash, space
+    // Паттерн масштабируется от реальных значений dashLen/dashSpace
+    {
+        double d = dashLen;       // длина штриха
+        double s = dashSpace;     // длина пробела
+        double total = d + s;
+        writeLType("DASHED", "Dashed __ __ __ __");
+        writeCode(73, 2);
+        writeCode(40, total);
+        writeCode(49, d);
+        writeCode(49, -s);
+    }
 
-    writeLType("DASHDOT", "Dash dot __ . __ . __");
-    writeCode(73, 4); 
-    writeCode(40, 1.0); 
-    writeCode(49, 0.5); 
-    writeCode(49, -0.25); 
-    writeCode(49, 0.0); 
-    writeCode(49, -0.25); 
-    
-    writeLType("DIVIDE", "Dash dot dot __ . . __ . . __");
-    writeCode(73, 6); 
-    writeCode(40, 1.25); 
-    writeCode(49, 0.5); 
-    writeCode(49, -0.25); 
-    writeCode(49, 0.0); 
-    writeCode(49, -0.25); 
-    writeCode(49, 0.0); 
-    writeCode(49, -0.25); 
+    // DASHDOT: dash, space, dot, space
+    {
+        double d = dashLen;
+        double s = dashSpace / 2.0;  // Уменьшенный пробел для точки
+        double total = d + s + 0.0 + s; // dot = 0 длины
+        writeLType("DASHDOT", "Dash dot __ . __ . __");
+        writeCode(73, 4);
+        writeCode(40, total);
+        writeCode(49, d);
+        writeCode(49, -s);
+        writeCode(49, 0.0);   // dot
+        writeCode(49, -s);
+    }
+
+    // DIVIDE: dash, space, dot, space, dot, space
+    {
+        double d = dashLen;
+        double s = dashSpace / 2.0;
+        double total = d + s + 0.0 + s + 0.0 + s;
+        writeLType("DIVIDE", "Dash dot dot __ . . __ . . __");
+        writeCode(73, 6);
+        writeCode(40, total);
+        writeCode(49, d);
+        writeCode(49, -s);
+        writeCode(49, 0.0);   // dot 1
+        writeCode(49, -s);
+        writeCode(49, 0.0);   // dot 2
+        writeCode(49, -s);
+    }
 
     writeCode(0, "ENDTAB");
 
@@ -173,9 +378,9 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     for (const QString& layerName : layerNames) {
         writeCode(0, "LAYER");
         writeCode(2, layerName);
-        writeCode(70, 0); // Флаги состояния (0 = нормальное)
-        writeCode(62, 7); // Цвет слоя (по умолчанию белый)
-        writeCode(6, "CONTINUOUS"); // Тип линии слоя
+        writeCode(70, 0);
+        writeCode(62, 7);
+        writeCode(6, "CONTINUOUS");
     }
     writeCode(0, "ENDTAB");
     writeCode(0, "ENDSEC");
@@ -192,198 +397,285 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     for (const auto& prim : primitives) {
         
         auto writeCommonProperties = [&writeCode, &prim]() {
-            writeCode(8, prim->getLayerName()); // Имя слоя (код 8)
-            writeCode(6, getDxfLineType(prim->getLineType())); // Тип линии (код 6)
-            writeCode(62, getAutoCadColorIndex(prim->getColor())); // Код цвета ACI (код 62)
-            writeCode(420, getTrueColor24Bit(prim->getColor())); // TrueColor RGB (код 420)
+            writeCode(8, prim->getLayerName());
+            writeCode(6, getDxfLineType(prim->getLineType()));
+            writeCode(62, getAutoCadColorIndex(prim->getColor()));
+            writeCode(420, getTrueColor24Bit(prim->getColor()));
+            // Толщина линии (код 370, в сотых долях мм)
+            writeCode(370, getDxfLineWeight(prim->getLineType()));
         };
 
         auto writeXData = [&writeCode, &prim]() {
             writeCode(999, QString("CLARUSCAD_LTYPE:%1").arg(static_cast<int>(prim->getLineType())));
         };
 
+        // Лямбда для записи POLYLINE из набора точек
+        auto writePolyline = [&writeCode, &prim, &writeCommonProperties, &writeXData](
+                                  const QVector<QPointF>& pts, bool closed) {
+            writeCode(0, "POLYLINE");
+            writeCommonProperties();
+            writeCode(66, 1);
+            writeCode(70, closed ? 1 : 0);
+            writeCode(10, 0.0);
+            writeCode(20, 0.0);
+            writeCode(30, 0.0);
+            writeXData();
+            for (const auto& pt : pts) {
+                writeCode(0, "VERTEX");
+                writeCode(8, prim->getLayerName());
+                writeCode(10, pt.x());
+                writeCode(20, pt.y());
+                writeCode(30, 0.0);
+            }
+            writeCode(0, "SEQEND");
+            writeCode(8, prim->getLayerName());
+        };
+
         PrimitiveType type = prim->getType();
+        int lineTypeId = prim->getLineType();
+        bool isSpecial = isSpecialLineType(lineTypeId);
+        bool isWave = (static_cast<LineType>(lineTypeId) == LineType::SolidWave);
 
         if (type == PrimitiveType::Segment) {
             auto* segment = dynamic_cast<SegmentPrimitive*>(prim.get());
             if (segment) {
-                writeCode(0, "LINE");
-                writeCommonProperties();
-                writeCode(10, segment->getStart().getX());
-                writeCode(20, segment->getStart().getY());
-                writeCode(30, 0.0);
-                writeCode(11, segment->getEnd().getX());
-                writeCode(21, segment->getEnd().getY());
-                writeCode(31, 0.0);
-                writeXData();
+                QPointF start(segment->getStart().getX(), segment->getStart().getY());
+                QPointF end(segment->getEnd().getX(), segment->getEnd().getY());
+
+                if (isSpecial) {
+                    // Волна или зигзаг — экспортируем как POLYLINE с аппроксимацией формы
+                    QVector<QPointF> pts = isWave ? generateWavePoints(start, end)
+                                                  : generateZigzagPoints(start, end);
+                    writePolyline(pts, false);
+                } else {
+                    writeCode(0, "LINE");
+                    writeCommonProperties();
+                    writeCode(10, start.x());
+                    writeCode(20, start.y());
+                    writeCode(30, 0.0);
+                    writeCode(11, end.x());
+                    writeCode(21, end.y());
+                    writeCode(31, 0.0);
+                    writeXData();
+                }
             }
         }
         else if (type == PrimitiveType::Circle) {
             auto* circle = dynamic_cast<CirclePrimitive*>(prim.get());
             if (circle) {
-                writeCode(0, "CIRCLE");
-                writeCommonProperties();
-                writeCode(10, circle->getCenter().getX());
-                writeCode(20, circle->getCenter().getY());
-                writeCode(30, 0.0);
-                writeCode(40, circle->getRadius());
-                writeXData();
+                if (isSpecial) {
+                    QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+                    double r = circle->getRadius();
+                    QVector<QPointF> pts = generateWaveEllipsePoints(center, r, r, isWave);
+                    writePolyline(pts, true);
+                } else {
+                    writeCode(0, "CIRCLE");
+                    writeCommonProperties();
+                    writeCode(10, circle->getCenter().getX());
+                    writeCode(20, circle->getCenter().getY());
+                    writeCode(30, 0.0);
+                    writeCode(40, circle->getRadius());
+                    writeXData();
+                }
             }
         }
         else if (type == PrimitiveType::Arc) {
             auto* arc = dynamic_cast<ArcPrimitive*>(prim.get());
             if (arc) {
-                writeCode(0, "ARC");
-                writeCommonProperties();
-                writeCode(10, arc->getCenter().getX());
-                writeCode(20, arc->getCenter().getY());
-                writeCode(30, 0.0);
-                writeCode(40, arc->getRadius());
-                writeCode(50, arc->getStartAngle()); // DXF ожидает градусы
-                // DXF Arc start angle is startAngle
-                // DXF Arc end angle is startAngle + spanAngle
-                double endAngle = arc->getStartAngle() + arc->getSpanAngle();
-                writeCode(51, endAngle);
-                writeXData();
+                if (isSpecial) {
+                    QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
+                    QVector<QPointF> pts = generateWaveArcPoints(center, arc->getRadius(),
+                                                                  arc->getStartAngle(), arc->getSpanAngle(), isWave);
+                    writePolyline(pts, false);
+                } else {
+                    writeCode(0, "ARC");
+                    writeCommonProperties();
+                    writeCode(10, arc->getCenter().getX());
+                    writeCode(20, arc->getCenter().getY());
+                    writeCode(30, 0.0);
+                    writeCode(40, arc->getRadius());
+                    writeCode(50, arc->getStartAngle());
+                    double endAngle = arc->getStartAngle() + arc->getSpanAngle();
+                    writeCode(51, endAngle);
+                    writeXData();
+                }
             }
         }
         else if (type == PrimitiveType::Ellipse) {
             auto* ellipse = dynamic_cast<EllipsePrimitive*>(prim.get());
             if (ellipse) {
-                writeCode(0, "ELLIPSE");
-                writeCommonProperties();
-                
-                // Для DXF: Эллипс задается центром(10,20,30), смещением конца ГЛАВНОЙ оси(11,21,31) 
-                // и отношением малой оси к главной (40).
-                
-                double rx = ellipse->getRadiusX();
-                double ry = ellipse->getRadiusY();
-                double majorRadius = std::max(rx, ry);
-                double minorRadius = std::min(rx, ry);
-                double ratio = minorRadius / majorRadius;
-                
-                // Угол поворота главной оси (в ClarusCAD это вращение в градусах)
-                double rotationRad = ellipse->getRotation() * 3.14159265358979323846 / 180.0;
-                
-                // Если ry > rx, значит главная ось по Y, мы должны добавить 90 градусов
-                if (ry > rx) {
-                    rotationRad += 3.14159265358979323846 / 2.0;
+                if (isSpecial) {
+                    QPointF center(ellipse->getCenter().getX(), ellipse->getCenter().getY());
+                    QVector<QPointF> pts = generateWaveEllipsePoints(center, ellipse->getRadiusX(),
+                                                                     ellipse->getRadiusY(), isWave);
+                    writePolyline(pts, true);
+                } else {
+                    writeCode(0, "ELLIPSE");
+                    writeCommonProperties();
+                    
+                    double rx = ellipse->getRadiusX();
+                    double ry = ellipse->getRadiusY();
+                    double majorRadius = std::max(rx, ry);
+                    double minorRadius = std::min(rx, ry);
+                    double ratio = minorRadius / majorRadius;
+                    
+                    double rotationRad = ellipse->getRotation() * 3.14159265358979323846 / 180.0;
+                    if (ry > rx) {
+                        rotationRad += 3.14159265358979323846 / 2.0;
+                    }
+                    
+                    double dx = majorRadius * std::cos(rotationRad);
+                    double dy = majorRadius * std::sin(rotationRad);
+                    
+                    writeCode(10, ellipse->getCenter().getX());
+                    writeCode(20, ellipse->getCenter().getY());
+                    writeCode(30, 0.0);
+                    writeCode(11, dx);
+                    writeCode(21, dy);
+                    writeCode(31, 0.0);
+                    writeCode(40, ratio);
+                    writeCode(41, 0.0);
+                    writeCode(42, 2.0 * 3.14159265358979323846);
+                    writeXData();
                 }
-                
-                // Вычисляем смещение конца главной оси от центра
-                double dx = majorRadius * std::cos(rotationRad);
-                double dy = majorRadius * std::sin(rotationRad);
-                
-                writeCode(10, ellipse->getCenter().getX());
-                writeCode(20, ellipse->getCenter().getY());
-                writeCode(30, 0.0);
-                
-                writeCode(11, dx);
-                writeCode(21, dy);
-                writeCode(31, 0.0);
-                
-                writeCode(40, ratio);
-                
-                // Начальный и конечный параметры (от 0 до 2*pi)
-                writeCode(41, 0.0);
-                writeCode(42, 2.0 * 3.14159265358979323846);
-                writeXData();
             }
         }
         else if (type == PrimitiveType::Polygon) {
             auto* poly = dynamic_cast<PolygonPrimitive*>(prim.get());
             if (poly) {
-                // В DXF AC1009 многоугольник экспортируется как POLYLINE
-                writeCode(0, "POLYLINE");
-                writeCommonProperties();
-                writeCode(66, 1);               // Флаг что за полилинией следуют VERTEX
-                writeCode(70, 1);               // Флаг 1 = замкнутая полилиния
-                writeCode(10, 0.0);
-                writeCode(20, 0.0);
-                writeCode(30, 0.0);
-                writeXData();
-                
-                const auto& pts = poly->getVertices();
-                for (const auto& pt : pts) {
-                    writeCode(0, "VERTEX");
-                    writeCode(8, prim->getLayerName());
-                    writeCode(10, pt.x());
-                    writeCode(20, pt.y());
+                if (isSpecial) {
+                    // Для специальных типов — генерируем волну/зигзаг по каждому ребру полигона
+                    const auto& verts = poly->getVertices();
+                    QVector<QPointF> allPts;
+                    for (int i = 0; i < verts.size(); ++i) {
+                        QPointF p1 = verts[i];
+                        QPointF p2 = verts[(i + 1) % verts.size()];
+                        QVector<QPointF> edgePts = isWave ? generateWavePoints(p1, p2)
+                                                          : generateZigzagPoints(p1, p2);
+                        // Не дублируем переходную точку
+                        if (!allPts.isEmpty() && !edgePts.isEmpty())
+                            edgePts.removeFirst();
+                        allPts.append(edgePts);
+                    }
+                    writePolyline(allPts, false); // Замкнутость через сами точки
+                } else {
+                    writeCode(0, "POLYLINE");
+                    writeCommonProperties();
+                    writeCode(66, 1);
+                    writeCode(70, 1);
+                    writeCode(10, 0.0);
+                    writeCode(20, 0.0);
                     writeCode(30, 0.0);
+                    writeXData();
+                    
+                    const auto& pts = poly->getVertices();
+                    for (const auto& pt : pts) {
+                        writeCode(0, "VERTEX");
+                        writeCode(8, prim->getLayerName());
+                        writeCode(10, pt.x());
+                        writeCode(20, pt.y());
+                        writeCode(30, 0.0);
+                    }
+                    
+                    writeCode(0, "SEQEND");
+                    writeCode(8, prim->getLayerName());
                 }
-                
-                writeCode(0, "SEQEND");
-                writeCode(8, prim->getLayerName());
             }
         }
         else if (type == PrimitiveType::Spline) {
             auto* spline = dynamic_cast<SplinePrimitive*>(prim.get());
             if (spline) {
-                // В DXF AC1009 сплайн (SPLINE) не поддерживается. Экспортируем как полилинию по точкам,
-                // чтобы в точности сохранить форму кривой Catmull-Rom.
-                writeCode(0, "POLYLINE");
-                writeCommonProperties();
-                writeCode(66, 1);               // Флаг что за полилинией следуют VERTEX
-                writeCode(70, spline->isClosed() ? 1 : 0); // Флаг 1 = замкнутая полилиния
-                writeCode(10, 0.0);
-                writeCode(20, 0.0);
-                writeCode(30, 0.0);
-                writeXData();
-                
-                auto pts = spline->calculateSplinePoints();
-                for (const auto& pt : pts) {
-                    writeCode(0, "VERTEX");
-                    writeCode(8, prim->getLayerName());
-                    writeCode(10, pt.x());
-                    writeCode(20, pt.y());
+                if (isSpecial) {
+                    // Для сплайна — генерируем волну/зигзаг по каждому сегменту аппроксимации
+                    auto splinePts = spline->calculateSplinePoints();
+                    QVector<QPointF> allPts;
+                    for (int i = 0; i < splinePts.size() - 1; ++i) {
+                        QVector<QPointF> segPts = isWave ? generateWavePoints(splinePts[i], splinePts[i+1])
+                                                         : generateZigzagPoints(splinePts[i], splinePts[i+1]);
+                        if (!allPts.isEmpty() && !segPts.isEmpty())
+                            segPts.removeFirst();
+                        allPts.append(segPts);
+                    }
+                    writePolyline(allPts, spline->isClosed());
+                } else {
+                    writeCode(0, "POLYLINE");
+                    writeCommonProperties();
+                    writeCode(66, 1);
+                    writeCode(70, spline->isClosed() ? 1 : 0);
+                    writeCode(10, 0.0);
+                    writeCode(20, 0.0);
                     writeCode(30, 0.0);
+                    writeXData();
+                    
+                    auto pts = spline->calculateSplinePoints();
+                    for (const auto& pt : pts) {
+                        writeCode(0, "VERTEX");
+                        writeCode(8, prim->getLayerName());
+                        writeCode(10, pt.x());
+                        writeCode(20, pt.y());
+                        writeCode(30, 0.0);
+                    }
+                    
+                    writeCode(0, "SEQEND");
+                    writeCode(8, prim->getLayerName());
                 }
-                
-                writeCode(0, "SEQEND");
-                writeCode(8, prim->getLayerName());
             }
         }
         else if (type == PrimitiveType::Rectangle) {
             auto* rect = dynamic_cast<RectanglePrimitive*>(prim.get());
             if (rect) {
-                // Экспортируем прямоугольник как замкнутую POLYLINE
-                writeCode(0, "POLYLINE");
-                writeCommonProperties();
-                writeCode(66, 1);               // Флаг что за полилинией следуют VERTEX
-                writeCode(70, 1);               // Флаг 1 = замкнутая полилиния
-                writeCode(10, 0.0);
-                writeCode(20, 0.0);
-                writeCode(30, 0.0);
-                
-                // Центр, ширина, высота и угол (надо вычислить 4 угла)
                 double w = rect->getWidth();
                 double h = rect->getHeight();
                 double rot = rect->getRotation() * M_PI / 180.0;
                 double cx = rect->getCenter().getX();
                 double cy = rect->getCenter().getY();
                 
-                // 4 вершины без поворота (отсчет: левый-верхний, правый-верхний, правый-нижний, левый-нижний)
-                QVector<QPointF> pts(4);
-                pts[0] = QPointF(-w/2, -h/2);
-                pts[1] = QPointF(w/2, -h/2);
-                pts[2] = QPointF(w/2, h/2);
-                pts[3] = QPointF(-w/2, h/2);
+                QVector<QPointF> corners(4);
+                corners[0] = QPointF(-w/2, -h/2);
+                corners[1] = QPointF(w/2, -h/2);
+                corners[2] = QPointF(w/2, h/2);
+                corners[3] = QPointF(-w/2, h/2);
                 
-                writeXData();
-                
+                // Повернуть и сместить
                 for (int i = 0; i < 4; ++i) {
-                    double x = pts[i].x() * std::cos(rot) - pts[i].y() * std::sin(rot) + cx;
-                    double y = pts[i].x() * std::sin(rot) + pts[i].y() * std::cos(rot) + cy;
-                    
-                    writeCode(0, "VERTEX");
-                    writeCode(8, prim->getLayerName());
-                    writeCode(10, x);
-                    writeCode(20, y);
-                    writeCode(30, 0.0);
+                    double x = corners[i].x() * std::cos(rot) - corners[i].y() * std::sin(rot) + cx;
+                    double y = corners[i].x() * std::sin(rot) + corners[i].y() * std::cos(rot) + cy;
+                    corners[i] = QPointF(x, y);
                 }
-                
-                writeCode(0, "SEQEND");
-                writeCode(8, prim->getLayerName());
+
+                if (isSpecial) {
+                    QVector<QPointF> allPts;
+                    for (int i = 0; i < 4; ++i) {
+                        QPointF p1 = corners[i];
+                        QPointF p2 = corners[(i + 1) % 4];
+                        QVector<QPointF> edgePts = isWave ? generateWavePoints(p1, p2)
+                                                          : generateZigzagPoints(p1, p2);
+                        if (!allPts.isEmpty() && !edgePts.isEmpty())
+                            edgePts.removeFirst();
+                        allPts.append(edgePts);
+                    }
+                    writePolyline(allPts, false);
+                } else {
+                    writeCode(0, "POLYLINE");
+                    writeCommonProperties();
+                    writeCode(66, 1);
+                    writeCode(70, 1);
+                    writeCode(10, 0.0);
+                    writeCode(20, 0.0);
+                    writeCode(30, 0.0);
+                    writeXData();
+                    
+                    for (int i = 0; i < 4; ++i) {
+                        writeCode(0, "VERTEX");
+                        writeCode(8, prim->getLayerName());
+                        writeCode(10, corners[i].x());
+                        writeCode(20, corners[i].y());
+                        writeCode(30, 0.0);
+                    }
+                    
+                    writeCode(0, "SEQEND");
+                    writeCode(8, prim->getLayerName());
+                }
             }
         }
     }
