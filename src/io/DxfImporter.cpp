@@ -133,8 +133,10 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
                 else if (d.first == 6) ltype = getClarusLineType(d.second);
                 else if (d.first == 62 && !hasTrueColor) color = getQColorFromAutoCadIndex(d.second.toInt());
                 else if (d.first == 420) { color = getQColorFromTrueColor(d.second.toInt()); hasTrueColor = true; }
-                else if (d.first == 1001 && d.second == "CLARUSCAD") { hasClarusData = true; }
-                else if (d.first == 1071 && hasClarusData) { clarusLType = d.second.toInt(); }
+                else if (d.first == 999 && d.second.startsWith("CLARUSCAD_LTYPE:")) {
+                    hasClarusData = true;
+                    clarusLType = d.second.mid(16).toInt();
+                }
             }
             
             if (hasClarusData) {

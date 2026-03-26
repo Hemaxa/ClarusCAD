@@ -99,9 +99,12 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     // ================= HEADER SECTION =================
     writeCode(0, "SECTION");
     writeCode(2, "HEADER");
-    // Версия DXF (AutoCAD 2013 - AC1027) для поддержки TrueColor и улучшенных типов
+    // Версия DXF (AutoCAD R12 - AC1009) для совместимости с парсерами DWGDirect (обход Null object Id из-за отсутствия Handles)
     writeCode(9, "$ACADVER");
-    writeCode(1, "AC1027");
+    writeCode(1, "AC1009");
+    // $HANDLING (0 = no handles required, which is strictly honored in AC1009)
+    writeCode(9, "$HANDLING");
+    writeCode(70, 0);
     writeCode(0, "ENDSEC");
 
     // ================= CLASSES SECTION =================
@@ -124,7 +127,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     // LTYPE TABLE
     writeCode(0, "TABLE");
     writeCode(2, "LTYPE");
-    writeCode(70, 8); // Number of linetypes: CONTINUOUS + 7 custom
+    writeCode(70, 4); // Number of linetypes
 
     auto writeLType = [&writeCode](const QString& name, const QString& desc) {
         writeCode(0, "LTYPE");
@@ -137,30 +140,13 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeLType("CONTINUOUS", "Solid main line");
     writeCode(73, 0); writeCode(40, 0.0);
 
-    writeLType("SOLID_THIN", "Solid thin line");
-    writeCode(73, 0); writeCode(40, 0.0);
-
-    writeLType("SOLID_WAVE", "Solid wavy line");
-    writeCode(73, 0); writeCode(40, 0.0);
-
-    writeLType("SOLID_KINK", "Solid zigzag line");
-    writeCode(73, 0); writeCode(40, 0.0);
-
     writeLType("DASHED", "Dashed __ __ __ __");
     writeCode(73, 2); 
     writeCode(40, 0.75); 
     writeCode(49, 0.5); 
     writeCode(49, -0.25); 
 
-    writeLType("DASHDOT_THICK", "Dash dot thick __ . __ . __");
-    writeCode(73, 4); 
-    writeCode(40, 1.0); 
-    writeCode(49, 0.5); 
-    writeCode(49, -0.25); 
-    writeCode(49, 0.0); 
-    writeCode(49, -0.25); 
-
-    writeLType("DASHDOT_THIN", "Dash dot thin __ . __ . __");
+    writeLType("DASHDOT", "Dash dot __ . __ . __");
     writeCode(73, 4); 
     writeCode(40, 1.0); 
     writeCode(49, 0.5); 
@@ -178,17 +164,6 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(49, 0.0); 
     writeCode(49, -0.25); 
 
-    writeCode(0, "ENDTAB");
-    
-    // APPID TABLE
-    writeCode(0, "TABLE");
-    writeCode(2, "APPID");
-    writeCode(70, 1);
-    
-    writeCode(0, "APPID");
-    writeCode(2, "CLARUSCAD");
-    writeCode(70, 0);
-    
     writeCode(0, "ENDTAB");
 
     // LAYER TABLE
@@ -224,8 +199,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         };
 
         auto writeXData = [&writeCode, &prim]() {
-            writeCode(1001, "CLARUSCAD");
-            writeCode(1071, static_cast<int>(prim->getLineType()));
+            writeCode(999, QString("CLARUSCAD_LTYPE:%1").arg(static_cast<int>(prim->getLineType())));
         };
 
         PrimitiveType type = prim->getType();
