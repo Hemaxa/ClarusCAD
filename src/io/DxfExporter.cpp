@@ -1,4 +1,4 @@
-//DxfExporter.cpp - реализация экспорта сцены в формат DXF
+//DxfExporter.cpp - реализация экспорта сцены в формат DXF (AC1015 / AutoCAD 2000)
 
 #include "DxfExporter.h"
 #include "Scene.h"
@@ -19,6 +19,7 @@
 #include <QSet>
 #include <QColor>
 #include <QLocale>
+#include <QDebug>
 #include <cmath>
 #include <algorithm>
 
@@ -65,7 +66,7 @@ static int getAutoCadColorIndex(const QColor& color) {
     return bestIndex;
 }
 
-// Вспомогательная функция для формирования 24-битного значения TrueColor (оставлена на случай импорта)
+// Вспомогательная функция для формирования 24-битного значения TrueColor
 static int getTrueColor24Bit(const QColor& color) {
     return (color.red() << 16) | (color.green() << 8) | color.blue();
 }
@@ -273,6 +274,18 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
 
     QTextStream out(&file);
     out.setLocale(QLocale::c());
+    // Обязательно: FixedNotation с высокой точностью, чтобы doubles всегда
+    // выводились с десятичной точкой и достаточным количеством знаков.
+    // SmartNotation (по умолчанию) может убрать десятичную точку у целых чисел
+    // и обрезать значащие цифры, что ломает DXF-парсеры.
+    out.setRealNumberNotation(QTextStream::FixedNotation);
+    out.setRealNumberPrecision(10);
+
+    // Счётчик уникальных handle'ов для AC1015
+    int handleCounter = 1;
+    auto nextHandle = [&handleCounter]() -> QString {
+        return QString::number(handleCounter++, 16).toUpper();
+    };
 
     auto writeCode = [&out](int code, const auto& value) {
         out << code << "\n" << value << "\n";
@@ -283,22 +296,6 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     double dashLen = lsm.getDashLength();   // по умолчанию 10.0
     double dashSpace = lsm.getDashSpace();  // по умолчанию 5.0
 
-    // ================= HEADER SECTION =================
-    writeCode(0, "SECTION");
-    writeCode(2, "HEADER");
-    writeCode(9, "$ACADVER");
-    writeCode(1, "AC1009");
-    writeCode(9, "$HANDLING");
-    writeCode(70, 0);
-    // Глобальный масштаб типов линий ($LTSCALE)
-    writeCode(9, "$LTSCALE");
-    writeCode(40, 1.0);
-    writeCode(0, "ENDSEC");
-
-    // ================= TABLES SECTION =================
-    writeCode(0, "SECTION");
-    writeCode(2, "TABLES");
-
     // Соберем уникальные слои
     QSet<QString> layerNames;
     const auto& primitives = scene.getPrimitives();
@@ -308,18 +305,95 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     if (layerNames.isEmpty()) {
         layerNames.insert("0");
     }
+    // Всегда включаем слой "0"
+    layerNames.insert("0");
 
-    // LTYPE TABLE — масштабированные паттерны штрихов
+    // Pre-allocate handles для таблиц и блоков
+    // Резервируем начальные handle'ы для системных объектов
+    QString hVportTable = nextHandle();   // 1
+    QString hVportEntry = nextHandle();   // 2
+    QString hLtypeTable = nextHandle();   // 3
+    // handle'ы для LTYPE записей выделяются далее
+    QString hLayerTable, hStyleTable, hAppIdTable, hDimStyleTable, hBlockRecordTable;
+    // handle'ы для блоков
+    QString hModelSpaceBlock, hPaperSpaceBlock;
+    QString hModelSpaceBlockEnd, hPaperSpaceBlockEnd;
+    QString hModelSpaceBlockRecord, hPaperSpaceBlockRecord;
+
+    // ================= HEADER SECTION =================
+    writeCode(0, "SECTION");
+    writeCode(2, "HEADER");
+    writeCode(9, "$ACADVER");
+    writeCode(1, "AC1015");
+    writeCode(9, "$HANDSEED");
+    // placeholder — обновим потом; пока Ставим большое значение
+    writeCode(5, "FFFF");
+    // Глобальный масштаб типов линий ($LTSCALE)
+    writeCode(9, "$LTSCALE");
+    writeCode(40, 1.0);
+    writeCode(0, "ENDSEC");
+
+    // ================= TABLES SECTION =================
+    writeCode(0, "SECTION");
+    writeCode(2, "TABLES");
+
+    // --- VPORT TABLE ---
+    writeCode(0, "TABLE");
+    writeCode(2, "VPORT");
+    writeCode(5, hVportTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, 1);
+    writeCode(0, "VPORT");
+    writeCode(5, hVportEntry);
+    writeCode(100, "AcDbSymbolTableRecord");
+    writeCode(100, "AcDbViewportTableRecord");
+    writeCode(2, "*ACTIVE");
+    writeCode(70, 0);
+    writeCode(10, 0.0); writeCode(20, 0.0);
+    writeCode(11, 1.0); writeCode(21, 1.0);
+    writeCode(12, 0.0); writeCode(22, 0.0);
+    writeCode(13, 0.0); writeCode(23, 0.0);
+    writeCode(14, 10.0); writeCode(24, 10.0);
+    writeCode(15, 10.0); writeCode(25, 10.0);
+    writeCode(16, 0.0); writeCode(26, 0.0); writeCode(36, 1.0);
+    writeCode(17, 0.0); writeCode(27, 0.0); writeCode(37, 0.0);
+    writeCode(40, 1000.0);
+    writeCode(41, 1.0);
+    writeCode(42, 50.0);
+    writeCode(43, 0.0);
+    writeCode(44, 0.0);
+    writeCode(50, 0.0);
+    writeCode(51, 0.0);
+    writeCode(71, 0);
+    writeCode(72, 100);
+    writeCode(73, 1);
+    writeCode(74, 3);
+    writeCode(75, 0);
+    writeCode(76, 1);
+    writeCode(77, 0);
+    writeCode(78, 0);
+    writeCode(0, "ENDTAB");
+
+    // --- LTYPE TABLE ---
+    int ltypeCount = 4; // CONTINUOUS, DASHED, DASHDOT, DIVIDE
+    hLtypeTable = nextHandle();
     writeCode(0, "TABLE");
     writeCode(2, "LTYPE");
-    writeCode(70, 4);
+    writeCode(5, hLtypeTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, ltypeCount);
 
-    auto writeLType = [&writeCode](const QString& name, const QString& desc) {
+    auto writeLType = [&writeCode, &nextHandle](const QString& name, const QString& desc) -> QString {
+        QString h = nextHandle();
         writeCode(0, "LTYPE");
+        writeCode(5, h);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbLinetypeTableRecord");
         writeCode(2, name);
         writeCode(70, 0);
         writeCode(3, desc);
         writeCode(72, 65);  // alignment 'A'
+        return h;
     };
 
     // CONTINUOUS
@@ -327,30 +401,35 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(73, 0); writeCode(40, 0.0);
 
     // DASHED: dash, space
-    // Паттерн масштабируется от реальных значений dashLen/dashSpace
     {
-        double d = dashLen;       // длина штриха
-        double s = dashSpace;     // длина пробела
+        double d = dashLen;
+        double s = dashSpace;
         double total = d + s;
         writeLType("DASHED", "Dashed __ __ __ __");
         writeCode(73, 2);
         writeCode(40, total);
         writeCode(49, d);
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
     }
 
     // DASHDOT: dash, space, dot, space
     {
         double d = dashLen;
-        double s = dashSpace / 2.0;  // Уменьшенный пробел для точки
-        double total = d + s + 0.0 + s; // dot = 0 длины
+        double s = dashSpace / 2.0;
+        double total = d + s + 0.0 + s;
         writeLType("DASHDOT", "Dash dot __ . __ . __");
         writeCode(73, 4);
         writeCode(40, total);
         writeCode(49, d);
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
         writeCode(49, 0.0);   // dot
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
     }
 
     // DIVIDE: dash, space, dot, space, dot, space
@@ -362,32 +441,172 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         writeCode(73, 6);
         writeCode(40, total);
         writeCode(49, d);
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
         writeCode(49, 0.0);   // dot 1
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
         writeCode(49, 0.0);   // dot 2
+        writeCode(74, 0);
         writeCode(49, -s);
+        writeCode(74, 0);
     }
 
     writeCode(0, "ENDTAB");
 
-    // LAYER TABLE
+    // --- LAYER TABLE ---
+    hLayerTable = nextHandle();
     writeCode(0, "TABLE");
     writeCode(2, "LAYER");
+    writeCode(5, hLayerTable);
+    writeCode(100, "AcDbSymbolTable");
     writeCode(70, layerNames.size());
     for (const QString& layerName : layerNames) {
+        QString h = nextHandle();
         writeCode(0, "LAYER");
+        writeCode(5, h);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbLayerTableRecord");
         writeCode(2, layerName);
         writeCode(70, 0);
         writeCode(62, 7);
         writeCode(6, "CONTINUOUS");
+        writeCode(370, 25); // Default lineweight
     }
     writeCode(0, "ENDTAB");
+
+    // --- STYLE TABLE ---
+    hStyleTable = nextHandle();
+    writeCode(0, "TABLE");
+    writeCode(2, "STYLE");
+    writeCode(5, hStyleTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, 1);
+    {
+        QString h = nextHandle();
+        writeCode(0, "STYLE");
+        writeCode(5, h);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbTextStyleTableRecord");
+        writeCode(2, "STANDARD");
+        writeCode(70, 0);
+        writeCode(40, 0.0);
+        writeCode(41, 1.0);
+        writeCode(50, 0.0);
+        writeCode(71, 0);
+        writeCode(42, 2.5);
+        writeCode(3, "txt");
+        writeCode(4, "");
+    }
+    writeCode(0, "ENDTAB");
+
+    // --- APPID TABLE ---
+    hAppIdTable = nextHandle();
+    writeCode(0, "TABLE");
+    writeCode(2, "APPID");
+    writeCode(5, hAppIdTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, 1);
+    {
+        QString h = nextHandle();
+        writeCode(0, "APPID");
+        writeCode(5, h);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbRegAppTableRecord");
+        writeCode(2, "ACAD");
+        writeCode(70, 0);
+    }
+    writeCode(0, "ENDTAB");
+
+    // --- DIMSTYLE TABLE ---
+    hDimStyleTable = nextHandle();
+    writeCode(0, "TABLE");
+    writeCode(2, "DIMSTYLE");
+    writeCode(5, hDimStyleTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, 1);
+    writeCode(100, "AcDbDimStyleTable");
+    {
+        QString h = nextHandle();
+        writeCode(0, "DIMSTYLE");
+        writeCode(5, h);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbDimStyleTableRecord");
+        writeCode(2, "STANDARD");
+        writeCode(70, 0);
+    }
+    writeCode(0, "ENDTAB");
+
+    // --- BLOCK_RECORD TABLE ---
+    hBlockRecordTable = nextHandle();
+    hModelSpaceBlockRecord = nextHandle();
+    hPaperSpaceBlockRecord = nextHandle();
+    writeCode(0, "TABLE");
+    writeCode(2, "BLOCK_RECORD");
+    writeCode(5, hBlockRecordTable);
+    writeCode(100, "AcDbSymbolTable");
+    writeCode(70, 2);
+
+    writeCode(0, "BLOCK_RECORD");
+    writeCode(5, hModelSpaceBlockRecord);
+    writeCode(100, "AcDbSymbolTableRecord");
+    writeCode(100, "AcDbBlockTableRecord");
+    writeCode(2, "*Model_Space");
+
+    writeCode(0, "BLOCK_RECORD");
+    writeCode(5, hPaperSpaceBlockRecord);
+    writeCode(100, "AcDbSymbolTableRecord");
+    writeCode(100, "AcDbBlockTableRecord");
+    writeCode(2, "*Paper_Space");
+
+    writeCode(0, "ENDTAB");
+
     writeCode(0, "ENDSEC");
 
     // ================= BLOCKS SECTION =================
     writeCode(0, "SECTION");
     writeCode(2, "BLOCKS");
+
+    // *Model_Space
+    hModelSpaceBlock = nextHandle();
+    writeCode(0, "BLOCK");
+    writeCode(5, hModelSpaceBlock);
+    writeCode(100, "AcDbEntity");
+    writeCode(8, "0");
+    writeCode(100, "AcDbBlockBegin");
+    writeCode(2, "*Model_Space");
+    writeCode(70, 0);
+    writeCode(10, 0.0); writeCode(20, 0.0); writeCode(30, 0.0);
+    writeCode(3, "*Model_Space");
+    writeCode(1, "");
+    hModelSpaceBlockEnd = nextHandle();
+    writeCode(0, "ENDBLK");
+    writeCode(5, hModelSpaceBlockEnd);
+    writeCode(100, "AcDbEntity");
+    writeCode(8, "0");
+    writeCode(100, "AcDbBlockEnd");
+
+    // *Paper_Space
+    hPaperSpaceBlock = nextHandle();
+    writeCode(0, "BLOCK");
+    writeCode(5, hPaperSpaceBlock);
+    writeCode(100, "AcDbEntity");
+    writeCode(8, "0");
+    writeCode(100, "AcDbBlockBegin");
+    writeCode(2, "*Paper_Space");
+    writeCode(70, 0);
+    writeCode(10, 0.0); writeCode(20, 0.0); writeCode(30, 0.0);
+    writeCode(3, "*Paper_Space");
+    writeCode(1, "");
+    hPaperSpaceBlockEnd = nextHandle();
+    writeCode(0, "ENDBLK");
+    writeCode(5, hPaperSpaceBlockEnd);
+    writeCode(100, "AcDbEntity");
+    writeCode(8, "0");
+    writeCode(100, "AcDbBlockEnd");
+
     writeCode(0, "ENDSEC");
 
     // ================= ENTITIES SECTION =================
@@ -396,24 +615,41 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
 
     for (const auto& prim : primitives) {
         
-        auto writeCommonProperties = [&writeCode, &prim]() {
+        // Общие свойства для AC1015: handle + AcDbEntity subclass + свойства
+        auto writeCommonProperties = [&writeCode, &nextHandle, &prim](const QString& subclassMarker) {
+            writeCode(5, nextHandle());
+            writeCode(100, "AcDbEntity");
             writeCode(8, prim->getLayerName());
-            writeCode(6, getDxfLineType(prim->getLineType()));
+            QString lt = getDxfLineType(prim->getLineType());
+            if (lt != "CONTINUOUS") {
+                writeCode(6, lt);
+            }
             writeCode(62, getAutoCadColorIndex(prim->getColor()));
             writeCode(420, getTrueColor24Bit(prim->getColor()));
             // Толщина линии (код 370, в сотых долях мм)
             writeCode(370, getDxfLineWeight(prim->getLineType()));
+            writeCode(100, subclassMarker);
         };
 
         auto writeXData = [&writeCode, &prim]() {
             writeCode(999, QString("CLARUSCAD_LTYPE:%1").arg(static_cast<int>(prim->getLineType())));
         };
 
-        // Лямбда для записи POLYLINE из набора точек
-        auto writePolyline = [&writeCode, &prim, &writeCommonProperties, &writeXData](
+        // Лямбда для записи POLYLINE из набора точек (AC1015)
+        auto writePolyline = [&writeCode, &nextHandle, &prim, &writeXData](
                                   const QVector<QPointF>& pts, bool closed) {
             writeCode(0, "POLYLINE");
-            writeCommonProperties();
+            writeCode(5, nextHandle());
+            writeCode(100, "AcDbEntity");
+            writeCode(8, prim->getLayerName());
+            QString lt = getDxfLineType(prim->getLineType());
+            if (lt != "CONTINUOUS") {
+                writeCode(6, lt);
+            }
+            writeCode(62, getAutoCadColorIndex(prim->getColor()));
+            writeCode(420, getTrueColor24Bit(prim->getColor()));
+            writeCode(370, getDxfLineWeight(prim->getLineType()));
+            writeCode(100, "AcDb2dPolyline");
             writeCode(66, 1);
             writeCode(70, closed ? 1 : 0);
             writeCode(10, 0.0);
@@ -422,12 +658,18 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
             writeXData();
             for (const auto& pt : pts) {
                 writeCode(0, "VERTEX");
+                writeCode(5, nextHandle());
+                writeCode(100, "AcDbEntity");
                 writeCode(8, prim->getLayerName());
+                writeCode(100, "AcDbVertex");
+                writeCode(100, "AcDb2dVertex");
                 writeCode(10, pt.x());
                 writeCode(20, pt.y());
                 writeCode(30, 0.0);
             }
             writeCode(0, "SEQEND");
+            writeCode(5, nextHandle());
+            writeCode(100, "AcDbEntity");
             writeCode(8, prim->getLayerName());
         };
 
@@ -449,7 +691,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(pts, false);
                 } else {
                     writeCode(0, "LINE");
-                    writeCommonProperties();
+                    writeCommonProperties("AcDbLine");
                     writeCode(10, start.x());
                     writeCode(20, start.y());
                     writeCode(30, 0.0);
@@ -470,7 +712,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(pts, true);
                 } else {
                     writeCode(0, "CIRCLE");
-                    writeCommonProperties();
+                    writeCommonProperties("AcDbCircle");
                     writeCode(10, circle->getCenter().getX());
                     writeCode(20, circle->getCenter().getY());
                     writeCode(30, 0.0);
@@ -489,14 +731,45 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(pts, false);
                 } else {
                     writeCode(0, "ARC");
-                    writeCommonProperties();
+                    // ARC в AC1015: AcDbEntity -> AcDbCircle -> AcDbArc
+                    // Qt использует Y-вниз, DXF — Y-вверх.
+                    // Углы Qt (CCW в экранных координатах) = CW в мат. координатах.
+                    // Для корректного отображения: DXF_angle = -Qt_angle
+                    // DXF ARC всегда идёт CCW от startAngle до endAngle.
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
+                    writeCode(8, prim->getLayerName());
+                    QString lt = getDxfLineType(prim->getLineType());
+                    if (lt != "CONTINUOUS") {
+                        writeCode(6, lt);
+                    }
+                    writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                    writeCode(420, getTrueColor24Bit(prim->getColor()));
+                    writeCode(370, getDxfLineWeight(prim->getLineType()));
+                    writeCode(100, "AcDbCircle");
                     writeCode(10, arc->getCenter().getX());
                     writeCode(20, arc->getCenter().getY());
                     writeCode(30, 0.0);
                     writeCode(40, arc->getRadius());
-                    writeCode(50, arc->getStartAngle());
-                    double endAngle = arc->getStartAngle() + arc->getSpanAngle();
-                    writeCode(51, endAngle);
+                    writeCode(100, "AcDbArc");
+                    // Конвертация углов Qt -> DXF:
+                    // Qt: startAngle, spanAngle (CCW при Y-down = CW при Y-up)
+                    // DXF: startAngle, endAngle (CCW при Y-up)
+                    // Нужно отразить углы: DXF_start = -QtEnd, DXF_end = -QtStart
+                    double qtStart = arc->getStartAngle();
+                    double qtEnd = qtStart + arc->getSpanAngle();
+                    double dxfStart = -qtEnd;
+                    double dxfEnd = -qtStart;
+                    // Нормализуем в диапазон [0, 360)
+                    auto normalizeAngle = [](double a) -> double {
+                        a = std::fmod(a, 360.0);
+                        if (a < 0) a += 360.0;
+                        return a;
+                    };
+                    dxfStart = normalizeAngle(dxfStart);
+                    dxfEnd = normalizeAngle(dxfEnd);
+                    writeCode(50, dxfStart);
+                    writeCode(51, dxfEnd);
                     writeXData();
                 }
             }
@@ -511,7 +784,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(pts, true);
                 } else {
                     writeCode(0, "ELLIPSE");
-                    writeCommonProperties();
+                    writeCommonProperties("AcDbEllipse");
                     
                     double rx = ellipse->getRadiusX();
                     double ry = ellipse->getRadiusY();
@@ -519,13 +792,25 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     double minorRadius = std::min(rx, ry);
                     double ratio = minorRadius / majorRadius;
                     
-                    double rotationRad = ellipse->getRotation() * 3.14159265358979323846 / 180.0;
+                    // Qt rotation: clockwise в экранных координатах (Y-down)
+                    // DXF rotation: CCW в мат. координатах (Y-up)
+                    // Конвертация: negating the angle
+                    double rotationRad = -(ellipse->getRotation() * M_PI / 180.0);
                     if (ry > rx) {
-                        rotationRad += 3.14159265358979323846 / 2.0;
+                        // Если ry > rx, то major axis вдоль Y → добавляем -90°
+                        rotationRad -= M_PI / 2.0;
                     }
                     
+                    // Вектор конечной точки большой оси (относительно центра)
                     double dx = majorRadius * std::cos(rotationRad);
                     double dy = majorRadius * std::sin(rotationRad);
+                    
+                    qDebug() << "[DXF ELLIPSE EXPORT] rx=" << rx << "ry=" << ry
+                             << "majorR=" << majorRadius << "minorR=" << minorRadius
+                             << "ratio=" << ratio
+                             << "rotation=" << ellipse->getRotation()
+                             << "rotationRad=" << rotationRad
+                             << "dx=" << dx << "dy=" << dy;
                     
                     writeCode(10, ellipse->getCenter().getX());
                     writeCode(20, ellipse->getCenter().getY());
@@ -535,7 +820,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(31, 0.0);
                     writeCode(40, ratio);
                     writeCode(41, 0.0);
-                    writeCode(42, 2.0 * 3.14159265358979323846);
+                    writeCode(42, 2.0 * M_PI);
                     writeXData();
                 }
             }
@@ -560,7 +845,17 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(allPts, false); // Замкнутость через сами точки
                 } else {
                     writeCode(0, "POLYLINE");
-                    writeCommonProperties();
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
+                    writeCode(8, prim->getLayerName());
+                    QString lt = getDxfLineType(prim->getLineType());
+                    if (lt != "CONTINUOUS") {
+                        writeCode(6, lt);
+                    }
+                    writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                    writeCode(420, getTrueColor24Bit(prim->getColor()));
+                    writeCode(370, getDxfLineWeight(prim->getLineType()));
+                    writeCode(100, "AcDb2dPolyline");
                     writeCode(66, 1);
                     writeCode(70, 1);
                     writeCode(10, 0.0);
@@ -571,13 +866,19 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     const auto& pts = poly->getVertices();
                     for (const auto& pt : pts) {
                         writeCode(0, "VERTEX");
+                        writeCode(5, nextHandle());
+                        writeCode(100, "AcDbEntity");
                         writeCode(8, prim->getLayerName());
+                        writeCode(100, "AcDbVertex");
+                        writeCode(100, "AcDb2dVertex");
                         writeCode(10, pt.x());
                         writeCode(20, pt.y());
                         writeCode(30, 0.0);
                     }
                     
                     writeCode(0, "SEQEND");
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
                     writeCode(8, prim->getLayerName());
                 }
             }
@@ -599,7 +900,17 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(allPts, spline->isClosed());
                 } else {
                     writeCode(0, "POLYLINE");
-                    writeCommonProperties();
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
+                    writeCode(8, prim->getLayerName());
+                    QString lt = getDxfLineType(prim->getLineType());
+                    if (lt != "CONTINUOUS") {
+                        writeCode(6, lt);
+                    }
+                    writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                    writeCode(420, getTrueColor24Bit(prim->getColor()));
+                    writeCode(370, getDxfLineWeight(prim->getLineType()));
+                    writeCode(100, "AcDb2dPolyline");
                     writeCode(66, 1);
                     writeCode(70, spline->isClosed() ? 1 : 0);
                     writeCode(10, 0.0);
@@ -610,13 +921,19 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     auto pts = spline->calculateSplinePoints();
                     for (const auto& pt : pts) {
                         writeCode(0, "VERTEX");
+                        writeCode(5, nextHandle());
+                        writeCode(100, "AcDbEntity");
                         writeCode(8, prim->getLayerName());
+                        writeCode(100, "AcDbVertex");
+                        writeCode(100, "AcDb2dVertex");
                         writeCode(10, pt.x());
                         writeCode(20, pt.y());
                         writeCode(30, 0.0);
                     }
                     
                     writeCode(0, "SEQEND");
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
                     writeCode(8, prim->getLayerName());
                 }
             }
@@ -657,7 +974,17 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writePolyline(allPts, false);
                 } else {
                     writeCode(0, "POLYLINE");
-                    writeCommonProperties();
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
+                    writeCode(8, prim->getLayerName());
+                    QString lt = getDxfLineType(prim->getLineType());
+                    if (lt != "CONTINUOUS") {
+                        writeCode(6, lt);
+                    }
+                    writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                    writeCode(420, getTrueColor24Bit(prim->getColor()));
+                    writeCode(370, getDxfLineWeight(prim->getLineType()));
+                    writeCode(100, "AcDb2dPolyline");
                     writeCode(66, 1);
                     writeCode(70, 1);
                     writeCode(10, 0.0);
@@ -667,19 +994,36 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     
                     for (int i = 0; i < 4; ++i) {
                         writeCode(0, "VERTEX");
+                        writeCode(5, nextHandle());
+                        writeCode(100, "AcDbEntity");
                         writeCode(8, prim->getLayerName());
+                        writeCode(100, "AcDbVertex");
+                        writeCode(100, "AcDb2dVertex");
                         writeCode(10, corners[i].x());
                         writeCode(20, corners[i].y());
                         writeCode(30, 0.0);
                     }
                     
                     writeCode(0, "SEQEND");
+                    writeCode(5, nextHandle());
+                    writeCode(100, "AcDbEntity");
                     writeCode(8, prim->getLayerName());
                 }
             }
         }
     }
 
+    writeCode(0, "ENDSEC");
+
+    // ================= OBJECTS SECTION (required for AC1015) =================
+    writeCode(0, "SECTION");
+    writeCode(2, "OBJECTS");
+    // Словарь корневой
+    QString hRootDict = nextHandle();
+    writeCode(0, "DICTIONARY");
+    writeCode(5, hRootDict);
+    writeCode(100, "AcDbDictionary");
+    writeCode(281, 1);
     writeCode(0, "ENDSEC");
 
     // ================= EOF =================
