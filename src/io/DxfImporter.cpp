@@ -205,8 +205,11 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
         }
         double majorRadius = std::sqrt(dx*dx + dy*dy);
         double minorRadius = majorRadius * ratio;
-        // Конвертация: DXF rotation (Y-вверх) → Qt rotation (Y-вниз) = negation
-        double rotation = -(std::atan2(dy, dx) * 180.0 / M_PI);
+        // Обратная конвертация DXF → Qt:
+        // Экспортёр инвертировал dy (Y-flip), поэтому для восстановления
+        // Qt-угла: rotation = atan2(-dy, dx)
+        // Всегда создаём с rx=majorRadius, ry=minorRadius.
+        double rotation = std::atan2(-dy, dx) * 180.0 / M_PI;
         if (majorRadius > 0) {
             auto* ell = new EllipsePrimitive(PointPrimitive(cx, cy), majorRadius, minorRadius, rotation);
             applyProps(ell, props);

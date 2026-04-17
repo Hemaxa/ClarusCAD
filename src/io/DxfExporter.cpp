@@ -792,25 +792,26 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     double minorRadius = std::min(rx, ry);
                     double ratio = minorRadius / majorRadius;
                     
-                    // Qt rotation: clockwise в экранных координатах (Y-down)
-                    // DXF rotation: CCW в мат. координатах (Y-up)
-                    // Конвертация: negating the angle
-                    double rotationRad = -(ellipse->getRotation() * M_PI / 180.0);
+                    // Qt: rotate(θ) — стандартная матрица вращения, θ в градусах.
+                    // В экранных координатах (Y-down):
+                    //   rx-ось → направление (cos(θ), sin(θ))
+                    //   ry-ось → направление (-sin(θ), cos(θ))
+                    // DXF использует Y-up. Координаты центра НЕ инвертируются,
+                    // поэтому весь чертёж зеркально отражён по Y.
+                    // Для консистентности: инвертируем ТОЛЬКО dy вектора большой оси.
+                    double theta = ellipse->getRotation() * M_PI / 180.0;
+                    double dx, dy;
                     if (ry > rx) {
-                        // Если ry > rx, то major axis вдоль Y → добавляем -90°
-                        rotationRad -= M_PI / 2.0;
+                        // Major axis вдоль ry: screen direction = (-sin(θ), cos(θ))
+                        // DXF (Y-flip): (-sin(θ), -cos(θ))
+                        dx = -majorRadius * std::sin(theta);
+                        dy = -majorRadius * std::cos(theta);
+                    } else {
+                        // Major axis вдоль rx: screen direction = (cos(θ), sin(θ))
+                        // DXF (Y-flip): (cos(θ), -sin(θ))
+                        dx = majorRadius * std::cos(theta);
+                        dy = -majorRadius * std::sin(theta);
                     }
-                    
-                    // Вектор конечной точки большой оси (относительно центра)
-                    double dx = majorRadius * std::cos(rotationRad);
-                    double dy = majorRadius * std::sin(rotationRad);
-                    
-                    qDebug() << "[DXF ELLIPSE EXPORT] rx=" << rx << "ry=" << ry
-                             << "majorR=" << majorRadius << "minorR=" << minorRadius
-                             << "ratio=" << ratio
-                             << "rotation=" << ellipse->getRotation()
-                             << "rotationRad=" << rotationRad
-                             << "dx=" << dx << "dy=" << dy;
                     
                     writeCode(10, ellipse->getCenter().getX());
                     writeCode(20, ellipse->getCenter().getY());
