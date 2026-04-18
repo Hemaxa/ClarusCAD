@@ -60,6 +60,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/controller/tools/SplineCreationTool.cpp
     ${SRC_DIR}/controller/tools/dimensions/LinearDimensionCreationTool.h
     ${SRC_DIR}/controller/tools/dimensions/LinearDimensionCreationTool.cpp
+    ${SRC_DIR}/controller/tools/dimensions/RadialDimensionCreationTool.h
+    ${SRC_DIR}/controller/tools/dimensions/RadialDimensionCreationTool.cpp
+    ${SRC_DIR}/controller/tools/dimensions/AngularDimensionCreationTool.h
+    ${SRC_DIR}/controller/tools/dimensions/AngularDimensionCreationTool.cpp
 
     #model
     ${SRC_DIR}/model/BasePrimitive.h
@@ -87,6 +91,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/primitives/dimensions/BaseDimensionPrimitive.cpp
     ${SRC_DIR}/model/primitives/dimensions/LinearDimensionPrimitive.h
     ${SRC_DIR}/model/primitives/dimensions/LinearDimensionPrimitive.cpp
+    ${SRC_DIR}/model/primitives/dimensions/RadialDimensionPrimitive.h
+    ${SRC_DIR}/model/primitives/dimensions/RadialDimensionPrimitive.cpp
+    ${SRC_DIR}/model/primitives/dimensions/AngularDimensionPrimitive.h
+    ${SRC_DIR}/model/primitives/dimensions/AngularDimensionPrimitive.cpp
 
     #view
     ${SRC_DIR}/view/BaseDrawingTool.h
@@ -120,6 +128,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/drawing/PolygonDrawingTool.cpp
     ${SRC_DIR}/view/drawing/SplineDrawingTool.h
     ${SRC_DIR}/view/drawing/SplineDrawingTool.cpp
+    ${SRC_DIR}/view/drawing/DimensionDrawingTool.h
+    ${SRC_DIR}/view/drawing/DimensionDrawingTool.cpp
 
     ${SRC_DIR}/view/panels/ConsolePanelWidget.h
     ${SRC_DIR}/view/panels/ConsolePanelWidget.cpp

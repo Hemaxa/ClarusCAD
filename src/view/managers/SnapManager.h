@@ -22,7 +22,8 @@ enum class SnapType {
     Tangent = 1 << 5,       ///< Касательная к окружности/дуге
     Quadrant = 1 << 6,      ///< Квадранты окружности (0°, 90°, 180°, 270°)
     Grid = 1 << 7,          ///< Привязка к сетке
-    All = 0xFF              ///< Все типы
+    Nearest = 1 << 8,       ///< Ближайшая точка на примитиве
+    All = 0x1FF             ///< Все типы
 };
 
 // Структура точки привязки
@@ -89,6 +90,7 @@ private:
     void collectMidpoints(BasePrimitive* prim, QVector<SnapPoint>& out);
     void collectCenters(BasePrimitive* prim, QVector<SnapPoint>& out);
     void collectQuadrants(BasePrimitive* prim, QVector<SnapPoint>& out);
+    void collectNearestPoints(const QPointF& mousePos, BasePrimitive* prim, QVector<SnapPoint>& out);
     
     // Сбор точек пересечения между примитивами
     void collectIntersections(const QPointF& mousePos, Scene* scene, 

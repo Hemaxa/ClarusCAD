@@ -3,14 +3,29 @@
 #pragma once
 
 #include "BaseDimensionPrimitive.h"
+#include "../../../view/managers/SnapManager.h"
 #include <QPointF>
 #include <QPainter>
+
+enum class LinearDimensionMode {
+    Aligned,
+    Horizontal,
+    Vertical
+};
 
 /**
  * @brief Класс линейного размера
  */
 class LinearDimensionPrimitive : public BaseDimensionPrimitive {
 public:
+    struct Attachment {
+        BasePrimitive* source = nullptr;
+        SnapType snapType = SnapType::None;
+        int index = -1;
+        double param = 0.0;
+        QPointF fallback;
+    };
+
     LinearDimensionPrimitive() = default;
     virtual ~LinearDimensionPrimitive() = default;
 
@@ -25,6 +40,12 @@ public:
 
     void setDimensionLinePos(const QPointF& pos) { m_dimensionLinePos = pos; }
     QPointF getDimensionLinePos() const { return m_dimensionLinePos; }
+    void setStartAttachment(const Attachment& a) { m_startAttachment = a; }
+    void setEndAttachment(const Attachment& a) { m_endAttachment = a; }
+    void updateFromAttachments();
+
+    void setMode(LinearDimensionMode mode) { m_mode = mode; recalculateValue(); }
+    LinearDimensionMode getMode() const { return m_mode; }
 
     virtual void recalculateValue() override;
 
@@ -35,14 +56,21 @@ public:
     virtual bool hitTest(const QPointF& point, double tolerance) const override;
     virtual bool intersects(const QRectF& rect) const override;
     virtual bool inside(const QRectF& rect) const override;
+    QPointF getDefaultTextAnchor() const override;
+    QVector<QPointF> getEditGripPoints() const override;
+    void moveGripPoint(int index, const QPointF& newPos) override;
     virtual void setColor(const QColor& color) override {
         BasePrimitive::setColor(color);
+        m_style.extensionLineColor = color;
         m_style.dimensionLineColor = color;
-        m_style.textColor = color; // Раскомментируй, если хочешь, чтобы текст тоже красился
+        m_style.textColor = color;
     }
 
 private:
     QPointF m_startPoint;       ///< Первая точка измерения
     QPointF m_endPoint;         ///< Вторая точка измерения
     QPointF m_dimensionLinePos; ///< Положение самой размерной линии (точка клика, определяющая отступ)
+    LinearDimensionMode m_mode = LinearDimensionMode::Aligned;
+    Attachment m_startAttachment;
+    Attachment m_endAttachment;
 };

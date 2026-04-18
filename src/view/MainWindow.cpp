@@ -12,6 +12,8 @@
 #include "PolygonCreationTool.h"
 #include "SplineCreationTool.h"
 #include "LinearDimensionCreationTool.h"
+#include "RadialDimensionCreationTool.h"
+#include "AngularDimensionCreationTool.h"
 
 // Primitives
 #include "PointPrimitive.h"
@@ -23,6 +25,8 @@
 #include "PolygonPrimitive.h"
 #include "SplinePrimitive.h"
 #include "LinearDimensionPrimitive.h"
+#include "RadialDimensionPrimitive.h"
+#include "AngularDimensionPrimitive.h"
 
 // Panels
 #include "ConsolePanelWidget.h"
@@ -109,6 +113,8 @@ void MainWindow::createTools()
     m_polygonCreationTool = new PolygonCreationTool(this);
     m_splineCreationTool = new SplineCreationTool(this);
     m_linearDimCreationTool = new LinearDimensionCreationTool(this);
+    m_radialDimCreationTool = new RadialDimensionCreationTool(this);
+    m_angularDimCreationTool = new AngularDimensionCreationTool(this);
 }
 
 void MainWindow::createPanelWindows()
@@ -182,7 +188,7 @@ void MainWindow::createConnections()
     connect(m_toolbarPanel, &ToolbarPanelWidget::circleToolActivated, this, &MainWindow::activateCircleCreationTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::rectangleToolActivated, this, &MainWindow::activateRectangleTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::arcToolActivated, this, &MainWindow::activateArcTool);
-    connect(m_toolbarPanel, &ToolbarPanelWidget::linearDimensionToolActivated, this, &MainWindow::activateLinearDimensionTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::dimensionToolActivated, this, &MainWindow::activateDimensionTool);
 
     //- NavigationPanelWidget -
     connect(m_navigationPanel, &NavigationPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
@@ -294,6 +300,20 @@ void MainWindow::createConnections()
     connect(m_linearDimCreationTool, &LinearDimensionCreationTool::dimensionDataReady, this, [this](LinearDimensionPrimitive* dim){
         dim->setLayerName(m_currentLayer);
         addPrimitiveToScene(dim);
+    });
+
+    connect(m_radialDimCreationTool, &RadialDimensionCreationTool::dimensionDataReady, this, [this](RadialDimensionPrimitive* dim){
+        dim->setLayerName(m_currentLayer);
+        addPrimitiveToScene(dim);
+    });
+
+    connect(m_angularDimCreationTool, &AngularDimensionCreationTool::dimensionDataReady, this, [this](AngularDimensionPrimitive* dim){
+        dim->setLayerName(m_currentLayer);
+        addPrimitiveToScene(dim);
+    });
+
+    connect(m_propertiesPanel, &PropertiesPanelWidget::dimensionPropertiesApplied, this, [this](){
+        emit sceneChanged(m_scene);
     });
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
@@ -529,11 +549,56 @@ void MainWindow::activateSplineTool() {
 }
 
 void MainWindow::activateLinearDimensionTool() {
+    activateLinearDimensionTool(LinearDimensionMode::Aligned);
+}
+
+void MainWindow::activateLinearDimensionTool(LinearDimensionMode mode) {
     deactivateCurrentTool();
+    m_linearDimCreationTool->setMode(mode);
     m_currentTool = m_linearDimCreationTool;
     m_viewportPanel->setActiveTool(m_currentTool);
     emit toolActivated(PrimitiveType::LinearDimension);
-    m_toolbarPanel->getCreateLinearDimensionButton()->setChecked(true);
+    m_toolbarPanel->getCreateDimensionButton()->setChecked(true);
+}
+
+void MainWindow::activateRadialDimensionTool(bool isDiameter) {
+    deactivateCurrentTool();
+    m_radialDimCreationTool->setDiameterMode(isDiameter);
+    m_currentTool = m_radialDimCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::RadialDimension);
+    m_toolbarPanel->getCreateDimensionButton()->setChecked(true);
+}
+
+void MainWindow::activateAngularDimensionTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_angularDimCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::AngularDimension);
+    m_toolbarPanel->getCreateDimensionButton()->setChecked(true);
+}
+
+void MainWindow::activateDimensionTool(DimensionCreationMode mode) {
+    switch (mode) {
+    case DimensionCreationMode::LinearAligned:
+        activateLinearDimensionTool(LinearDimensionMode::Aligned);
+        break;
+    case DimensionCreationMode::LinearHorizontal:
+        activateLinearDimensionTool(LinearDimensionMode::Horizontal);
+        break;
+    case DimensionCreationMode::LinearVertical:
+        activateLinearDimensionTool(LinearDimensionMode::Vertical);
+        break;
+    case DimensionCreationMode::Radius:
+        activateRadialDimensionTool(false);
+        break;
+    case DimensionCreationMode::Diameter:
+        activateRadialDimensionTool(true);
+        break;
+    case DimensionCreationMode::Angular:
+        activateAngularDimensionTool();
+        break;
+    }
 }
 
 void MainWindow::deactivateCurrentTool()
@@ -597,6 +662,7 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         segment->setLineType(static_cast<int>(lineType));
     }
 
+    refreshAssociativeDimensions();
     // Сигнал об изменении сцены обновит список объектов
     emit sceneChanged(m_scene);
 
@@ -632,6 +698,7 @@ void MainWindow::applyCircleChanges(CirclePrimitive* circle, const PointPrimitiv
         circle->setColor(color);
         circle->setLineType(static_cast<int>(lineType));
     }
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 
@@ -656,6 +723,7 @@ void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrim
     rect->setCornerRadius(cornerRadius);
     rect->setColor(color);
     rect->setLineType((int)type);
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 
@@ -675,6 +743,21 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
     }
 }
 
+void MainWindow::refreshAssociativeDimensions()
+{
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        if (auto* linear = dynamic_cast<LinearDimensionPrimitive*>(primitive.get())) {
+            linear->updateFromAttachments();
+        } else if (auto* radial = dynamic_cast<RadialDimensionPrimitive*>(primitive.get())) {
+            radial->updateFromAssociation();
+        } else if (auto* angular = dynamic_cast<AngularDimensionPrimitive*>(primitive.get())) {
+            angular->updateFromAssociation();
+        } else if (auto* base = dynamic_cast<BaseDimensionPrimitive*>(primitive.get())) {
+            base->recalculateValue();
+        }
+    }
+}
+
 void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& color, LineType type) {
     if(!arc) {
         auto* newArc = new ArcPrimitive(center, rad, start, span);
@@ -690,6 +773,7 @@ void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center
     arc->setSpanAngle(span);
     arc->setColor(color);
     arc->setLineType((int)type);
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 
@@ -722,6 +806,7 @@ void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive
         ell->setColor(c);
         ell->setLineType((int)t);
     }
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 
@@ -747,6 +832,7 @@ void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const 
     spline->setClosed(closed);
     spline->setColor(c);
     spline->setLineType((int)t);
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 
@@ -765,6 +851,7 @@ void MainWindow::applyPolygonChanges(PolygonPrimitive* polygon, int sides, Polyg
         polygon->setColor(color);
         polygon->setLineType((int)lineType);
     }
+    refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
 

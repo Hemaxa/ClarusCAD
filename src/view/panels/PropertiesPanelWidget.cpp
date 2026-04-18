@@ -88,14 +88,8 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_splineProperties, &SplinePropertiesWidget::closedChanged, this, &PropertiesPanelWidget::splineClosedChanged);
 
     // --- Коннекты РАЗМЕРОВ ---
-    // Для размеров просто пробрасываем сигнал обновления сцены при изменении текста
     connect(m_dimensionProperties, &DimensionPropertiesWidget::dimensionPropertiesApplied, this, [this](){
-        // У MainWindow нет специального метода для применения размеров, т.к. текст меняется прямо в примитиве через виджет, 
-        // поэтому мы просто эмитируем пустой colorChanged с белым цветом (либо просто эмитируем dimensionPropertiesApplied, чтобы его ловили, 
-        // но лучше определить сигнал dimensionPropertiesApplied). У нас нет сигнала от панели свойств для вызова sceneChanged напрямую, 
-        // поэтому просто эмитим сигнал, который MainWindow сможет поймать и вызвать emit sceneChanged(m_scene);
-        emit this->colorChanged(Qt::white); // хак чтобы триггернуть перерисовку если нет других способов (хотя в MainWindow onColorChanged не перерисовывает).
-        // Добавим сигнал sceneNeedsUpdate или что-то подобное. К сож., в MainWindow applyCommonProperties требует цвет.
+        emit this->dimensionPropertiesApplied();
     });
 
     // --- Коннекты ОБЩИХ СВОЙСТВ ---
@@ -150,7 +144,9 @@ void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primi
             m_splineProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_splineProperties);
         }
-        else if (firstType == PrimitiveType::LinearDimension) {
+        else if (firstType == PrimitiveType::LinearDimension
+                 || firstType == PrimitiveType::RadialDimension
+                 || firstType == PrimitiveType::AngularDimension) {
             m_dimensionProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_dimensionProperties);
         }
@@ -195,7 +191,9 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
         m_splineProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_splineProperties);
     }
-    else if (type == PrimitiveType::LinearDimension) {
+    else if (type == PrimitiveType::LinearDimension
+             || type == PrimitiveType::RadialDimension
+             || type == PrimitiveType::AngularDimension) {
         m_dimensionProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_dimensionProperties);
     }

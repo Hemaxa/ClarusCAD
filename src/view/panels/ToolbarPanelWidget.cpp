@@ -23,7 +23,6 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_createEllipseBtn = new AnimationManager(":/icons/icons/tools/ellipse.svg", "Эллипс [E]", Qt::Key_E, true);
     m_createPolygonBtn = new AnimationManager(":/icons/icons/tools/polygon.svg", "Многоугольник [P]", Qt::Key_P, true);
     m_createSplineBtn = new AnimationManager(":/icons/icons/tools/spline.svg", "Сплайн [L]", Qt::Key_L, true);
-    m_createLinearDimBtn = new AnimationManager(":/icons/icons/tools/dimension_linear.svg", "Линейный размер [D]", Qt::Key_D, true);
 
     // === FLYOUT КНОПКА ДЛЯ ОКРУЖНОСТИ ===
     m_createCircleBtn = new FlyoutToolButton(this);
@@ -49,6 +48,17 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_createArcBtn->setFixedSize(40, 40);
     m_createArcBtn->setIconSize(QSize(28, 28));
 
+    // === FLYOUT КНОПКА ДЛЯ РАЗМЕРОВ ===
+    m_createDimensionBtn = new FlyoutToolButton(this);
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearAligned), ":/icons/icons/tools/dimension_linear.svg", "Линейный выровненный [D]");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearHorizontal), ":/icons/icons/tools/dimension_linear.svg", "Линейный горизонтальный");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearVertical), ":/icons/icons/tools/dimension_linear.svg", "Линейный вертикальный");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Radius), ":/icons/icons/tools/dimension_radius.svg", "Радиальный размер");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Diameter), ":/icons/icons/tools/dimension_diameter.svg", "Диаметральный размер");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Angular), ":/icons/icons/tools/dimension_angular.svg", "Угловой размер");
+    m_createDimensionBtn->setFixedSize(40, 40);
+    m_createDimensionBtn->setIconSize(QSize(28, 28));
+
     //добавление кнопок в общую группу
     m_buttonGroup->addButton(m_deleteBtn);
     m_buttonGroup->addButton(m_moveBtn);
@@ -59,7 +69,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->addButton(m_createEllipseBtn);
     m_buttonGroup->addButton(m_createPolygonBtn);
     m_buttonGroup->addButton(m_createSplineBtn);
-    m_buttonGroup->addButton(m_createLinearDimBtn);
+    m_buttonGroup->addButton(m_createDimensionBtn);
 
     //добавление кнопок в layout
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
@@ -71,7 +81,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->addWidget(m_createEllipseBtn, 6, 0, Qt::AlignLeft);
     layout->addWidget(m_createPolygonBtn, 7, 0, Qt::AlignLeft);
     layout->addWidget(m_createSplineBtn, 8, 0, Qt::AlignLeft);
-    layout->addWidget(m_createLinearDimBtn, 9, 0, Qt::AlignLeft);
+    layout->addWidget(m_createDimensionBtn, 9, 0, Qt::AlignLeft);
 
     layout->setColumnStretch(1, 1);
     layout->setRowStretch(10, 1);
@@ -83,12 +93,6 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated);
     connect(m_createPolygonBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::polygonToolActivated);
     connect(m_createSplineBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::splineToolActivated);
-    
-    // Подключение кнопки линейного размера
-    connect(m_createLinearDimBtn, &QToolButton::clicked, this, [this](){
-        emit linearDimensionToolActivated();
-        emit commandRequested("tool_linear_dimension"); // По просьбе пользователя
-    });
 
     // === ПОДКЛЮЧЕНИЕ FLYOUT КНОПОК ===
     
@@ -105,6 +109,11 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     // Arc: modeActivated -> ArcCreationMode
     connect(m_createArcBtn, &FlyoutToolButton::modeActivated, this, [this](int modeId) {
         emit arcToolActivated(static_cast<ArcCreationMode>(modeId));
+    });
+
+    connect(m_createDimensionBtn, &FlyoutToolButton::modeActivated, this, [this](int modeId) {
+        emit dimensionToolActivated(static_cast<DimensionCreationMode>(modeId));
+        emit commandRequested("tool_linear_dimension");
     });
 
     setMinimumWidth(160);
@@ -130,4 +139,4 @@ QToolButton* ToolbarPanelWidget::getCreateArcButton() const { return m_createArc
 QToolButton* ToolbarPanelWidget::getCreateEllipseButton() const { return m_createEllipseBtn; }
 QToolButton* ToolbarPanelWidget::getCreatePolygonButton() const { return m_createPolygonBtn; }
 QToolButton* ToolbarPanelWidget::getCreateSplineButton() const { return m_createSplineBtn; }
-QToolButton* ToolbarPanelWidget::getCreateLinearDimensionButton() const { return m_createLinearDimBtn; }
+QToolButton* ToolbarPanelWidget::getCreateDimensionButton() const { return m_createDimensionBtn; }

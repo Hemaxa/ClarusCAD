@@ -3,6 +3,7 @@
 #pragma once
 
 #include "EnumManager.h"
+#include "../../model/DimensionStyle.h"
 
 #include <QObject>
 #include <QSettings> //класс Qt для работы с настроками (умеет сохранять настройки в файл или реестр)
@@ -76,6 +77,37 @@ public:
     void setKinkStraight(double val);
     double getKinkStraight() const;
 
+    // --- Параметры размеров ---
+    void setDimensionFontFamily(const QString& val);
+    QString getDimensionFontFamily() const;
+    void setDimensionTextHeight(double val);
+    double getDimensionTextHeight() const;
+    void setDimensionTextGap(double val);
+    double getDimensionTextGap() const;
+    void setDimensionArrowSize(double val);
+    double getDimensionArrowSize() const;
+    void setDimensionArrowType(DimensionArrowType type);
+    DimensionArrowType getDimensionArrowType() const;
+    void setDimensionArrowFilled(bool val);
+    bool getDimensionArrowFilled() const;
+    void setDimensionExtensionOffset(double val);
+    double getDimensionExtensionOffset() const;
+    void setDimensionExtensionExtend(double val);
+    double getDimensionExtensionExtend() const;
+    void setDimensionLineExtension(double val);
+    double getDimensionLineExtension() const;
+    void setDimensionTextColor(const QColor& val);
+    QColor getDimensionTextColor() const;
+    void setDimensionExtensionLineColor(const QColor& val);
+    QColor getDimensionExtensionLineColor() const;
+    void setDimensionLineColor(const QColor& val);
+    QColor getDimensionLineColor() const;
+    void setDimensionExtensionLineType(int val);
+    int getDimensionExtensionLineType() const;
+    void setDimensionLineType(int val);
+    int getDimensionLineType() const;
+    DimensionStyle getDefaultDimensionStyle() const;
+
 signals:
     //сигналы об изменении настроек
     void themeNameChanged(const QString& themeName);
@@ -87,6 +119,7 @@ signals:
     void dashSpaceChanged(double space);
     void waveParamsChanged();
     void kinkParamsChanged();
+    void dimensionStyleChanged();
 
 private:
     //конструктор
@@ -116,4 +149,6 @@ private:
     double m_kinkAmplitude;
     double m_kinkLength;
     double m_kinkStraight;
+
+    DimensionStyle m_dimensionStyle;
 };

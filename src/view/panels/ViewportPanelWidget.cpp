@@ -16,7 +16,9 @@
 #include "EllipseDrawingTool.h"
 #include "PolygonDrawingTool.h"
 #include "SplineDrawingTool.h"
+#include "DimensionDrawingTool.h"
 #include "SnapManager.h"
+#include "BaseDimensionPrimitive.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -106,6 +108,27 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             }
 
             if (mouseEvent->button() == Qt::LeftButton && !m_activeTool) {
+                if (m_selectedPrimitives.size() == 1) {
+                    auto* dim = dynamic_cast<BaseDimensionPrimitive*>(m_selectedPrimitives.first());
+                    if (dim) {
+                        QPointF worldClick = screenToWorld(mouseEvent->pos());
+                        const double tolerance = 12.0 / getZoomFactor();
+                        if (QLineF(worldClick, dim->getTextAnchor()).length() <= tolerance) {
+                            m_isDraggingDimensionText = true;
+                            m_draggedDimension = dim;
+                            return true;
+                        }
+                        const auto grips = dim->getEditGripPoints();
+                        for (int i = 0; i < grips.size(); ++i) {
+                            if (QLineF(worldClick, grips[i]).length() <= tolerance) {
+                                m_isDraggingDimensionGrip = true;
+                                m_draggedDimension = dim;
+                                m_draggedGripIndex = i;
+                                return true;
+                            }
+                        }
+                    }
+                }
                 m_isSelecting = true;
                 m_selectionStartPos = mouseEvent->pos();
                 m_currentMousePosScreen = mouseEvent->pos();
@@ -149,6 +172,19 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 m_camera->pan(delta);
             }
             else if (m_isSelecting) {
+                update();
+            }
+            else if (m_isDraggingDimensionText && m_draggedDimension) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                m_draggedDimension->setCustomTextPosition(worldPos);
+                emit selectionChanged(m_selectedPrimitives);
+                update();
+            }
+            else if (m_isDraggingDimensionGrip && m_draggedDimension) {
+                QPointF worldPos = screenToWorld(mouseEvent->pos());
+                QPointF snapped = getSnappedPoint(worldPos);
+                m_draggedDimension->moveGripPoint(m_draggedGripIndex, snapped);
+                emit selectionChanged(m_selectedPrimitives);
                 update();
             }
             else if (m_activeTool) {
@@ -260,6 +296,16 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
                 update();
             }
 
+            if (mouseEvent->button() == Qt::LeftButton && (m_isDraggingDimensionGrip || m_isDraggingDimensionText)) {
+                m_isDraggingDimensionGrip = false;
+                m_isDraggingDimensionText = false;
+                m_draggedDimension = nullptr;
+                m_draggedGripIndex = -1;
+                emit selectionChanged(m_selectedPrimitives);
+                update();
+                return true;
+            }
+
             if (mouseEvent->button() == Qt::MiddleButton && m_isPanning) {
                 m_isPanning = false;
                 canvas()->setCursor(Qt::ArrowCursor);
@@ -308,6 +354,9 @@ void ViewportPanelWidget::createDrawingTools()
     m_drawingTools[PrimitiveType::Ellipse] = std::make_unique<EllipseDrawingTool>();
     m_drawingTools[PrimitiveType::Polygon] = std::make_unique<PolygonDrawingTool>();
     m_drawingTools[PrimitiveType::Spline] = std::make_unique<SplineDrawingTool>();
+    m_drawingTools[PrimitiveType::LinearDimension] = std::make_unique<DimensionDrawingTool>();
+    m_drawingTools[PrimitiveType::RadialDimension] = std::make_unique<DimensionDrawingTool>();
+    m_drawingTools[PrimitiveType::AngularDimension] = std::make_unique<DimensionDrawingTool>();
 }
 
 void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
@@ -345,6 +394,23 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
     // 6. Отрисовка инструмента
     if (m_activeTool) {
         m_activeTool->onPaint(painter);
+    }
+
+    if (m_selectedPrimitives.size() == 1) {
+        if (auto* dim = dynamic_cast<BaseDimensionPrimitive*>(m_selectedPrimitives.first())) {
+            painter.save();
+            QPen gripPen(Qt::yellow, 0);
+            painter.setPen(gripPen);
+            painter.setBrush(QColor(255, 255, 0, 120));
+            const double r = 5.0 / getZoomFactor();
+            for (const auto& grip : dim->getEditGripPoints()) {
+                painter.drawRect(QRectF(grip.x() - r, grip.y() - r, r * 2, r * 2));
+            }
+            painter.setBrush(QColor(0, 255, 255, 120));
+            QPointF text = dim->getTextAnchor();
+            painter.drawEllipse(text, r, r);
+            painter.restore();
+        }
     }
 
     // 7. ОТРИСОВКА РАМКИ ВЫДЕЛЕНИЯ
@@ -448,6 +514,12 @@ void ViewportPanelWidget::paintCanvas(QPaintEvent* event)
                 painter.drawLine(QPointF(screenPos.x() - markerSize*1.5, screenPos.y() - markerSize),
                                QPointF(screenPos.x() + markerSize*1.5, screenPos.y() + markerSize));
             }
+            break;
+        case SnapType::Nearest:
+            painter.setPen(QPen(Qt::yellow, 2.0));
+            painter.drawEllipse(screenPos, markerSize/2, markerSize/2);
+            painter.drawLine(QPointF(screenPos.x() - markerSize, screenPos.y()),
+                             QPointF(screenPos.x() + markerSize, screenPos.y()));
             break;
         default:
             // Простой крест
@@ -779,20 +851,30 @@ QPointF ViewportPanelWidget::snapToPrimitives(const QPointF& worldPos) const
 
 QPointF ViewportPanelWidget::getSnappedPoint(const QPointF& worldPos) const
 {
-    // Входные координаты уже мировые (события трансформируются в eventFilter)
-    QPointF snappedPos = worldPos;
+    return getSnapPoint(worldPos).position;
+}
 
-    if (m_isPrimitiveSnapEnabled) {
-        snappedPos = snapToPrimitives(worldPos);
-        if (snappedPos == worldPos && m_isGridSnapEnabled) {
-            snappedPos = snapToGrid(worldPos);
+SnapPoint ViewportPanelWidget::getSnapPoint(const QPointF& worldPos) const
+{
+    SnapPoint result;
+    result.position = worldPos;
+    result.type = SnapType::None;
+
+    if (m_isPrimitiveSnapEnabled && m_scene) {
+        result = SnapManager::instance().findNearestSnapPoint(worldPos, m_scene, getZoomFactor(), 15.0);
+        m_lastSnapPoint = result;
+        if (result.type != SnapType::None) {
+            return result;
         }
     }
-    else if (m_isGridSnapEnabled) {
-        snappedPos = snapToGrid(worldPos);
+
+    if (m_isGridSnapEnabled) {
+        result.position = snapToGrid(worldPos);
+        result.type = SnapType::Grid;
+        return result;
     }
 
-    return snappedPos;
+    return result;
 }
 
 void ViewportPanelWidget::panWorld(const QPointF& worldDelta)

@@ -18,6 +18,7 @@ class ThemeManager;
 class BaseCreationTool;
 class BaseDrawingTool;
 class QLabel;
+class BaseDimensionPrimitive;
 
 //наслдедуется от базового класса BasePanelWidget
 class ViewportPanelWidget : public BasePanelWidget
@@ -68,6 +69,7 @@ public:
      * @param worldPos Исходная точка в мире (обычно под курсором).
      */
     QPointF getSnappedPoint(const QPointF& worldPos) const;
+    SnapPoint getSnapPoint(const QPointF& worldPos) const;
 
     // Методы трансформации координат
     
@@ -160,4 +162,9 @@ private:
     QPoint m_currentMousePosScreen;
     
     mutable SnapPoint m_lastSnapPoint; // Текущая точка привязки для визуализации
+
+    bool m_isDraggingDimensionGrip = false;
+    bool m_isDraggingDimensionText = false;
+    BaseDimensionPrimitive* m_draggedDimension = nullptr;
+    int m_draggedGripIndex = -1;
 };

@@ -8,9 +8,41 @@
 #include "EllipsePrimitive.h"
 #include "PolygonPrimitive.h"
 #include "SplinePrimitive.h"
+#include "PointPrimitive.h"
 
 #include <cmath>
 #include <algorithm>
+#include <limits>
+#include <QTransform>
+
+namespace {
+QPointF closestPointOnSegment(const QPointF& p, const QPointF& a, const QPointF& b)
+{
+    const double dx = b.x() - a.x();
+    const double dy = b.y() - a.y();
+    const double lenSq = dx * dx + dy * dy;
+    if (lenSq < 1e-12) return a;
+    const double t = std::clamp(((p.x() - a.x()) * dx + (p.y() - a.y()) * dy) / lenSq, 0.0, 1.0);
+    return QPointF(a.x() + t * dx, a.y() + t * dy);
+}
+
+double normalizeDeg(double angle)
+{
+    while (angle < 0.0) angle += 360.0;
+    while (angle >= 360.0) angle -= 360.0;
+    return angle;
+}
+
+bool angleOnArc(double angle, double start, double span)
+{
+    angle = normalizeDeg(angle);
+    start = normalizeDeg(start);
+    double rel = angle - start;
+    while (rel < 0.0) rel += 360.0;
+    if (span >= 0.0) return rel <= span;
+    return rel >= (360.0 + span);
+}
+}
 
 SnapManager& SnapManager::instance()
 {
@@ -25,6 +57,7 @@ SnapManager::SnapManager() : QObject(nullptr)
                          static_cast<int>(SnapType::Midpoint) |
                          static_cast<int>(SnapType::Center) |
                          static_cast<int>(SnapType::Quadrant) |
+                         static_cast<int>(SnapType::Nearest) |
                          static_cast<int>(SnapType::Grid) |
                          static_cast<int>(SnapType::Intersection) |
                          static_cast<int>(SnapType::Perpendicular) |
@@ -145,6 +178,9 @@ void SnapManager::collectSnapPoints(const QPointF& mousePos, BasePrimitive* prim
     }
     if (isSnapTypeEnabled(SnapType::Quadrant)) {
         collectQuadrants(primitive, outPoints);
+    }
+    if (isSnapTypeEnabled(SnapType::Nearest)) {
+        collectNearestPoints(mousePos, primitive, outPoints);
     }
     
     // Расчет расстояний и фильтрация по толерансу
@@ -357,6 +393,110 @@ void SnapManager::collectQuadrants(BasePrimitive* prim, QVector<SnapPoint>& out)
         sp.position = QPointF(cx, cy + ellipse->getRadiusY());
         out.append(sp);
         sp.position = QPointF(cx, cy - ellipse->getRadiusY());
+        out.append(sp);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void SnapManager::collectNearestPoints(const QPointF& mousePos, BasePrimitive* prim, QVector<SnapPoint>& out)
+{
+    SnapPoint sp;
+    sp.type = SnapType::Nearest;
+    sp.source = prim;
+
+    switch (prim->getType()) {
+    case PrimitiveType::Segment: {
+        auto* seg = static_cast<SegmentPrimitive*>(prim);
+        QPointF a(seg->getStart().getX(), seg->getStart().getY());
+        QPointF b(seg->getEnd().getX(), seg->getEnd().getY());
+        sp.position = closestPointOnSegment(mousePos, a, b);
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Circle: {
+        auto* circle = static_cast<CirclePrimitive*>(prim);
+        QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+        QLineF line(center, mousePos);
+        if (line.length() < 1e-6) break;
+        line.setLength(circle->getRadius());
+        sp.position = line.p2();
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Arc: {
+        auto* arc = static_cast<ArcPrimitive*>(prim);
+        QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
+        double angle = QLineF(center, mousePos).angle();
+        angle = normalizeDeg(-angle);
+        if (!angleOnArc(angle, arc->getStartAngle(), arc->getSpanAngle())) {
+            QPointF start(center.x() + arc->getRadius() * std::cos(arc->getStartAngle() * M_PI / 180.0),
+                          center.y() + arc->getRadius() * std::sin(arc->getStartAngle() * M_PI / 180.0));
+            QPointF end(center.x() + arc->getRadius() * std::cos((arc->getStartAngle() + arc->getSpanAngle()) * M_PI / 180.0),
+                        center.y() + arc->getRadius() * std::sin((arc->getStartAngle() + arc->getSpanAngle()) * M_PI / 180.0));
+            sp.position = QLineF(mousePos, start).length() < QLineF(mousePos, end).length() ? start : end;
+        } else {
+            sp.position = QPointF(center.x() + arc->getRadius() * std::cos(angle * M_PI / 180.0),
+                                  center.y() + arc->getRadius() * std::sin(angle * M_PI / 180.0));
+        }
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Ellipse: {
+        auto* ellipse = static_cast<EllipsePrimitive*>(prim);
+        QTransform t;
+        t.translate(ellipse->getCenter().getX(), ellipse->getCenter().getY());
+        t.rotate(ellipse->getRotation());
+        QTransform inv = t.inverted();
+        QPointF local = inv.map(mousePos);
+        double angle = std::atan2(local.y() * ellipse->getRadiusX(), local.x() * ellipse->getRadiusY());
+        QPointF localOnEllipse(ellipse->getRadiusX() * std::cos(angle), ellipse->getRadiusY() * std::sin(angle));
+        sp.position = t.map(localOnEllipse);
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Rectangle: {
+        auto* rect = static_cast<RectanglePrimitive*>(prim);
+        QPolygonF poly = rect->getBoundingBox().isValid() ? QPolygonF(rect->getBoundingBox()) : QPolygonF();
+        poly = rect->getSnapPoints().mid(1, 4);
+        double best = std::numeric_limits<double>::max();
+        QPointF bestPoint = mousePos;
+        for (int i = 0; i < poly.size(); ++i) {
+            QPointF p = closestPointOnSegment(mousePos, poly[i], poly[(i + 1) % poly.size()]);
+            double d = QLineF(mousePos, p).length();
+            if (d < best) { best = d; bestPoint = p; }
+        }
+        sp.position = bestPoint;
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Polygon: {
+        auto* poly = static_cast<PolygonPrimitive*>(prim);
+        QVector<QPointF> vertices = poly->getVertices();
+        double best = std::numeric_limits<double>::max();
+        QPointF bestPoint = mousePos;
+        for (int i = 0; i < vertices.size(); ++i) {
+            QPointF p = closestPointOnSegment(mousePos, vertices[i], vertices[(i + 1) % vertices.size()]);
+            double d = QLineF(mousePos, p).length();
+            if (d < best) { best = d; bestPoint = p; }
+        }
+        sp.position = bestPoint;
+        out.append(sp);
+        break;
+    }
+    case PrimitiveType::Spline: {
+        auto* spline = static_cast<SplinePrimitive*>(prim);
+        QVector<QPointF> pts = spline->getControlPoints();
+        double best = std::numeric_limits<double>::max();
+        QPointF bestPoint = mousePos;
+        for (int i = 0; i < pts.size() - 1; ++i) {
+            QPointF p = closestPointOnSegment(mousePos, pts[i], pts[i + 1]);
+            double d = QLineF(mousePos, p).length();
+            if (d < best) { best = d; bestPoint = p; }
+        }
+        sp.position = bestPoint;
         out.append(sp);
         break;
     }
@@ -907,4 +1047,3 @@ void SnapManager::collectTangents(const QPointF& mousePos, const QPointF& basePo
         }
     }
 }
-

@@ -18,6 +18,16 @@ enum class PrimitiveType {
     AngularDimension
 };
 
+// Режимы инструмента размеров
+enum class DimensionCreationMode {
+    LinearAligned,
+    LinearHorizontal,
+    LinearVertical,
+    Radius,
+    Diameter,
+    Angular
+};
+
 // Режимы построения окружности
 enum class CircleCreationMode {
     CenterRadius,

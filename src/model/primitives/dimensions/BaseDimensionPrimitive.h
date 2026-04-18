@@ -54,6 +54,16 @@ public:
      */
     virtual void recalculateValue() = 0;
 
+    void setCustomTextPosition(const QPointF& pos) { m_hasCustomTextPosition = true; m_customTextPosition = pos; }
+    void clearCustomTextPosition() { m_hasCustomTextPosition = false; }
+    bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
+    QPointF getCustomTextPosition() const { return m_customTextPosition; }
+
+    virtual QPointF getDefaultTextAnchor() const = 0;
+    QPointF getTextAnchor() const { return m_hasCustomTextPosition ? m_customTextPosition : getDefaultTextAnchor(); }
+    virtual QVector<QPointF> getEditGripPoints() const = 0;
+    virtual void moveGripPoint(int index, const QPointF& newPos) = 0;
+
     // --- Заглушки для чисто виртуальных методов BasePrimitive ---
 
     virtual void draw(QPainter& painter, bool isSelected) const override {}
@@ -67,4 +77,6 @@ protected:
     DimensionStyle m_style;           ///< Настройки стиля размера
     double m_measuredValue = 0.0;     ///< Вычисленное значение
     QString m_customText = "";        ///< Переопределенный текст
+    bool m_hasCustomTextPosition = false;
+    QPointF m_customTextPosition;
 };

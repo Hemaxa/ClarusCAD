@@ -3,9 +3,102 @@
 #include "../../../view/panels/ViewportPanelWidget.h"
 #include "../../../view/managers/SnapManager.h"
 #include "../../../view/managers/ObjectBindingManager.h"
+#include "../../../view/managers/SettingsManager.h"
 #include "../../../model/Scene.h"
+#include "../../../model/primitives/PolygonPrimitive.h"
 #include <QMouseEvent>
 #include <QWidget>
+#include <algorithm>
+#include <cmath>
+
+namespace {
+LinearDimensionPrimitive::Attachment makeAttachment(const SnapPoint& snap, const QPointF& pos)
+{
+    LinearDimensionPrimitive::Attachment a;
+    a.source = snap.source;
+    a.snapType = snap.type;
+    a.fallback = pos;
+    if (!snap.source) return a;
+
+    switch (snap.source->getType()) {
+    case PrimitiveType::Segment: {
+        auto points = snap.source->getSnapPoints();
+        if (snap.type == SnapType::Endpoint) {
+            a.index = (QLineF(pos, points[0]).length() < QLineF(pos, points[1]).length()) ? 0 : 1;
+        } else if (snap.type == SnapType::Nearest) {
+            QPointF p1 = points[0], p2 = points[1];
+            const double lenSq = std::pow(p2.x()-p1.x(),2)+std::pow(p2.y()-p1.y(),2);
+            if (lenSq > 1e-12) a.param = ((pos.x()-p1.x())*(p2.x()-p1.x()) + (pos.y()-p1.y())*(p2.y()-p1.y())) / lenSq;
+        }
+        break;
+    }
+    case PrimitiveType::Circle:
+    case PrimitiveType::Arc:
+    case PrimitiveType::Ellipse: {
+        QPointF center = snap.source->getSnapPoints().first();
+        a.param = std::atan2(pos.y() - center.y(), pos.x() - center.x());
+        break;
+    }
+    case PrimitiveType::Rectangle: {
+        auto pts = snap.source->getSnapPoints();
+        if (snap.type == SnapType::Endpoint) {
+            double best = 1e18;
+            for (int i = 0; i < 4; ++i) {
+                double d = QLineF(pos, pts[1 + i]).length();
+                if (d < best) { best = d; a.index = i; }
+            }
+        } else if (snap.type == SnapType::Midpoint) {
+            double best = 1e18;
+            for (int i = 0; i < 4; ++i) {
+                double d = QLineF(pos, pts[5 + i]).length();
+                if (d < best) { best = d; a.index = i; }
+            }
+        } else if (snap.type == SnapType::Nearest) {
+            double best = 1e18;
+            for (int i = 0; i < 4; ++i) {
+                QPointF p1 = pts[1 + i], p2 = pts[1 + ((i + 1) % 4)];
+                QPointF cp = pos;
+                const double lenSq = std::pow(p2.x()-p1.x(),2)+std::pow(p2.y()-p1.y(),2);
+                if (lenSq < 1e-12) continue;
+                double t = ((pos.x()-p1.x())*(p2.x()-p1.x()) + (pos.y()-p1.y())*(p2.y()-p1.y())) / lenSq;
+                t = std::clamp(t, 0.0, 1.0);
+                cp = p1 + (p2-p1) * t;
+                double d = QLineF(pos, cp).length();
+                if (d < best) { best = d; a.index = i; a.param = t; }
+            }
+        }
+        break;
+    }
+    case PrimitiveType::Polygon: {
+        auto* poly = static_cast<PolygonPrimitive*>(snap.source);
+        auto verts = poly->getVertices();
+        if (snap.type == SnapType::Endpoint) {
+            double best = 1e18;
+            for (int i = 0; i < verts.size(); ++i) {
+                double d = QLineF(pos, verts[i]).length();
+                if (d < best) { best = d; a.index = i; }
+            }
+        } else if (snap.type == SnapType::Nearest) {
+            double best = 1e18;
+            for (int i = 0; i < verts.size(); ++i) {
+                QPointF p1 = verts[i], p2 = verts[(i + 1) % verts.size()];
+                const double lenSq = std::pow(p2.x()-p1.x(),2)+std::pow(p2.y()-p1.y(),2);
+                if (lenSq < 1e-12) continue;
+                double t = ((pos.x()-p1.x())*(p2.x()-p1.x()) + (pos.y()-p1.y())*(p2.y()-p1.y())) / lenSq;
+                t = std::clamp(t, 0.0, 1.0);
+                QPointF cp = p1 + (p2-p1) * t;
+                double d = QLineF(pos, cp).length();
+                if (d < best) { best = d; a.index = i; a.param = t; }
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    return a;
+}
+}
 
 LinearDimensionCreationTool::LinearDimensionCreationTool(QObject* parent) 
     : BaseCreationTool(parent), m_state(0) 
@@ -16,16 +109,20 @@ void LinearDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
     if (event->button() == Qt::LeftButton) {
         if (m_state == 0) {
             // Первая точка (привязки включены)
-            QPointF pos = viewport->getSnappedPoint(event->position());
+            SnapPoint snap = viewport->getSnapPoint(event->position());
+            QPointF pos = snap.position;
             
             m_previewDimension = std::make_unique<LinearDimensionPrimitive>();
             m_previewDimension->setStartPoint(pos);
             m_previewDimension->setEndPoint(pos);
             m_previewDimension->setDimensionLinePos(pos);
+            m_previewDimension->setMode(m_mode);
+            m_previewDimension->setStartAttachment(makeAttachment(snap, pos));
             
-            DimensionStyle style;
+            DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
             style.dimensionLineColor = m_currentColor;
-            style.textColor = Qt::white; // Текст пусть будет белым
+            style.extensionLineColor = m_currentColor;
+            style.textColor = m_currentColor;
             m_previewDimension->setStyle(style);
             
             SnapManager::instance().setBasePoint(pos);
@@ -34,9 +131,11 @@ void LinearDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
             viewport->update();
         } else if (m_state == 1) {
             // Вторая точка (привязки включены)
-            QPointF pos = viewport->getSnappedPoint(event->position());
+            SnapPoint snap = viewport->getSnapPoint(event->position());
+            QPointF pos = snap.position;
             
             m_previewDimension->setEndPoint(pos);
+            m_previewDimension->setEndAttachment(makeAttachment(snap, pos));
             m_previewDimension->recalculateValue();
             
             SnapManager::instance().clearBasePoint();

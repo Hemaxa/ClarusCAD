@@ -7,6 +7,10 @@
         <file>icons/tools/ellipse.svg</file>
         <file>icons/tools/polygon.svg</file>
         <file>icons/tools/spline.svg</file>
+        <file>icons/tools/dimension_linear.svg</file>
+        <file>icons/tools/dimension_radius.svg</file>
+        <file>icons/tools/dimension_diameter.svg</file>
+        <file>icons/tools/dimension_angular.svg</file>
         <!-- Circle modes -->
         <file>icons/tools/circle_center_radius.svg</file>
         <file>icons/tools/circle_center_diameter.svg</file>

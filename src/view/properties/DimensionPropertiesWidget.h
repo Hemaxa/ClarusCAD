@@ -6,7 +6,11 @@
 #include <QLabel>
 #include <QLineEdit>
 
-class LinearDimensionPrimitive;
+class QDoubleSpinBox;
+class QComboBox;
+class QCheckBox;
+class QPushButton;
+class QFontComboBox;
 
 class DimensionPropertiesWidget : public BasePropertiesWidget
 {
@@ -25,8 +29,32 @@ protected:
 
 private slots:
     void onCustomTextChanged(const QString& text);
+    void onStyleValueChanged();
+    void onTextColorClicked();
+    void onExtensionColorClicked();
+    void onDimensionLineColorClicked();
 
 private:
+    void applyStyleToSelection();
+    void updateColorButton(QPushButton* button, const QColor& color);
+    void populateLocalLineTypeCombo(QComboBox* combo);
+
+    QLabel* m_typeLabel;
     QLabel* m_measuredValueLabel;
     QLineEdit* m_customTextEdit;
+    QFontComboBox* m_fontComboBox;
+    QDoubleSpinBox* m_textHeightSpinBox;
+    QDoubleSpinBox* m_textGapSpinBox;
+    QDoubleSpinBox* m_textAlongOffsetSpinBox;
+    QDoubleSpinBox* m_arrowSizeSpinBox;
+    QComboBox* m_arrowTypeComboBox;
+    QCheckBox* m_arrowFilledCheckBox;
+    QDoubleSpinBox* m_extensionOffsetSpinBox;
+    QDoubleSpinBox* m_extensionExtendSpinBox;
+    QDoubleSpinBox* m_dimensionLineExtendSpinBox;
+    QComboBox* m_extensionLineTypeCombo;
+    QComboBox* m_dimensionLineTypeCombo;
+    QPushButton* m_textColorButton;
+    QPushButton* m_extensionColorButton;
+    QPushButton* m_dimensionLineColorButton;
 };

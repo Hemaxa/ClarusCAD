@@ -3,6 +3,7 @@
 #pragma once
 
 #include "BasePrimitive.h"
+#include "../model/primitives/dimensions/LinearDimensionPrimitive.h"
 #include <QMainWindow>
 #include <QShowEvent>
 #include <QKeyEvent>
@@ -19,6 +20,8 @@ class ArcPrimitive;
 class PolygonPrimitive;
 class SplinePrimitive;
 class LinearDimensionPrimitive;
+class RadialDimensionPrimitive;
+class AngularDimensionPrimitive;
 
 class BaseCreationTool;
 class BaseDrawingTool;
@@ -32,6 +35,8 @@ class EllipseCreationTool;
 class PolygonCreationTool;
 class SplineCreationTool;
 class LinearDimensionCreationTool;
+class RadialDimensionCreationTool;
+class AngularDimensionCreationTool;
 
 class ConsolePanelWidget;
 class NavigationPanelWidget;
@@ -66,6 +71,10 @@ private slots:
     void activatePolygonTool();
     void activateSplineTool();
     void activateLinearDimensionTool();
+    void activateLinearDimensionTool(LinearDimensionMode mode);
+    void activateDimensionTool(DimensionCreationMode mode);
+    void activateRadialDimensionTool(bool isDiameter);
+    void activateAngularDimensionTool();
 
     //слот установки цвета для инструмента
     void onColorChanged(const QColor& color);
@@ -138,6 +147,7 @@ private:
     void createActions(); //метод для создания QAction
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
+    void refreshAssociativeDimensions();
 
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 
@@ -159,6 +169,8 @@ private:
     PolygonCreationTool* m_polygonCreationTool;
     SplineCreationTool* m_splineCreationTool;
     LinearDimensionCreationTool* m_linearDimCreationTool;
+    RadialDimensionCreationTool* m_radialDimCreationTool;
+    AngularDimensionCreationTool* m_angularDimCreationTool;
 
     //интерфейсные панели
     ViewportPanelWidget* m_viewportPanel;

@@ -91,6 +91,7 @@ signals:
     void polygonSidesChanged(int sides);
     void polygonTypeChanged(PolygonCreationMode type);
     void splineClosedChanged(bool closed);
+    void dimensionPropertiesApplied();
     
     /**
      * @brief Сигнал применения общих свойств (цвет, тип линии) для нескольких объектов.

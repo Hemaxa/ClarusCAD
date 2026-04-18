@@ -19,6 +19,8 @@ public:
 
     void setColor(const QColor& color) override;
     QColor getColor() const override;
+    void setMode(LinearDimensionMode mode) { m_mode = mode; if (m_previewDimension) m_previewDimension->setMode(mode); }
+    LinearDimensionMode getMode() const { return m_mode; }
 
 signals:
     void dimensionDataReady(LinearDimensionPrimitive* dim); // <--- ДОБАВИТЬ БЛОК СИГНАЛОВ
@@ -27,4 +29,5 @@ private:
     int m_state = 0; // 0: Ожидание первой точки, 1: Ожидание второй точки, 2: Ожидание положения линии
     std::unique_ptr<LinearDimensionPrimitive> m_previewDimension;
     QColor m_currentColor = Qt::white;
+    LinearDimensionMode m_mode = LinearDimensionMode::Aligned;
 };

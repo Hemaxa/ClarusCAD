@@ -17,6 +17,8 @@
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QScrollArea>
+#include <QColorDialog>
+#include <QFontComboBox>
 
 SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
@@ -72,6 +74,115 @@ QWidget* SettingsWindow::createAppearanceTab()
     formLayout->addRow("Тема оформления:", m_themeComboBox);
 
     mainLayout->addWidget(groupBox);
+
+    auto* dimGroup = new QGroupBox("Глобальный стиль размеров");
+    auto* dimLayout = new QFormLayout(dimGroup);
+    dimLayout->setSpacing(10);
+    dimLayout->setContentsMargins(15, 25, 15, 15);
+
+    auto populateLineTypes = [](QComboBox* combo) {
+        combo->clear();
+        combo->addItem("Сплошная", static_cast<int>(LineType::SolidMain));
+        combo->addItem("Тонкая", static_cast<int>(LineType::SolidThin));
+        combo->addItem("Штриховая", static_cast<int>(LineType::Dashed));
+        combo->addItem("Штрих-пунктирная", static_cast<int>(LineType::DashDotThin));
+        combo->addItem("Две точки", static_cast<int>(LineType::DashDotDot));
+    };
+    auto setButtonColor = [](QPushButton* button, const QColor& color) {
+        button->setStyleSheet(QString("background-color: %1;").arg(color.name()));
+        button->setText(color.name());
+    };
+
+    m_dimensionFontComboBox = new QFontComboBox();
+    m_dimensionFontComboBox->setCurrentFont(QFont(SettingsManager::instance().getDimensionFontFamily()));
+
+    m_dimensionTextHeightSpinBox = new QDoubleSpinBox();
+    m_dimensionTextHeightSpinBox->setRange(6.0, 48.0);
+    m_dimensionTextHeightSpinBox->setValue(SettingsManager::instance().getDimensionTextHeight());
+    m_dimensionTextHeightSpinBox->setSuffix(" px");
+
+    m_dimensionTextGapSpinBox = new QDoubleSpinBox();
+    m_dimensionTextGapSpinBox->setRange(0.0, 40.0);
+    m_dimensionTextGapSpinBox->setValue(SettingsManager::instance().getDimensionTextGap());
+    m_dimensionTextGapSpinBox->setSuffix(" px");
+
+    m_dimensionArrowSizeSpinBox = new QDoubleSpinBox();
+    m_dimensionArrowSizeSpinBox->setRange(4.0, 40.0);
+    m_dimensionArrowSizeSpinBox->setValue(SettingsManager::instance().getDimensionArrowSize());
+    m_dimensionArrowSizeSpinBox->setSuffix(" px");
+
+    m_dimensionArrowTypeComboBox = new QComboBox();
+    m_dimensionArrowTypeComboBox->addItem("Закрытая", static_cast<int>(DimensionArrowType::ClosedFilled));
+    m_dimensionArrowTypeComboBox->addItem("Открытая", static_cast<int>(DimensionArrowType::ClosedOpen));
+    m_dimensionArrowTypeComboBox->addItem("Засечка", static_cast<int>(DimensionArrowType::Slash));
+    m_dimensionArrowTypeComboBox->setCurrentIndex(m_dimensionArrowTypeComboBox->findData(static_cast<int>(SettingsManager::instance().getDimensionArrowType())));
+
+    m_dimensionArrowFilledCheck = new QCheckBox("Заполненные стрелки");
+    m_dimensionArrowFilledCheck->setChecked(SettingsManager::instance().getDimensionArrowFilled());
+
+    m_dimensionExtOffsetSpinBox = new QDoubleSpinBox();
+    m_dimensionExtOffsetSpinBox->setRange(0.0, 50.0);
+    m_dimensionExtOffsetSpinBox->setValue(SettingsManager::instance().getDimensionExtensionOffset());
+    m_dimensionExtOffsetSpinBox->setSuffix(" px");
+
+    m_dimensionExtExtendSpinBox = new QDoubleSpinBox();
+    m_dimensionExtExtendSpinBox->setRange(0.0, 50.0);
+    m_dimensionExtExtendSpinBox->setValue(SettingsManager::instance().getDimensionExtensionExtend());
+    m_dimensionExtExtendSpinBox->setSuffix(" px");
+
+    m_dimensionLineExtendSpinBox = new QDoubleSpinBox();
+    m_dimensionLineExtendSpinBox->setRange(0.0, 50.0);
+    m_dimensionLineExtendSpinBox->setValue(SettingsManager::instance().getDimensionLineExtension());
+    m_dimensionLineExtendSpinBox->setSuffix(" px");
+
+    m_dimensionExtLineTypeComboBox = new QComboBox();
+    populateLineTypes(m_dimensionExtLineTypeComboBox);
+    m_dimensionExtLineTypeComboBox->setCurrentIndex(m_dimensionExtLineTypeComboBox->findData(SettingsManager::instance().getDimensionExtensionLineType()));
+
+    m_dimensionLineTypeComboBox = new QComboBox();
+    populateLineTypes(m_dimensionLineTypeComboBox);
+    m_dimensionLineTypeComboBox->setCurrentIndex(m_dimensionLineTypeComboBox->findData(SettingsManager::instance().getDimensionLineType()));
+
+    m_dimensionTextColorButton = new QPushButton();
+    m_dimensionExtColorButton = new QPushButton();
+    m_dimensionLineColorButton = new QPushButton();
+    m_dimensionTextColorButton->setProperty("selectedColor", SettingsManager::instance().getDimensionTextColor());
+    m_dimensionExtColorButton->setProperty("selectedColor", SettingsManager::instance().getDimensionExtensionLineColor());
+    m_dimensionLineColorButton->setProperty("selectedColor", SettingsManager::instance().getDimensionLineColor());
+    setButtonColor(m_dimensionTextColorButton, SettingsManager::instance().getDimensionTextColor());
+    setButtonColor(m_dimensionExtColorButton, SettingsManager::instance().getDimensionExtensionLineColor());
+    setButtonColor(m_dimensionLineColorButton, SettingsManager::instance().getDimensionLineColor());
+
+    auto attachColorPicker = [this, setButtonColor](QPushButton* button) {
+        connect(button, &QPushButton::clicked, this, [button, setButtonColor]() {
+            QColor initial = button->property("selectedColor").value<QColor>();
+            QColor color = QColorDialog::getColor(initial, button);
+            if (color.isValid()) {
+                button->setProperty("selectedColor", color);
+                setButtonColor(button, color);
+            }
+        });
+    };
+    attachColorPicker(m_dimensionTextColorButton);
+    attachColorPicker(m_dimensionExtColorButton);
+    attachColorPicker(m_dimensionLineColorButton);
+
+    dimLayout->addRow("Шрифт:", m_dimensionFontComboBox);
+    dimLayout->addRow("Высота текста:", m_dimensionTextHeightSpinBox);
+    dimLayout->addRow("Отступ текста:", m_dimensionTextGapSpinBox);
+    dimLayout->addRow("Размер стрелки:", m_dimensionArrowSizeSpinBox);
+    dimLayout->addRow("Тип стрелки:", m_dimensionArrowTypeComboBox);
+    dimLayout->addRow("", m_dimensionArrowFilledCheck);
+    dimLayout->addRow("Отступ выносной:", m_dimensionExtOffsetSpinBox);
+    dimLayout->addRow("Выход выносной:", m_dimensionExtExtendSpinBox);
+    dimLayout->addRow("Выход размерной:", m_dimensionLineExtendSpinBox);
+    dimLayout->addRow("Тип выносной:", m_dimensionExtLineTypeComboBox);
+    dimLayout->addRow("Тип размерной:", m_dimensionLineTypeComboBox);
+    dimLayout->addRow("Цвет текста:", m_dimensionTextColorButton);
+    dimLayout->addRow("Цвет выносной:", m_dimensionExtColorButton);
+    dimLayout->addRow("Цвет размерной:", m_dimensionLineColorButton);
+
+    mainLayout->addWidget(dimGroup);
     mainLayout->addStretch(); //Прижать вверх
     return widget;
 }
@@ -498,6 +609,20 @@ void SettingsWindow::applySettings()
     SettingsManager::instance().setKinkAmplitude(newKinkAmplitude);
     SettingsManager::instance().setKinkLength(newKinkLength);
     SettingsManager::instance().setKinkStraight(newKinkStraight);
+    SettingsManager::instance().setDimensionFontFamily(m_dimensionFontComboBox->currentFont().family());
+    SettingsManager::instance().setDimensionTextHeight(m_dimensionTextHeightSpinBox->value());
+    SettingsManager::instance().setDimensionTextGap(m_dimensionTextGapSpinBox->value());
+    SettingsManager::instance().setDimensionArrowSize(m_dimensionArrowSizeSpinBox->value());
+    SettingsManager::instance().setDimensionArrowType(static_cast<DimensionArrowType>(m_dimensionArrowTypeComboBox->currentData().toInt()));
+    SettingsManager::instance().setDimensionArrowFilled(m_dimensionArrowFilledCheck->isChecked());
+    SettingsManager::instance().setDimensionExtensionOffset(m_dimensionExtOffsetSpinBox->value());
+    SettingsManager::instance().setDimensionExtensionExtend(m_dimensionExtExtendSpinBox->value());
+    SettingsManager::instance().setDimensionLineExtension(m_dimensionLineExtendSpinBox->value());
+    SettingsManager::instance().setDimensionExtensionLineType(m_dimensionExtLineTypeComboBox->currentData().toInt());
+    SettingsManager::instance().setDimensionLineType(m_dimensionLineTypeComboBox->currentData().toInt());
+    SettingsManager::instance().setDimensionTextColor(m_dimensionTextColorButton->property("selectedColor").value<QColor>());
+    SettingsManager::instance().setDimensionExtensionLineColor(m_dimensionExtColorButton->property("selectedColor").value<QColor>());
+    SettingsManager::instance().setDimensionLineColor(m_dimensionLineColorButton->property("selectedColor").value<QColor>());
 
     //сохранение значений в SettingsManager
     SettingsManager::instance().saveSettings();

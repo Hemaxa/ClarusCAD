@@ -10,11 +10,13 @@
 class QComboBox;
 class QSpinBox;
 class QDoubleSpinBox;
+class QFontComboBox;
 class QTabWidget;
 class QListWidget;
 class QLineEdit;
 class QLabel;
 class QCheckBox;
+class QPushButton;
 
 class SettingsWindow : public QDialog
 {
@@ -57,6 +59,20 @@ private:
 
     //Элементы вкладки Оформление
     QComboBox* m_themeComboBox;
+    QFontComboBox* m_dimensionFontComboBox;
+    QDoubleSpinBox* m_dimensionTextHeightSpinBox;
+    QDoubleSpinBox* m_dimensionTextGapSpinBox;
+    QDoubleSpinBox* m_dimensionArrowSizeSpinBox;
+    QComboBox* m_dimensionArrowTypeComboBox;
+    QCheckBox* m_dimensionArrowFilledCheck;
+    QDoubleSpinBox* m_dimensionExtOffsetSpinBox;
+    QDoubleSpinBox* m_dimensionExtExtendSpinBox;
+    QDoubleSpinBox* m_dimensionLineExtendSpinBox;
+    QComboBox* m_dimensionExtLineTypeComboBox;
+    QComboBox* m_dimensionLineTypeComboBox;
+    QPushButton* m_dimensionTextColorButton;
+    QPushButton* m_dimensionExtColorButton;
+    QPushButton* m_dimensionLineColorButton;
 
     //Элементы вкладки Рабочая область
     QSpinBox* m_gridStepSpinBox;
