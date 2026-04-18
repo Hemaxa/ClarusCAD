@@ -34,6 +34,7 @@ add_executable(ClarusCAD
     src/view/drawing/EllipseDrawingTool.h src/view/drawing/EllipseDrawingTool.cpp
     src/controller/tools/EllipseCreationTool.h src/controller/tools/EllipseCreationTool.cpp
     src/view/properties/EllipsePropertiesWidget.h src/view/properties/EllipsePropertiesWidget.cpp
+    src/view/properties/DimensionPropertiesWidget.h src/view/properties/DimensionPropertiesWidget.cpp
     src/view/managers/ObjectBindingManager.h src/view/managers/ObjectBindingManager.cpp)
 
 #обозначение исходных файлов
@@ -57,6 +58,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/controller/tools/PolygonCreationTool.cpp
     ${SRC_DIR}/controller/tools/SplineCreationTool.h
     ${SRC_DIR}/controller/tools/SplineCreationTool.cpp
+    ${SRC_DIR}/controller/tools/dimensions/LinearDimensionCreationTool.h
+    ${SRC_DIR}/controller/tools/dimensions/LinearDimensionCreationTool.cpp
 
     #model
     ${SRC_DIR}/model/BasePrimitive.h
@@ -80,6 +83,10 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/model/primitives/PolygonPrimitive.cpp
     ${SRC_DIR}/model/primitives/SplinePrimitive.h
     ${SRC_DIR}/model/primitives/SplinePrimitive.cpp
+    ${SRC_DIR}/model/primitives/dimensions/BaseDimensionPrimitive.h
+    ${SRC_DIR}/model/primitives/dimensions/BaseDimensionPrimitive.cpp
+    ${SRC_DIR}/model/primitives/dimensions/LinearDimensionPrimitive.h
+    ${SRC_DIR}/model/primitives/dimensions/LinearDimensionPrimitive.cpp
 
     #view
     ${SRC_DIR}/view/BaseDrawingTool.h
@@ -139,6 +146,8 @@ target_sources (ClarusCAD PRIVATE
     ${SRC_DIR}/view/properties/PolygonPropertiesWidget.cpp
     ${SRC_DIR}/view/properties/SplinePropertiesWidget.h
     ${SRC_DIR}/view/properties/SplinePropertiesWidget.cpp
+    ${SRC_DIR}/view/properties/DimensionPropertiesWidget.h
+    ${SRC_DIR}/view/properties/DimensionPropertiesWidget.cpp
 
     ${SRC_DIR}/view/widgets/FlyoutToolButton.h
     ${SRC_DIR}/view/widgets/FlyoutToolButton.cpp
@@ -152,10 +161,12 @@ target_include_directories(ClarusCAD PRIVATE
     #controller
     ${SRC_DIR}/controller
     ${SRC_DIR}/controller/tools
+    ${SRC_DIR}/controller/tools/dimensions
 
     #model
     ${SRC_DIR}/model
     ${SRC_DIR}/model/primitives
+    ${SRC_DIR}/model/primitives/dimensions
 
     #io
     ${SRC_DIR}/io

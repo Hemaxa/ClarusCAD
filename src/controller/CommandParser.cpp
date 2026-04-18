@@ -1,5 +1,6 @@
 #include "CommandParser.h"
 #include "SettingsManager.h"
+#include "LinearDimensionCreationTool.h"
 
 #include <QRegularExpression>
 
@@ -36,6 +37,13 @@ ParsedCommand CommandParser::parse(const QString& commandString) const
 
     result.name = match.captured(1).toLower();
     QString argsPart = match.captured(2);
+
+    if (result.name == "tool_linear_dimension") {
+        // Как запрошено пользователем. Но мы уже обрабатываем это через сигналы-слоты MainWindow,
+        // поэтому это просто заглушка для возврата, если парсинг когда-то расширится до инструментов.
+        result.isValid = true;
+        return result;
+    }
 
     if (!m_commandInfos.contains(result.name)) {
         result.errorDescription = "Неизвестная команда: " + result.name;

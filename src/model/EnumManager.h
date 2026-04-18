@@ -12,7 +12,10 @@ enum class PrimitiveType {
     Rectangle,  // Новое
     Ellipse,    // Новое
     Polygon,    // Новое
-    Spline      // Новое
+    Spline,     // Новое
+    LinearDimension,
+    RadialDimension,
+    AngularDimension
 };
 
 // Режимы построения окружности

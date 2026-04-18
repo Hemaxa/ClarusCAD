@@ -35,6 +35,7 @@ public:
     QToolButton* getCreateEllipseButton() const;
     QToolButton* getCreatePolygonButton() const;
     QToolButton* getCreateSplineButton() const;
+    QToolButton* getCreateLinearDimensionButton() const;
 
 signals:
     // Сигналы активации инструментов
@@ -47,6 +48,8 @@ signals:
     void ellipseToolActivated();
     void polygonToolActivated();
     void splineToolActivated();
+    void linearDimensionToolActivated();
+    void commandRequested(const QString& command); // user specifically requested this signal as an example
 
 private:
     QButtonGroup* m_buttonGroup; ///< Группа кнопок для эксклюзивного выбора
@@ -61,4 +64,5 @@ private:
     QToolButton* m_createEllipseBtn;
     QToolButton* m_createPolygonBtn;
     QToolButton* m_createSplineBtn;
+    QToolButton* m_createLinearDimBtn;
 };

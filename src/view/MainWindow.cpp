@@ -1,14 +1,30 @@
 #include "MainWindow.h"
 #include "Scene.h"
 
+// Tools
 #include "DeleteTool.h"
 #include "MoveTool.h"
 #include "SegmentCreationTool.h"
 #include "CircleCreationTool.h"
+#include "RectangleCreationTool.h"
+#include "ArcCreationTool.h"
+#include "EllipseCreationTool.h"
+#include "PolygonCreationTool.h"
+#include "SplineCreationTool.h"
+#include "LinearDimensionCreationTool.h"
 
+// Primitives
+#include "PointPrimitive.h"
 #include "SegmentPrimitive.h"
 #include "CirclePrimitive.h"
+#include "RectanglePrimitive.h"
+#include "ArcPrimitive.h"
+#include "EllipsePrimitive.h"
+#include "PolygonPrimitive.h"
+#include "SplinePrimitive.h"
+#include "LinearDimensionPrimitive.h"
 
+// Panels
 #include "ConsolePanelWidget.h"
 #include "NavigationPanelWidget.h"
 #include "PropertiesPanelWidget.h"
@@ -92,6 +108,7 @@ void MainWindow::createTools()
     m_ellipseCreationTool = new EllipseCreationTool(this);
     m_polygonCreationTool = new PolygonCreationTool(this);
     m_splineCreationTool = new SplineCreationTool(this);
+    m_linearDimCreationTool = new LinearDimensionCreationTool(this);
 }
 
 void MainWindow::createPanelWindows()
@@ -165,6 +182,7 @@ void MainWindow::createConnections()
     connect(m_toolbarPanel, &ToolbarPanelWidget::circleToolActivated, this, &MainWindow::activateCircleCreationTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::rectangleToolActivated, this, &MainWindow::activateRectangleTool);
     connect(m_toolbarPanel, &ToolbarPanelWidget::arcToolActivated, this, &MainWindow::activateArcTool);
+    connect(m_toolbarPanel, &ToolbarPanelWidget::linearDimensionToolActivated, this, &MainWindow::activateLinearDimensionTool);
 
     //- NavigationPanelWidget -
     connect(m_navigationPanel, &NavigationPanelWidget::zoomInClicked, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::zoomIn));
@@ -269,9 +287,14 @@ void MainWindow::createConnections()
     connect(m_propertiesPanel, &PropertiesPanelWidget::splineClosedChanged, 
             m_splineCreationTool, &SplineCreationTool::setClosed);
     
-    // Связь панели свойств с методом применения изменений сплайна
     connect(m_propertiesPanel, &PropertiesPanelWidget::splinePropertiesApplied, 
             this, &MainWindow::applySplineChanges);
+
+    // Коннект для ЛИНЕЙНОГО РАЗМЕРА
+    connect(m_linearDimCreationTool, &LinearDimensionCreationTool::dimensionDataReady, this, [this](LinearDimensionPrimitive* dim){
+        dim->setLayerName(m_currentLayer);
+        addPrimitiveToScene(dim);
+    });
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
@@ -503,6 +526,14 @@ void MainWindow::activateSplineTool() {
     m_viewportPanel->setActiveTool(m_currentTool);
     emit toolActivated(PrimitiveType::Spline);
     m_toolbarPanel->getCreateSplineButton()->setChecked(true);
+}
+
+void MainWindow::activateLinearDimensionTool() {
+    deactivateCurrentTool();
+    m_currentTool = m_linearDimCreationTool;
+    m_viewportPanel->setActiveTool(m_currentTool);
+    emit toolActivated(PrimitiveType::LinearDimension);
+    m_toolbarPanel->getCreateLinearDimensionButton()->setChecked(true);
 }
 
 void MainWindow::deactivateCurrentTool()

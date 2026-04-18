@@ -23,6 +23,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_createEllipseBtn = new AnimationManager(":/icons/icons/tools/ellipse.svg", "Эллипс [E]", Qt::Key_E, true);
     m_createPolygonBtn = new AnimationManager(":/icons/icons/tools/polygon.svg", "Многоугольник [P]", Qt::Key_P, true);
     m_createSplineBtn = new AnimationManager(":/icons/icons/tools/spline.svg", "Сплайн [L]", Qt::Key_L, true);
+    m_createLinearDimBtn = new AnimationManager(":/icons/icons/tools/dimension_linear.svg", "Линейный размер [D]", Qt::Key_D, true);
 
     // === FLYOUT КНОПКА ДЛЯ ОКРУЖНОСТИ ===
     m_createCircleBtn = new FlyoutToolButton(this);
@@ -58,6 +59,7 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     m_buttonGroup->addButton(m_createEllipseBtn);
     m_buttonGroup->addButton(m_createPolygonBtn);
     m_buttonGroup->addButton(m_createSplineBtn);
+    m_buttonGroup->addButton(m_createLinearDimBtn);
 
     //добавление кнопок в layout
     layout->addWidget(m_deleteBtn, 0, 0, Qt::AlignLeft);
@@ -69,9 +71,10 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     layout->addWidget(m_createEllipseBtn, 6, 0, Qt::AlignLeft);
     layout->addWidget(m_createPolygonBtn, 7, 0, Qt::AlignLeft);
     layout->addWidget(m_createSplineBtn, 8, 0, Qt::AlignLeft);
+    layout->addWidget(m_createLinearDimBtn, 9, 0, Qt::AlignLeft);
 
     layout->setColumnStretch(1, 1);
-    layout->setRowStretch(9, 1);
+    layout->setRowStretch(10, 1);
 
     //подключение сигналов для простых кнопок
     connect(m_deleteBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::deleteToolActivated);
@@ -80,6 +83,12 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
     connect(m_createEllipseBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::ellipseToolActivated);
     connect(m_createPolygonBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::polygonToolActivated);
     connect(m_createSplineBtn, &QToolButton::clicked, this, &ToolbarPanelWidget::splineToolActivated);
+    
+    // Подключение кнопки линейного размера
+    connect(m_createLinearDimBtn, &QToolButton::clicked, this, [this](){
+        emit linearDimensionToolActivated();
+        emit commandRequested("tool_linear_dimension"); // По просьбе пользователя
+    });
 
     // === ПОДКЛЮЧЕНИЕ FLYOUT КНОПОК ===
     
@@ -121,3 +130,4 @@ QToolButton* ToolbarPanelWidget::getCreateArcButton() const { return m_createArc
 QToolButton* ToolbarPanelWidget::getCreateEllipseButton() const { return m_createEllipseBtn; }
 QToolButton* ToolbarPanelWidget::getCreatePolygonButton() const { return m_createPolygonBtn; }
 QToolButton* ToolbarPanelWidget::getCreateSplineButton() const { return m_createSplineBtn; }
+QToolButton* ToolbarPanelWidget::getCreateLinearDimensionButton() const { return m_createLinearDimBtn; }

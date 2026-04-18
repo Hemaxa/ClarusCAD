@@ -14,6 +14,7 @@
 #include "PolygonPrimitive.h"
 #include "SplinePropertiesWidget.h"
 #include "SplinePrimitive.h"
+#include "DimensionPropertiesWidget.h"
 
 #include <QColor>
 #include <QList>
@@ -106,5 +107,6 @@ private:
     EllipsePropertiesWidget* m_ellipseProperties;
     PolygonPropertiesWidget* m_polygonProperties;
     SplinePropertiesWidget* m_splineProperties;
+    DimensionPropertiesWidget* m_dimensionProperties;
     CommonPropertiesWidget* m_commonProperties; ///< Виджет общих свойств для мультивыделения
 };

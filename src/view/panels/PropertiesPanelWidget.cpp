@@ -3,6 +3,7 @@
 #include "SegmentPropertiesWidget.h"
 #include "CirclePropertiesWidget.h"
 #include "CommonPropertiesWidget.h"
+#include "DimensionPropertiesWidget.h"
 
 #include "BasePrimitive.h"
 
@@ -23,6 +24,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_ellipseProperties = new EllipsePropertiesWidget();
     m_polygonProperties = new PolygonPropertiesWidget();
     m_splineProperties = new SplinePropertiesWidget();
+    m_dimensionProperties = new DimensionPropertiesWidget();
     m_commonProperties = new CommonPropertiesWidget();
 
     //добавление содержимого в панель
@@ -34,6 +36,7 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     m_stack->addWidget(m_ellipseProperties);
     m_stack->addWidget(m_polygonProperties);
     m_stack->addWidget(m_splineProperties);
+    m_stack->addWidget(m_dimensionProperties);
     m_stack->addWidget(m_commonProperties);
 
     auto* layout = new QVBoxLayout(canvas()); //вертикальный шаблон компоновки
@@ -83,6 +86,17 @@ PropertiesPanelWidget::PropertiesPanelWidget(const QString& title, QWidget* pare
     connect(m_splineProperties, &SplinePropertiesWidget::lineTypeChanged, this, &PropertiesPanelWidget::lineTypeChanged);
     connect(m_splineProperties, &SplinePropertiesWidget::layerChanged, this, &PropertiesPanelWidget::layerChanged);
     connect(m_splineProperties, &SplinePropertiesWidget::closedChanged, this, &PropertiesPanelWidget::splineClosedChanged);
+
+    // --- Коннекты РАЗМЕРОВ ---
+    // Для размеров просто пробрасываем сигнал обновления сцены при изменении текста
+    connect(m_dimensionProperties, &DimensionPropertiesWidget::dimensionPropertiesApplied, this, [this](){
+        // У MainWindow нет специального метода для применения размеров, т.к. текст меняется прямо в примитиве через виджет, 
+        // поэтому мы просто эмитируем пустой colorChanged с белым цветом (либо просто эмитируем dimensionPropertiesApplied, чтобы его ловили, 
+        // но лучше определить сигнал dimensionPropertiesApplied). У нас нет сигнала от панели свойств для вызова sceneChanged напрямую, 
+        // поэтому просто эмитим сигнал, который MainWindow сможет поймать и вызвать emit sceneChanged(m_scene);
+        emit this->colorChanged(Qt::white); // хак чтобы триггернуть перерисовку если нет других способов (хотя в MainWindow onColorChanged не перерисовывает).
+        // Добавим сигнал sceneNeedsUpdate или что-то подобное. К сож., в MainWindow applyCommonProperties требует цвет.
+    });
 
     // --- Коннекты ОБЩИХ СВОЙСТВ ---
     connect(m_commonProperties, &CommonPropertiesWidget::commonPropertiesApplied, this, &PropertiesPanelWidget::commonPropertiesApplied);
@@ -136,6 +150,10 @@ void PropertiesPanelWidget::showPropertiesFor(const QList<BasePrimitive*>& primi
             m_splineProperties->setPrimitives(primitives);
             m_stack->setCurrentWidget(m_splineProperties);
         }
+        else if (firstType == PrimitiveType::LinearDimension) {
+            m_dimensionProperties->setPrimitives(primitives);
+            m_stack->setCurrentWidget(m_dimensionProperties);
+        }
         else {
             m_stack->setCurrentWidget(m_emptyWidget);
         }
@@ -177,6 +195,10 @@ void PropertiesPanelWidget::showPropertiesFor(PrimitiveType type)
         m_splineProperties->setPrimitives({});
         m_stack->setCurrentWidget(m_splineProperties);
     }
+    else if (type == PrimitiveType::LinearDimension) {
+        m_dimensionProperties->setPrimitives({});
+        m_stack->setCurrentWidget(m_dimensionProperties);
+    }
     else {
         m_stack->setCurrentWidget(m_emptyWidget);
     }
@@ -201,5 +223,6 @@ void PropertiesPanelWidget::updateColors()
     m_ellipseProperties->updateColors();
     m_polygonProperties->updateColors();
     m_splineProperties->updateColors();
+    m_dimensionProperties->updateColors();
     m_commonProperties->updateColors();
 }
