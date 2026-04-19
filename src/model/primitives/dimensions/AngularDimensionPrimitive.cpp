@@ -47,6 +47,8 @@ void drawArrow(QPainter& painter, const QPointF& tip, double angle, const Dimens
             QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
             QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
         );
+    } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.drawEllipse(tip, size * 0.35, size * 0.35);
     } else {
         QPolygonF arrow;
         arrow << tip
@@ -116,6 +118,26 @@ void AngularDimensionPrimitive::recalculateValue()
     const double startAngle = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
     const double endAngle = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
     m_measuredValue = std::abs(deltaAngle(startAngle, endAngle)) * 180.0 / M_PI;
+}
+
+bool AngularDimensionPrimitive::applyMeasuredValueOverride(double value)
+{
+    if (value <= 0.0 || value >= 360.0) return false;
+
+    const double startAngle = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
+    const double endAngle = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
+    const double currentSweep = deltaAngle(startAngle, endAngle);
+    const double sign = currentSweep >= 0.0 ? 1.0 : -1.0;
+    const double newEndAngle = startAngle + sign * value * M_PI / 180.0;
+    const double endRadius = pointDistance(m_centerPoint, m_endPoint);
+    if (endRadius < 1e-6) return false;
+
+    m_endPoint = QPointF(m_centerPoint.x() + endRadius * std::cos(newEndAngle),
+                         m_centerPoint.y() + endRadius * std::sin(newEndAngle));
+    m_secondSource = nullptr;
+    m_secondEdgeIndex = -1;
+    recalculateValue();
+    return true;
 }
 
 void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const

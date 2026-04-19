@@ -47,6 +47,7 @@ private:
     QWidget* createAppearanceTab();
     QWidget* createViewportTab();
     QWidget* createLineStylesTab();
+    QWidget* createDimensionStylesTab();
 
     //метод заполнения списка тем
     void populateThemeComboBox();

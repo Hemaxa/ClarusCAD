@@ -3,6 +3,7 @@
 #include "DimensionPropertiesWidget.h"
 #include "BaseDimensionPrimitive.h"
 #include "LineStyleManager.h"
+#include "SettingsManager.h"
 
 #include <QCheckBox>
 #include <QColorDialog>
@@ -10,17 +11,65 @@
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
 #include <QFormLayout>
+#include <QGroupBox>
+#include <QScrollArea>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QStackedWidget>
+#include <QVBoxLayout>
+
+namespace {
+QGroupBox* createGroup(const QString& title, QVBoxLayout* parentLayout)
+{
+    auto* group = new QGroupBox(title);
+    group->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    auto* layout = new QFormLayout(group);
+    layout->setContentsMargins(12, 20, 12, 10);
+    layout->setSpacing(8);
+    parentLayout->addWidget(group);
+    return group;
+}
+
+QFormLayout* formOf(QGroupBox* group)
+{
+    return static_cast<QFormLayout*>(group->layout());
+}
+}
 
 DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
 {
-    auto* layout = new QFormLayout(m_centralColumn);
+    m_paramsStack->hide();
+    m_rightColumn->hide();
+
+    auto* centralLayout = qobject_cast<QVBoxLayout*>(m_centralColumn->layout());
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    auto* content = new QWidget(scrollArea);
+    auto* contentLayout = new QVBoxLayout(content);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setSpacing(10);
+
+    auto* valueGroup = createGroup("Значение и слой", contentLayout);
+    auto* textGroup = createGroup("Текст размера", contentLayout);
+    auto* extensionGroup = createGroup("Выносные линии", contentLayout);
+    auto* dimensionLineGroup = createGroup("Размерная линия", contentLayout);
+    auto* arrowGroup = createGroup("Стрелки", contentLayout);
 
     m_typeLabel = new QLabel("-", this);
     m_measuredValueLabel = new QLabel("0.00", this);
+    m_measuredValueSpinBox = new QDoubleSpinBox(this);
+    m_measuredValueSpinBox->setRange(0.001, 1000000.0);
+    m_measuredValueSpinBox->setDecimals(3);
+    m_measuredValueSpinBox->setSingleStep(1.0);
+    m_measuredValueSpinBox->setToolTip("Меняет измеряемую геометрию выбранного размера.");
+
     m_customTextEdit = new QLineEdit(this);
-    m_customTextEdit->setPlaceholderText("Авто (поставьте текст для переопределения)");
+    m_customTextEdit->setPlaceholderText("Авто: вычисленное значение");
+
+    m_layerEdit = new QLineEdit("0", this);
+    m_layerEdit->setPlaceholderText("0");
 
     m_fontComboBox = new QFontComboBox(this);
 
@@ -41,9 +90,10 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_arrowSizeSpinBox->setSuffix(" px");
 
     m_arrowTypeComboBox = new QComboBox(this);
-    m_arrowTypeComboBox->addItem("Закрытая", static_cast<int>(DimensionArrowType::ClosedFilled));
-    m_arrowTypeComboBox->addItem("Открытая", static_cast<int>(DimensionArrowType::ClosedOpen));
+    m_arrowTypeComboBox->addItem("Классическая (закрытая)", static_cast<int>(DimensionArrowType::ClosedFilled));
+    m_arrowTypeComboBox->addItem("Разомкнутая (открытая)", static_cast<int>(DimensionArrowType::ClosedOpen));
     m_arrowTypeComboBox->addItem("Засечка", static_cast<int>(DimensionArrowType::Slash));
+    m_arrowTypeComboBox->addItem("Точка", static_cast<int>(DimensionArrowType::Dot));
 
     m_arrowFilledCheckBox = new QCheckBox("Заполнение стрелок", this);
 
@@ -68,26 +118,38 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_extensionColorButton = new QPushButton(this);
     m_dimensionLineColorButton = new QPushButton(this);
 
-    layout->addRow("Тип размера:", m_typeLabel);
-    layout->addRow("Измеренное значение:", m_measuredValueLabel);
-    layout->addRow("Текст размера:", m_customTextEdit);
-    layout->addRow("Шрифт:", m_fontComboBox);
-    layout->addRow("Высота текста:", m_textHeightSpinBox);
-    layout->addRow("Отступ текста:", m_textGapSpinBox);
-    layout->addRow("Смещение вдоль линии:", m_textAlongOffsetSpinBox);
-    layout->addRow("Размер стрелки:", m_arrowSizeSpinBox);
-    layout->addRow("Тип стрелки:", m_arrowTypeComboBox);
-    layout->addRow("", m_arrowFilledCheckBox);
-    layout->addRow("Отступ выносной:", m_extensionOffsetSpinBox);
-    layout->addRow("Выход выносной:", m_extensionExtendSpinBox);
-    layout->addRow("Выход размерной:", m_dimensionLineExtendSpinBox);
-    layout->addRow("Тип выносной:", m_extensionLineTypeCombo);
-    layout->addRow("Тип размерной:", m_dimensionLineTypeCombo);
-    layout->addRow("Цвет текста:", m_textColorButton);
-    layout->addRow("Цвет выносной:", m_extensionColorButton);
-    layout->addRow("Цвет размерной:", m_dimensionLineColorButton);
+    formOf(valueGroup)->addRow("Тип:", m_typeLabel);
+    formOf(valueGroup)->addRow("Авто-значение:", m_measuredValueLabel);
+    formOf(valueGroup)->addRow("Задать значение:", m_measuredValueSpinBox);
+    formOf(valueGroup)->addRow("Слой:", m_layerEdit);
+
+    formOf(textGroup)->addRow("Переопределение текста:", m_customTextEdit);
+    formOf(textGroup)->addRow("Шрифт:", m_fontComboBox);
+    formOf(textGroup)->addRow("Высота:", m_textHeightSpinBox);
+    formOf(textGroup)->addRow("Отступ от линии:", m_textGapSpinBox);
+    formOf(textGroup)->addRow("Положение вдоль линии:", m_textAlongOffsetSpinBox);
+    formOf(textGroup)->addRow("Цвет:", m_textColorButton);
+
+    formOf(extensionGroup)->addRow("Цвет:", m_extensionColorButton);
+    formOf(extensionGroup)->addRow("Тип линии:", m_extensionLineTypeCombo);
+    formOf(extensionGroup)->addRow("Отступ от объекта:", m_extensionOffsetSpinBox);
+    formOf(extensionGroup)->addRow("Выход за размерную:", m_extensionExtendSpinBox);
+
+    formOf(dimensionLineGroup)->addRow("Цвет:", m_dimensionLineColorButton);
+    formOf(dimensionLineGroup)->addRow("Тип линии:", m_dimensionLineTypeCombo);
+    formOf(dimensionLineGroup)->addRow("Расширение за выносные:", m_dimensionLineExtendSpinBox);
+
+    formOf(arrowGroup)->addRow("Тип:", m_arrowTypeComboBox);
+    formOf(arrowGroup)->addRow("Размер:", m_arrowSizeSpinBox);
+    formOf(arrowGroup)->addRow("", m_arrowFilledCheckBox);
+
+    contentLayout->addStretch();
+    scrollArea->setWidget(content);
+    centralLayout->addWidget(scrollArea, 1);
 
     connect(m_customTextEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onCustomTextChanged);
+    connect(m_measuredValueSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &DimensionPropertiesWidget::onMeasuredValueChanged);
+    connect(m_layerEdit, &QLineEdit::editingFinished, this, &DimensionPropertiesWidget::onLayerEdited);
     connect(m_fontComboBox, &QFontComboBox::currentFontChanged, this, [this]() { onStyleValueChanged(); });
     connect(m_textHeightSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this]() { onStyleValueChanged(); });
     connect(m_textGapSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this]() { onStyleValueChanged(); });
@@ -129,7 +191,34 @@ void DimensionPropertiesWidget::updateColorButton(QPushButton* button, const QCo
 
 void DimensionPropertiesWidget::updateFieldValues()
 {
-    if (!m_currentPrimitive) return;
+    if (!m_currentPrimitive) {
+        const DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
+        QSignalBlocker b1(m_customTextEdit), b2(m_fontComboBox), b3(m_textHeightSpinBox), b4(m_textGapSpinBox),
+            b5(m_textAlongOffsetSpinBox), b6(m_arrowSizeSpinBox), b7(m_arrowTypeComboBox), b8(m_arrowFilledCheckBox),
+            b9(m_extensionOffsetSpinBox), b10(m_extensionExtendSpinBox), b11(m_dimensionLineExtendSpinBox),
+            b12(m_extensionLineTypeCombo), b13(m_dimensionLineTypeCombo), b14(m_measuredValueSpinBox), b15(m_layerEdit);
+        m_typeLabel->setText("-");
+        m_measuredValueLabel->setText("Создание нового размера");
+        m_measuredValueSpinBox->setValue(1.0);
+        m_customTextEdit->clear();
+        m_layerEdit->setText("0");
+        m_fontComboBox->setCurrentFont(QFont(style.fontFamily));
+        m_textHeightSpinBox->setValue(style.textHeight);
+        m_textGapSpinBox->setValue(style.textGap);
+        m_textAlongOffsetSpinBox->setValue(style.textAlongLineOffset);
+        m_arrowSizeSpinBox->setValue(style.arrowSize);
+        m_arrowTypeComboBox->setCurrentIndex(m_arrowTypeComboBox->findData(static_cast<int>(style.arrowType)));
+        m_arrowFilledCheckBox->setChecked(style.arrowFilled);
+        m_extensionOffsetSpinBox->setValue(style.extensionLineOffset);
+        m_extensionExtendSpinBox->setValue(style.extensionLineExtend);
+        m_dimensionLineExtendSpinBox->setValue(style.dimensionLineExtension);
+        m_extensionLineTypeCombo->setCurrentIndex(m_extensionLineTypeCombo->findData(style.extensionLineTypeId));
+        m_dimensionLineTypeCombo->setCurrentIndex(m_dimensionLineTypeCombo->findData(style.dimensionLineTypeId));
+        updateColorButton(m_textColorButton, style.textColor);
+        updateColorButton(m_extensionColorButton, style.extensionLineColor);
+        updateColorButton(m_dimensionLineColorButton, style.dimensionLineColor);
+        return;
+    }
 
     const PrimitiveType type = m_currentPrimitive->getType();
     if (type != PrimitiveType::LinearDimension
@@ -147,9 +236,11 @@ void DimensionPropertiesWidget::updateFieldValues()
     QSignalBlocker b1(m_customTextEdit), b2(m_fontComboBox), b3(m_textHeightSpinBox), b4(m_textGapSpinBox),
         b5(m_textAlongOffsetSpinBox), b6(m_arrowSizeSpinBox), b7(m_arrowTypeComboBox), b8(m_arrowFilledCheckBox),
         b9(m_extensionOffsetSpinBox), b10(m_extensionExtendSpinBox), b11(m_dimensionLineExtendSpinBox),
-        b12(m_extensionLineTypeCombo), b13(m_dimensionLineTypeCombo);
+        b12(m_extensionLineTypeCombo), b13(m_dimensionLineTypeCombo), b14(m_measuredValueSpinBox), b15(m_layerEdit);
 
     m_customTextEdit->setText(dim->getCustomText());
+    m_measuredValueSpinBox->setValue(dim->getMeasuredValue());
+    m_layerEdit->setText(m_currentPrimitive->getLayerName());
     m_fontComboBox->setCurrentFont(QFont(style.fontFamily));
     m_textHeightSpinBox->setValue(style.textHeight);
     m_textGapSpinBox->setValue(style.textGap);
@@ -180,6 +271,40 @@ void DimensionPropertiesWidget::onCustomTextChanged(const QString& text)
             static_cast<BaseDimensionPrimitive*>(prim)->setCustomText(text);
         }
     }
+    emit dimensionPropertiesApplied();
+}
+
+void DimensionPropertiesWidget::onMeasuredValueChanged(double value)
+{
+    if (m_selectedPrimitives.isEmpty()) return;
+
+    for (auto* prim : m_selectedPrimitives) {
+        const PrimitiveType type = prim->getType();
+        if (type == PrimitiveType::LinearDimension
+            || type == PrimitiveType::RadialDimension
+            || type == PrimitiveType::AngularDimension) {
+            auto* dim = static_cast<BaseDimensionPrimitive*>(prim);
+            if (dim->applyMeasuredValueOverride(value)) {
+                dim->setCustomText(QString());
+            }
+        }
+    }
+    updateFieldValues();
+    emit dimensionPropertiesApplied();
+}
+
+void DimensionPropertiesWidget::onLayerEdited()
+{
+    QString layerName = m_layerEdit->text().trimmed();
+    if (layerName.isEmpty()) {
+        layerName = "0";
+        m_layerEdit->setText(layerName);
+    }
+
+    for (auto* prim : m_selectedPrimitives) {
+        if (prim) prim->setLayerName(layerName);
+    }
+    emit layerChanged(layerName);
     emit dimensionPropertiesApplied();
 }
 

@@ -24,6 +24,8 @@ void drawDimensionArrow(QPainter& painter, const QPointF& tip, double angle, con
             QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
             QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
         );
+    } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.drawEllipse(tip, size * 0.35, size * 0.35);
     } else {
         QPolygonF arrow;
         arrow << tip
@@ -196,6 +198,39 @@ void LinearDimensionPrimitive::recalculateValue() {
         m_measuredValue = std::sqrt(dx * dx + dy * dy);
         break;
     }
+}
+
+bool LinearDimensionPrimitive::applyMeasuredValueOverride(double value)
+{
+    if (value <= 0.0) return false;
+
+    switch (m_mode) {
+    case LinearDimensionMode::Horizontal: {
+        const double sign = (m_endPoint.x() >= m_startPoint.x()) ? 1.0 : -1.0;
+        m_endPoint.setX(m_startPoint.x() + sign * value);
+        break;
+    }
+    case LinearDimensionMode::Vertical: {
+        const double sign = (m_endPoint.y() >= m_startPoint.y()) ? 1.0 : -1.0;
+        m_endPoint.setY(m_startPoint.y() + sign * value);
+        break;
+    }
+    case LinearDimensionMode::Aligned:
+    default: {
+        const double dx = m_endPoint.x() - m_startPoint.x();
+        const double dy = m_endPoint.y() - m_startPoint.y();
+        const double len = std::sqrt(dx * dx + dy * dy);
+        if (len < 1e-6) return false;
+        m_endPoint = QPointF(m_startPoint.x() + dx / len * value,
+                             m_startPoint.y() + dy / len * value);
+        break;
+    }
+    }
+
+    m_endAttachment = {};
+    m_endAttachment.fallback = m_endPoint;
+    recalculateValue();
+    return true;
 }
 
 void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {

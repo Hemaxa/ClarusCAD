@@ -48,6 +48,7 @@ public:
     LinearDimensionMode getMode() const { return m_mode; }
 
     virtual void recalculateValue() override;
+    bool applyMeasuredValueOverride(double value) override;
 
     // Переопределенные методы BasePrimitive
     virtual QVector<QPointF> getSnapPoints() const override;

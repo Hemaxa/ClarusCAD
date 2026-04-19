@@ -36,6 +36,7 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     m_tabWidget->addTab(createAppearanceTab(), "Оформление");
     m_tabWidget->addTab(createViewportTab(), "Рабочая область");
     m_tabWidget->addTab(createLineStylesTab(), "Стили линий");
+    m_tabWidget->addTab(createDimensionStylesTab(), "Стили размеров");
 
     //кнопки "OK" и "Отмена"
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
@@ -75,10 +76,40 @@ QWidget* SettingsWindow::createAppearanceTab()
 
     mainLayout->addWidget(groupBox);
 
-    auto* dimGroup = new QGroupBox("Глобальный стиль размеров");
-    auto* dimLayout = new QFormLayout(dimGroup);
-    dimLayout->setSpacing(10);
-    dimLayout->setContentsMargins(15, 25, 15, 15);
+    mainLayout->addStretch(); //Прижать вверх
+    return widget;
+}
+
+QWidget* SettingsWindow::createDimensionStylesTab()
+{
+    auto* scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    auto* widget = new QWidget();
+    auto* mainLayout = new QVBoxLayout(widget);
+    mainLayout->setContentsMargins(15, 15, 15, 15);
+    mainLayout->setSpacing(10);
+
+    auto* textGroup = new QGroupBox("Текст размера");
+    auto* textLayout = new QFormLayout(textGroup);
+    textLayout->setSpacing(10);
+    textLayout->setContentsMargins(15, 25, 15, 15);
+
+    auto* extensionGroup = new QGroupBox("Выносные линии");
+    auto* extensionLayout = new QFormLayout(extensionGroup);
+    extensionLayout->setSpacing(10);
+    extensionLayout->setContentsMargins(15, 25, 15, 15);
+
+    auto* dimensionLineGroup = new QGroupBox("Размерная линия");
+    auto* dimensionLineLayout = new QFormLayout(dimensionLineGroup);
+    dimensionLineLayout->setSpacing(10);
+    dimensionLineLayout->setContentsMargins(15, 25, 15, 15);
+
+    auto* arrowGroup = new QGroupBox("Стрелки");
+    auto* arrowLayout = new QFormLayout(arrowGroup);
+    arrowLayout->setSpacing(10);
+    arrowLayout->setContentsMargins(15, 25, 15, 15);
 
     auto populateLineTypes = [](QComboBox* combo) {
         combo->clear();
@@ -112,9 +143,10 @@ QWidget* SettingsWindow::createAppearanceTab()
     m_dimensionArrowSizeSpinBox->setSuffix(" px");
 
     m_dimensionArrowTypeComboBox = new QComboBox();
-    m_dimensionArrowTypeComboBox->addItem("Закрытая", static_cast<int>(DimensionArrowType::ClosedFilled));
-    m_dimensionArrowTypeComboBox->addItem("Открытая", static_cast<int>(DimensionArrowType::ClosedOpen));
+    m_dimensionArrowTypeComboBox->addItem("Классическая (закрытая)", static_cast<int>(DimensionArrowType::ClosedFilled));
+    m_dimensionArrowTypeComboBox->addItem("Разомкнутая (открытая)", static_cast<int>(DimensionArrowType::ClosedOpen));
     m_dimensionArrowTypeComboBox->addItem("Засечка", static_cast<int>(DimensionArrowType::Slash));
+    m_dimensionArrowTypeComboBox->addItem("Точка", static_cast<int>(DimensionArrowType::Dot));
     m_dimensionArrowTypeComboBox->setCurrentIndex(m_dimensionArrowTypeComboBox->findData(static_cast<int>(SettingsManager::instance().getDimensionArrowType())));
 
     m_dimensionArrowFilledCheck = new QCheckBox("Заполненные стрелки");
@@ -167,24 +199,32 @@ QWidget* SettingsWindow::createAppearanceTab()
     attachColorPicker(m_dimensionExtColorButton);
     attachColorPicker(m_dimensionLineColorButton);
 
-    dimLayout->addRow("Шрифт:", m_dimensionFontComboBox);
-    dimLayout->addRow("Высота текста:", m_dimensionTextHeightSpinBox);
-    dimLayout->addRow("Отступ текста:", m_dimensionTextGapSpinBox);
-    dimLayout->addRow("Размер стрелки:", m_dimensionArrowSizeSpinBox);
-    dimLayout->addRow("Тип стрелки:", m_dimensionArrowTypeComboBox);
-    dimLayout->addRow("", m_dimensionArrowFilledCheck);
-    dimLayout->addRow("Отступ выносной:", m_dimensionExtOffsetSpinBox);
-    dimLayout->addRow("Выход выносной:", m_dimensionExtExtendSpinBox);
-    dimLayout->addRow("Выход размерной:", m_dimensionLineExtendSpinBox);
-    dimLayout->addRow("Тип выносной:", m_dimensionExtLineTypeComboBox);
-    dimLayout->addRow("Тип размерной:", m_dimensionLineTypeComboBox);
-    dimLayout->addRow("Цвет текста:", m_dimensionTextColorButton);
-    dimLayout->addRow("Цвет выносной:", m_dimensionExtColorButton);
-    dimLayout->addRow("Цвет размерной:", m_dimensionLineColorButton);
+    textLayout->addRow("Шрифт:", m_dimensionFontComboBox);
+    textLayout->addRow("Высота:", m_dimensionTextHeightSpinBox);
+    textLayout->addRow("Отступ от линии:", m_dimensionTextGapSpinBox);
+    textLayout->addRow("Цвет:", m_dimensionTextColorButton);
 
-    mainLayout->addWidget(dimGroup);
-    mainLayout->addStretch(); //Прижать вверх
-    return widget;
+    extensionLayout->addRow("Цвет:", m_dimensionExtColorButton);
+    extensionLayout->addRow("Тип линии:", m_dimensionExtLineTypeComboBox);
+    extensionLayout->addRow("Отступ от объекта:", m_dimensionExtOffsetSpinBox);
+    extensionLayout->addRow("Выход за размерную:", m_dimensionExtExtendSpinBox);
+
+    dimensionLineLayout->addRow("Цвет:", m_dimensionLineColorButton);
+    dimensionLineLayout->addRow("Тип линии:", m_dimensionLineTypeComboBox);
+    dimensionLineLayout->addRow("Расширение за выносные:", m_dimensionLineExtendSpinBox);
+
+    arrowLayout->addRow("Тип:", m_dimensionArrowTypeComboBox);
+    arrowLayout->addRow("Размер:", m_dimensionArrowSizeSpinBox);
+    arrowLayout->addRow("", m_dimensionArrowFilledCheck);
+
+    mainLayout->addWidget(textGroup);
+    mainLayout->addWidget(extensionGroup);
+    mainLayout->addWidget(dimensionLineGroup);
+    mainLayout->addWidget(arrowGroup);
+    mainLayout->addStretch();
+
+    scrollArea->setWidget(widget);
+    return scrollArea;
 }
 
 QWidget* SettingsWindow::createViewportTab()

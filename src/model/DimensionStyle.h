@@ -8,7 +8,8 @@
 enum class DimensionArrowType {
     ClosedFilled,
     ClosedOpen,
-    Slash
+    Slash,
+    Dot
 };
 
 /**

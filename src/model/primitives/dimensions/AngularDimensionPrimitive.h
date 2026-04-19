@@ -26,6 +26,7 @@ public:
     void updateFromAssociation();
 
     void recalculateValue() override;
+    bool applyMeasuredValueOverride(double value) override;
 
     QVector<QPointF> getSnapPoints() const override;
     void draw(QPainter& painter, bool isSelected) const override;

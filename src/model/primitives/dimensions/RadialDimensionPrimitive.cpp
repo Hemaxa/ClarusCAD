@@ -38,6 +38,8 @@ void drawArrow(QPainter& painter, const QPointF& tip, double angle, const Dimens
             QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
             QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
         );
+    } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.drawEllipse(tip, size * 0.35, size * 0.35);
     } else {
         QPolygonF arrow;
         arrow << tip
@@ -64,6 +66,25 @@ void RadialDimensionPrimitive::recalculateValue()
 {
     const double radius = distance(m_centerPoint, m_radiusPoint);
     m_measuredValue = m_isDiameter ? radius * 2.0 : radius;
+}
+
+bool RadialDimensionPrimitive::applyMeasuredValueOverride(double value)
+{
+    if (value <= 0.0) return false;
+
+    const double radius = m_isDiameter ? value / 2.0 : value;
+    QPointF dir = normalizedDirection(m_centerPoint, m_radiusPoint);
+    if (m_isDiameter) {
+        dir = normalizedDirection(m_centerPoint, m_dimensionLinePos);
+    }
+
+    m_radiusPoint = m_centerPoint + QPointF(dir.x() * radius, dir.y() * radius);
+    const double leaderDistance = distance(m_centerPoint, m_dimensionLinePos);
+    const double targetLeaderDistance = std::max(leaderDistance, radius);
+    m_dimensionLinePos = m_centerPoint + QPointF(dir.x() * targetLeaderDistance, dir.y() * targetLeaderDistance);
+    m_associatedPrimitive = nullptr;
+    recalculateValue();
+    return true;
 }
 
 void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const

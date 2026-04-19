@@ -54,6 +54,12 @@ public:
      */
     virtual void recalculateValue() = 0;
 
+    /**
+     * @brief Применить вручную введенное числовое значение к геометрии размера.
+     * @return true, если размер смог перестроить свои опорные точки.
+     */
+    virtual bool applyMeasuredValueOverride(double value) { Q_UNUSED(value); return false; }
+
     void setCustomTextPosition(const QPointF& pos) { m_hasCustomTextPosition = true; m_customTextPosition = pos; }
     void clearCustomTextPosition() { m_hasCustomTextPosition = false; }
     bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }

@@ -29,6 +29,8 @@ protected:
 
 private slots:
     void onCustomTextChanged(const QString& text);
+    void onMeasuredValueChanged(double value);
+    void onLayerEdited();
     void onStyleValueChanged();
     void onTextColorClicked();
     void onExtensionColorClicked();
@@ -41,7 +43,9 @@ private:
 
     QLabel* m_typeLabel;
     QLabel* m_measuredValueLabel;
+    QDoubleSpinBox* m_measuredValueSpinBox;
     QLineEdit* m_customTextEdit;
+    QLineEdit* m_layerEdit;
     QFontComboBox* m_fontComboBox;
     QDoubleSpinBox* m_textHeightSpinBox;
     QDoubleSpinBox* m_textGapSpinBox;
