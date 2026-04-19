@@ -29,15 +29,15 @@ SplinePropertiesWidget::SplinePropertiesWidget(QWidget* parent) : BaseProperties
     //создание прокручиваемой области для контрольных точек
     m_pointsScrollArea = new QScrollArea();
     m_pointsScrollArea->setWidgetResizable(true);
-    m_pointsScrollArea->setMinimumHeight(120);
-    m_pointsScrollArea->setMaximumHeight(180);
+    m_pointsScrollArea->setMinimumHeight(70);
+    m_pointsScrollArea->setMaximumHeight(110);
     m_pointsScrollArea->setFrameShape(QFrame::NoFrame);
     
     m_pointsContainer = new QWidget();
-    m_pointsLayout = new QVBoxLayout(m_pointsContainer);
+    m_pointsLayout = new QGridLayout(m_pointsContainer);
     m_pointsLayout->setContentsMargins(0, 0, 0, 0);
-    m_pointsLayout->setSpacing(4);
-    m_pointsLayout->addStretch();
+    m_pointsLayout->setHorizontalSpacing(10);
+    m_pointsLayout->setVerticalSpacing(4);
     
     m_pointsScrollArea->setWidget(m_pointsContainer);
     
@@ -98,17 +98,19 @@ void SplinePropertiesWidget::rebuildControlPointsUI()
         hLayout->setSpacing(4);
         
         QLabel* indexLabel = new QLabel(QString::number(i + 1) + ":");
-        indexLabel->setFixedWidth(20);
+        indexLabel->setFixedWidth(18);
         
         row.xEdit = new QLineEdit(QString::number(points[i].x(), 'f', 2));
         row.xEdit->setValidator(validator);
         row.xEdit->setObjectName("PropertiesInput");
         row.xEdit->setPlaceholderText("X");
+        row.xEdit->setFixedWidth(64);
         
         row.yEdit = new QLineEdit(QString::number(points[i].y(), 'f', 2));
         row.yEdit->setValidator(validator);
         row.yEdit->setObjectName("PropertiesInput");
         row.yEdit->setPlaceholderText("Y");
+        row.yEdit->setFixedWidth(64);
         
         row.deleteBtn = new QPushButton("×");
         row.deleteBtn->setFixedSize(24, 24);
@@ -120,8 +122,11 @@ void SplinePropertiesWidget::rebuildControlPointsUI()
         hLayout->addWidget(row.xEdit);
         hLayout->addWidget(row.yEdit);
         hLayout->addWidget(row.deleteBtn);
+        hLayout->addStretch();
         
-        m_pointsLayout->insertWidget(m_pointsLayout->count() - 1, row.container);
+        const int gridRow = i / 2;
+        const int gridColumn = i % 2;
+        m_pointsLayout->addWidget(row.container, gridRow, gridColumn);
         m_pointRows.append(row);
     }
 }

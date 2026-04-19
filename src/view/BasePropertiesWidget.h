@@ -118,6 +118,7 @@ protected:
      * @brief Заполнить выпадающий список типов линий доступными стилями.
      */
     void populateLineTypeComboBox();
+    void applyCompactMetrics();
 
     QList<BasePrimitive*> m_selectedPrimitives; ///< Список редактируемых объектов
     BasePrimitive* m_currentPrimitive = nullptr; ///< Указатель на "главный" объект (обычно последний) для чтения геометрии

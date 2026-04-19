@@ -111,6 +111,16 @@ bool edgePoints(BasePrimitive* source, int edgeIndex, QPointF& a, QPointF& b)
         return false;
     }
 }
+
+QPointF rotateAround(const QPointF& point, const QPointF& center, double angleDelta)
+{
+    const double dx = point.x() - center.x();
+    const double dy = point.y() - center.y();
+    const double c = std::cos(angleDelta);
+    const double s = std::sin(angleDelta);
+    return QPointF(center.x() + dx * c - dy * s,
+                   center.y() + dx * s + dy * c);
+}
 }
 
 void AngularDimensionPrimitive::recalculateValue()
@@ -132,10 +142,22 @@ bool AngularDimensionPrimitive::applyMeasuredValueOverride(double value)
     const double endRadius = pointDistance(m_centerPoint, m_endPoint);
     if (endRadius < 1e-6) return false;
 
+    if (m_secondSource && m_secondSource->getType() == PrimitiveType::Segment) {
+        auto* segment = static_cast<SegmentPrimitive*>(m_secondSource);
+        const double currentEndAngle = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
+        const double angleDelta = newEndAngle - currentEndAngle;
+        QPointF p1(segment->getStart().getX(), segment->getStart().getY());
+        QPointF p2(segment->getEnd().getX(), segment->getEnd().getY());
+        p1 = rotateAround(p1, m_centerPoint, angleDelta);
+        p2 = rotateAround(p2, m_centerPoint, angleDelta);
+        segment->setStart(PointPrimitive::fromPointF(p1));
+        segment->setEnd(PointPrimitive::fromPointF(p2));
+        updateFromAssociation();
+        return true;
+    }
+
     m_endPoint = QPointF(m_centerPoint.x() + endRadius * std::cos(newEndAngle),
                          m_centerPoint.y() + endRadius * std::sin(newEndAngle));
-    m_secondSource = nullptr;
-    m_secondEdgeIndex = -1;
     recalculateValue();
     return true;
 }

@@ -11,28 +11,44 @@
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
 #include <QFormLayout>
-#include <QGroupBox>
-#include <QScrollArea>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
 namespace {
-QGroupBox* createGroup(const QString& title, QVBoxLayout* parentLayout)
+QWidget* createColumn(const QString& title, QHBoxLayout* parentLayout)
 {
-    auto* group = new QGroupBox(title);
-    group->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
-    auto* layout = new QFormLayout(group);
-    layout->setContentsMargins(12, 20, 12, 10);
-    layout->setSpacing(8);
-    parentLayout->addWidget(group);
-    return group;
+    auto* column = new QWidget();
+    column->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    column->setMinimumWidth(166);
+
+    auto* columnLayout = new QVBoxLayout(column);
+    columnLayout->setContentsMargins(0, 0, 0, 0);
+    columnLayout->setSpacing(2);
+
+    auto* titleLabel = new QLabel(title);
+    titleLabel->setStyleSheet("font-weight: 600;");
+    columnLayout->addWidget(titleLabel);
+
+    auto* formLayout = new QFormLayout();
+    formLayout->setContentsMargins(0, 0, 0, 0);
+    formLayout->setHorizontalSpacing(6);
+    formLayout->setVerticalSpacing(2);
+    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    formLayout->setFieldGrowthPolicy(QFormLayout::FieldsStayAtSizeHint);
+    columnLayout->addLayout(formLayout);
+
+    parentLayout->addWidget(column);
+    return column;
 }
 
-QFormLayout* formOf(QGroupBox* group)
+QFormLayout* formOf(QWidget* column)
 {
-    return static_cast<QFormLayout*>(group->layout());
+    auto* columnLayout = qobject_cast<QVBoxLayout*>(column->layout());
+    return static_cast<QFormLayout*>(columnLayout->itemAt(1)->layout());
 }
 }
 
@@ -42,20 +58,15 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_rightColumn->hide();
 
     auto* centralLayout = qobject_cast<QVBoxLayout*>(m_centralColumn->layout());
-    auto* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameShape(QFrame::NoFrame);
+    auto* columnsLayout = new QHBoxLayout();
+    columnsLayout->setContentsMargins(0, 0, 0, 0);
+    columnsLayout->setSpacing(8);
 
-    auto* content = new QWidget(scrollArea);
-    auto* contentLayout = new QVBoxLayout(content);
-    contentLayout->setContentsMargins(0, 0, 0, 0);
-    contentLayout->setSpacing(10);
-
-    auto* valueGroup = createGroup("Значение и слой", contentLayout);
-    auto* textGroup = createGroup("Текст размера", contentLayout);
-    auto* extensionGroup = createGroup("Выносные линии", contentLayout);
-    auto* dimensionLineGroup = createGroup("Размерная линия", contentLayout);
-    auto* arrowGroup = createGroup("Стрелки", contentLayout);
+    auto* valueGroup = createColumn("Значение", columnsLayout);
+    auto* textGroup = createColumn("Текст", columnsLayout);
+    auto* extensionGroup = createColumn("Выносные", columnsLayout);
+    auto* dimensionLineGroup = createColumn("Размерная", columnsLayout);
+    auto* arrowGroup = createColumn("Стрелки", columnsLayout);
 
     m_typeLabel = new QLabel("-", this);
     m_measuredValueLabel = new QLabel("0.00", this);
@@ -64,32 +75,43 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_measuredValueSpinBox->setDecimals(3);
     m_measuredValueSpinBox->setSingleStep(1.0);
     m_measuredValueSpinBox->setToolTip("Меняет измеряемую геометрию выбранного размера.");
+    m_measuredValueSpinBox->setObjectName("PropertiesInput");
 
     m_customTextEdit = new QLineEdit(this);
     m_customTextEdit->setPlaceholderText("Авто: вычисленное значение");
+    m_customTextEdit->setMinimumWidth(150);
+    m_customTextEdit->setMaximumWidth(220);
 
     m_layerEdit = new QLineEdit("0", this);
     m_layerEdit->setPlaceholderText("0");
+    m_layerEdit->setMaximumWidth(90);
 
     m_fontComboBox = new QFontComboBox(this);
+    m_fontComboBox->setMinimumWidth(150);
+    m_fontComboBox->setMaximumWidth(220);
 
     m_textHeightSpinBox = new QDoubleSpinBox(this);
     m_textHeightSpinBox->setRange(6.0, 48.0);
     m_textHeightSpinBox->setSuffix(" px");
+    m_textHeightSpinBox->setObjectName("PropertiesInput");
 
     m_textGapSpinBox = new QDoubleSpinBox(this);
     m_textGapSpinBox->setRange(0.0, 40.0);
     m_textGapSpinBox->setSuffix(" px");
+    m_textGapSpinBox->setObjectName("PropertiesInput");
 
     m_textAlongOffsetSpinBox = new QDoubleSpinBox(this);
     m_textAlongOffsetSpinBox->setRange(-100.0, 100.0);
     m_textAlongOffsetSpinBox->setSuffix(" px");
+    m_textAlongOffsetSpinBox->setObjectName("PropertiesInput");
 
     m_arrowSizeSpinBox = new QDoubleSpinBox(this);
     m_arrowSizeSpinBox->setRange(4.0, 40.0);
     m_arrowSizeSpinBox->setSuffix(" px");
+    m_arrowSizeSpinBox->setObjectName("PropertiesInput");
 
     m_arrowTypeComboBox = new QComboBox(this);
+    m_arrowTypeComboBox->setObjectName("PropertiesComboBox");
     m_arrowTypeComboBox->addItem("Классическая (закрытая)", static_cast<int>(DimensionArrowType::ClosedFilled));
     m_arrowTypeComboBox->addItem("Разомкнутая (открытая)", static_cast<int>(DimensionArrowType::ClosedOpen));
     m_arrowTypeComboBox->addItem("Засечка", static_cast<int>(DimensionArrowType::Slash));
@@ -100,52 +122,60 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_extensionOffsetSpinBox = new QDoubleSpinBox(this);
     m_extensionOffsetSpinBox->setRange(0.0, 100.0);
     m_extensionOffsetSpinBox->setSuffix(" px");
+    m_extensionOffsetSpinBox->setObjectName("PropertiesInput");
 
     m_extensionExtendSpinBox = new QDoubleSpinBox(this);
     m_extensionExtendSpinBox->setRange(0.0, 100.0);
     m_extensionExtendSpinBox->setSuffix(" px");
+    m_extensionExtendSpinBox->setObjectName("PropertiesInput");
 
     m_dimensionLineExtendSpinBox = new QDoubleSpinBox(this);
     m_dimensionLineExtendSpinBox->setRange(0.0, 100.0);
     m_dimensionLineExtendSpinBox->setSuffix(" px");
+    m_dimensionLineExtendSpinBox->setObjectName("PropertiesInput");
 
     m_extensionLineTypeCombo = new QComboBox(this);
     m_dimensionLineTypeCombo = new QComboBox(this);
+    m_extensionLineTypeCombo->setObjectName("PropertiesComboBox");
+    m_dimensionLineTypeCombo->setObjectName("PropertiesComboBox");
     populateLocalLineTypeCombo(m_extensionLineTypeCombo);
     populateLocalLineTypeCombo(m_dimensionLineTypeCombo);
 
     m_textColorButton = new QPushButton(this);
     m_extensionColorButton = new QPushButton(this);
     m_dimensionLineColorButton = new QPushButton(this);
+    for (auto* button : {m_textColorButton, m_extensionColorButton, m_dimensionLineColorButton}) {
+        button->setFixedHeight(24);
+        button->setMaximumWidth(96);
+    }
 
     formOf(valueGroup)->addRow("Тип:", m_typeLabel);
-    formOf(valueGroup)->addRow("Авто-значение:", m_measuredValueLabel);
-    formOf(valueGroup)->addRow("Задать значение:", m_measuredValueSpinBox);
+    formOf(valueGroup)->addRow("Авто:", m_measuredValueLabel);
+    formOf(valueGroup)->addRow("Задать:", m_measuredValueSpinBox);
     formOf(valueGroup)->addRow("Слой:", m_layerEdit);
 
-    formOf(textGroup)->addRow("Переопределение текста:", m_customTextEdit);
+    formOf(textGroup)->addRow("Текст:", m_customTextEdit);
     formOf(textGroup)->addRow("Шрифт:", m_fontComboBox);
     formOf(textGroup)->addRow("Высота:", m_textHeightSpinBox);
-    formOf(textGroup)->addRow("Отступ от линии:", m_textGapSpinBox);
-    formOf(textGroup)->addRow("Положение вдоль линии:", m_textAlongOffsetSpinBox);
+    formOf(textGroup)->addRow("Отступ:", m_textGapSpinBox);
+    formOf(textGroup)->addRow("Вдоль:", m_textAlongOffsetSpinBox);
     formOf(textGroup)->addRow("Цвет:", m_textColorButton);
 
     formOf(extensionGroup)->addRow("Цвет:", m_extensionColorButton);
     formOf(extensionGroup)->addRow("Тип линии:", m_extensionLineTypeCombo);
-    formOf(extensionGroup)->addRow("Отступ от объекта:", m_extensionOffsetSpinBox);
-    formOf(extensionGroup)->addRow("Выход за размерную:", m_extensionExtendSpinBox);
+    formOf(extensionGroup)->addRow("Отступ:", m_extensionOffsetSpinBox);
+    formOf(extensionGroup)->addRow("Выход:", m_extensionExtendSpinBox);
 
     formOf(dimensionLineGroup)->addRow("Цвет:", m_dimensionLineColorButton);
     formOf(dimensionLineGroup)->addRow("Тип линии:", m_dimensionLineTypeCombo);
-    formOf(dimensionLineGroup)->addRow("Расширение за выносные:", m_dimensionLineExtendSpinBox);
+    formOf(dimensionLineGroup)->addRow("Расширение:", m_dimensionLineExtendSpinBox);
 
     formOf(arrowGroup)->addRow("Тип:", m_arrowTypeComboBox);
     formOf(arrowGroup)->addRow("Размер:", m_arrowSizeSpinBox);
     formOf(arrowGroup)->addRow("", m_arrowFilledCheckBox);
 
-    contentLayout->addStretch();
-    scrollArea->setWidget(content);
-    centralLayout->addWidget(scrollArea, 1);
+    columnsLayout->addStretch();
+    centralLayout->addLayout(columnsLayout);
 
     connect(m_customTextEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onCustomTextChanged);
     connect(m_measuredValueSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &DimensionPropertiesWidget::onMeasuredValueChanged);

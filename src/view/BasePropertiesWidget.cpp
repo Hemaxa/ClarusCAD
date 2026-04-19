@@ -14,7 +14,10 @@
 #include <QHBoxLayout>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QListView>
 #include <QPainter>
+#include <QSpinBox>
+#include <QDoubleSpinBox>
 
 BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 {
@@ -23,15 +26,15 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 
     //создание главной горизонтальной компоновки
     auto* mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(10, 5, 10, 5);
-    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(8, 4, 8, 4);
+    mainLayout->setSpacing(8);
 
     //1) Левая часть: параметры координат (переключаемые)
     m_centralColumn = new QWidget();
     auto* centralLayout = new QVBoxLayout(m_centralColumn);
     centralLayout->setAlignment(Qt::AlignTop);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    centralLayout->setSpacing(4);
+    centralLayout->setSpacing(2);
 
     //создание общей панели с параметрами
     m_paramsStack = new QStackedWidget();
@@ -40,65 +43,57 @@ BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 
     //используем grid layout для декартовых координат (2 поля в ряд)
     auto* cartesianLayout = new QGridLayout(m_cartesianWidgets);
-    cartesianLayout->setContentsMargins(0, 5, 0, 0);
-    cartesianLayout->setSpacing(4);
+    cartesianLayout->setContentsMargins(0, 2, 0, 0);
+    cartesianLayout->setHorizontalSpacing(6);
+    cartesianLayout->setVerticalSpacing(2);
 
     //используем grid layout для полярных координат
     auto* polarLayout = new QGridLayout(m_polarWidgets);
-    polarLayout->setContentsMargins(0, 5, 0, 0);
-    polarLayout->setSpacing(4);
+    polarLayout->setContentsMargins(0, 2, 0, 0);
+    polarLayout->setHorizontalSpacing(6);
+    polarLayout->setVerticalSpacing(2);
 
     m_paramsStack->addWidget(m_cartesianWidgets);
     m_paramsStack->addWidget(m_polarWidgets);
     centralLayout->addWidget(m_paramsStack);
 
-    //2) Правая часть: цвет + тип линии + кнопка (вертикально)
+    //2) Правая часть: цвет + тип линии + слой + кнопка (одна компактная строка)
     m_rightColumn = new QWidget();
-    auto* rightLayout = new QVBoxLayout(m_rightColumn);
+    auto* rightLayout = new QHBoxLayout(m_rightColumn);
     rightLayout->setAlignment(Qt::AlignTop);
-    rightLayout->setContentsMargins(0, 5, 0, 0);
-    rightLayout->setSpacing(4);
+    rightLayout->setContentsMargins(0, 2, 0, 0);
+    rightLayout->setSpacing(8);
 
     //строка с цветом
-    auto* colorRow = new QHBoxLayout();
-    colorRow->setSpacing(5);
     auto* colorLabel = new QLabel("Цвет:");
     m_colorButton = new QPushButton();
     m_colorButton->setObjectName("ColorButton");
     m_colorButton->setFixedSize(24, 24);
     m_colorButton->setCursor(Qt::PointingHandCursor);
     connect(m_colorButton, &QPushButton::clicked, this, &BasePropertiesWidget::onColorButtonClicked);
-    colorRow->addWidget(colorLabel);
-    colorRow->addWidget(m_colorButton);
-    colorRow->addStretch();
-    rightLayout->addLayout(colorRow);
+    rightLayout->addWidget(colorLabel);
+    rightLayout->addWidget(m_colorButton);
 
     //строка с типом линии
-    auto* lineRow = new QHBoxLayout();
-    lineRow->setSpacing(5);
     auto* lineLabel = new QLabel("Линия:");
     m_lineTypeComboBox = new QComboBox();
-    m_lineTypeComboBox->setFixedWidth(160);
-    m_lineTypeComboBox->setIconSize(QSize(80, 16));
+    m_lineTypeComboBox->setFixedWidth(118);
+    m_lineTypeComboBox->setIconSize(QSize(92, 16));
+    m_lineTypeComboBox->setMinimumContentsLength(0);
+    m_lineTypeComboBox->view()->setMinimumWidth(260);
     m_lineTypeComboBox->setObjectName("LineTypeComboBox");
     m_lineTypeComboBox->setCursor(Qt::PointingHandCursor);
     connect(m_lineTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &BasePropertiesWidget::onLineTypeBoxClicked);
-    lineRow->addWidget(lineLabel);
-    lineRow->addWidget(m_lineTypeComboBox);
-    lineRow->addStretch();
-    rightLayout->addLayout(lineRow);
+    rightLayout->addWidget(lineLabel);
+    rightLayout->addWidget(m_lineTypeComboBox);
 
     //строка со слоем
-    auto* layerRow = new QHBoxLayout();
-    layerRow->setSpacing(5);
     auto* layerLabel = new QLabel("Слой:");
     m_layerLineEdit = new QLineEdit("0");
-    m_layerLineEdit->setFixedWidth(160);
+    m_layerLineEdit->setFixedWidth(90);
     connect(m_layerLineEdit, &QLineEdit::editingFinished, this, &BasePropertiesWidget::onLayerNameChanged);
-    layerRow->addWidget(layerLabel);
-    layerRow->addWidget(m_layerLineEdit);
-    layerRow->addStretch();
-    rightLayout->addLayout(layerRow);
+    rightLayout->addWidget(layerLabel);
+    rightLayout->addWidget(m_layerLineEdit);
 
     //кнопка "Создать/Обновить"
     m_applyButton = new QPushButton();
@@ -159,6 +154,7 @@ void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives
     }
 
     updateFieldValues();
+    applyCompactMetrics();
 }
 
 void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
@@ -175,6 +171,42 @@ void BasePropertiesWidget::setCoordinateSystem(CoordinateSystemType type)
     }
 
     updateFieldValues();
+    applyCompactMetrics();
+}
+
+void BasePropertiesWidget::applyCompactMetrics()
+{
+    for (auto* edit : findChildren<QLineEdit*>()) {
+        if (edit == m_layerLineEdit) continue;
+        if (edit->objectName() == "PropertiesInput") {
+            edit->setFixedHeight(24);
+            edit->setMinimumWidth(58);
+            edit->setMaximumWidth(82);
+        }
+    }
+
+    for (auto* combo : findChildren<QComboBox*>()) {
+        if (combo == m_lineTypeComboBox) continue;
+        if (combo->objectName() == "PropertiesComboBox") {
+            combo->setFixedHeight(24);
+            combo->setMinimumWidth(110);
+            combo->setMaximumWidth(170);
+        }
+    }
+
+    for (auto* spin : findChildren<QSpinBox*>()) {
+        if (spin->objectName() == "PropertiesInput") {
+            spin->setFixedHeight(24);
+            spin->setMaximumWidth(82);
+        }
+    }
+
+    for (auto* spin : findChildren<QDoubleSpinBox*>()) {
+        if (spin->objectName() == "PropertiesInput") {
+            spin->setFixedHeight(24);
+            spin->setMaximumWidth(96);
+        }
+    }
 }
 
 void BasePropertiesWidget::updateColor(const QColor& color, bool isMixed)
@@ -292,6 +324,7 @@ void BasePropertiesWidget::populateLineTypeComboBox()
         }
 
         m_lineTypeComboBox->addItem(icon, name, static_cast<int>(type));
+        m_lineTypeComboBox->setItemData(m_lineTypeComboBox->count() - 1, name, Qt::ToolTipRole);
     }
 
     auto customStyles = LineStyleManager::instance().getCustomStyles();
@@ -302,6 +335,7 @@ void BasePropertiesWidget::populateLineTypeComboBox()
         LineStyleManager::instance().drawLine(p, QPointF(0, 8), QPointF(80, 8), it.key(), iconColor);
 
         m_lineTypeComboBox->addItem(QIcon(pix), it.value().name, it.key());
+        m_lineTypeComboBox->setItemData(m_lineTypeComboBox->count() - 1, it.value().name, Qt::ToolTipRole);
     }
 
     m_lineTypeComboBox->blockSignals(false);

@@ -313,6 +313,7 @@ void MainWindow::createConnections()
     });
 
     connect(m_propertiesPanel, &PropertiesPanelWidget::dimensionPropertiesApplied, this, [this](){
+        refreshAssociativeDimensions();
         emit sceneChanged(m_scene);
     });
 

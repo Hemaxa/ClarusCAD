@@ -7,7 +7,7 @@
 
 #include <QLabel>
 #include <QScrollArea>
-#include <QVBoxLayout>
+#include <QGridLayout>
 #include <QVector>
 #include <QPair>
 
@@ -68,7 +68,7 @@ private:
     
     //контейнер для полей контрольных точек
     QWidget* m_pointsContainer;
-    QVBoxLayout* m_pointsLayout;
+    QGridLayout* m_pointsLayout;
     QScrollArea* m_pointsScrollArea;
     
     //пары полей (X, Y) и кнопка удаления для каждой точки

@@ -181,6 +181,66 @@ void normalizeReadableScreenAngle(double& angleDeg)
     if (angleDeg > 90.0) angleDeg -= 180.0;
     if (angleDeg < -90.0) angleDeg += 180.0;
 }
+
+bool moveAttachmentPoint(LinearDimensionPrimitive::Attachment& attachment, const QPointF& newPoint)
+{
+    if (!attachment.source) {
+        attachment.fallback = newPoint;
+        return true;
+    }
+
+    switch (attachment.source->getType()) {
+    case PrimitiveType::Segment: {
+        auto* seg = static_cast<SegmentPrimitive*>(attachment.source);
+        if (attachment.snapType != SnapType::Endpoint) return false;
+        if (attachment.index == 0) {
+            seg->setStart(PointPrimitive::fromPointF(newPoint));
+        } else {
+            seg->setEnd(PointPrimitive::fromPointF(newPoint));
+        }
+        attachment.fallback = newPoint;
+        return true;
+    }
+    case PrimitiveType::Rectangle: {
+        auto* rect = static_cast<RectanglePrimitive*>(attachment.source);
+        if (attachment.snapType != SnapType::Endpoint && attachment.snapType != SnapType::Midpoint && attachment.snapType != SnapType::Nearest) {
+            return false;
+        }
+        attachment.fallback = newPoint;
+        Q_UNUSED(rect);
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+bool resizeAssociatedRectangle(const LinearDimensionPrimitive::Attachment& startAttachment,
+                               const LinearDimensionPrimitive::Attachment& endAttachment,
+                               LinearDimensionMode mode,
+                               double value)
+{
+    if (!startAttachment.source || startAttachment.source != endAttachment.source) return false;
+    if (startAttachment.source->getType() != PrimitiveType::Rectangle) return false;
+
+    auto* rect = static_cast<RectanglePrimitive*>(startAttachment.source);
+    if (mode == LinearDimensionMode::Horizontal) {
+        rect->setWidth(value);
+    } else if (mode == LinearDimensionMode::Vertical) {
+        rect->setHeight(value);
+    } else {
+        const QPointF p1 = resolveAttachment(startAttachment);
+        const QPointF p2 = resolveAttachment(endAttachment);
+        const double dx = std::abs(p2.x() - p1.x());
+        const double dy = std::abs(p2.y() - p1.y());
+        if (dx >= dy) {
+            rect->setWidth(value);
+        } else {
+            rect->setHeight(value);
+        }
+    }
+    return true;
+}
 }
 
 void LinearDimensionPrimitive::recalculateValue() {
@@ -203,6 +263,11 @@ void LinearDimensionPrimitive::recalculateValue() {
 bool LinearDimensionPrimitive::applyMeasuredValueOverride(double value)
 {
     if (value <= 0.0) return false;
+
+    if (resizeAssociatedRectangle(m_startAttachment, m_endAttachment, m_mode, value)) {
+        updateFromAttachments();
+        return true;
+    }
 
     switch (m_mode) {
     case LinearDimensionMode::Horizontal: {
@@ -227,8 +292,14 @@ bool LinearDimensionPrimitive::applyMeasuredValueOverride(double value)
     }
     }
 
-    m_endAttachment = {};
-    m_endAttachment.fallback = m_endPoint;
+    if (!moveAttachmentPoint(m_endAttachment, m_endPoint)) {
+        m_endAttachment = {};
+        m_endAttachment.fallback = m_endPoint;
+    } else {
+        updateFromAttachments();
+        return true;
+    }
+
     recalculateValue();
     return true;
 }

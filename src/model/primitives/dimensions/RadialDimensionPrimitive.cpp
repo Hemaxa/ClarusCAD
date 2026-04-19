@@ -73,6 +73,35 @@ bool RadialDimensionPrimitive::applyMeasuredValueOverride(double value)
     if (value <= 0.0) return false;
 
     const double radius = m_isDiameter ? value / 2.0 : value;
+    if (m_associatedPrimitive) {
+        switch (m_associatedPrimitive->getType()) {
+        case PrimitiveType::Circle: {
+            auto* circle = static_cast<CirclePrimitive*>(m_associatedPrimitive);
+            circle->setRadius(radius);
+            updateFromAssociation();
+            return true;
+        }
+        case PrimitiveType::Arc: {
+            auto* arc = static_cast<ArcPrimitive*>(m_associatedPrimitive);
+            arc->setRadius(radius);
+            updateFromAssociation();
+            return true;
+        }
+        case PrimitiveType::Ellipse: {
+            auto* ellipse = static_cast<EllipsePrimitive*>(m_associatedPrimitive);
+            const double currentRadius = distance(m_centerPoint, m_radiusPoint);
+            if (currentRadius < 1e-6) return false;
+            const double scale = radius / currentRadius;
+            ellipse->setRadiusX(std::max(0.001, ellipse->getRadiusX() * scale));
+            ellipse->setRadiusY(std::max(0.001, ellipse->getRadiusY() * scale));
+            updateFromAssociation();
+            return true;
+        }
+        default:
+            break;
+        }
+    }
+
     QPointF dir = normalizedDirection(m_centerPoint, m_radiusPoint);
     if (m_isDiameter) {
         dir = normalizedDirection(m_centerPoint, m_dimensionLinePos);
@@ -82,7 +111,6 @@ bool RadialDimensionPrimitive::applyMeasuredValueOverride(double value)
     const double leaderDistance = distance(m_centerPoint, m_dimensionLinePos);
     const double targetLeaderDistance = std::max(leaderDistance, radius);
     m_dimensionLinePos = m_centerPoint + QPointF(dir.x() * targetLeaderDistance, dir.y() * targetLeaderDistance);
-    m_associatedPrimitive = nullptr;
     recalculateValue();
     return true;
 }
