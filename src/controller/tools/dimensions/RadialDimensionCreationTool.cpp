@@ -12,6 +12,32 @@
 #include <QMouseEvent>
 #include <cmath>
 
+namespace {
+bool circularPrimitiveCenter(BasePrimitive* primitive, QPointF& center)
+{
+    if (!primitive) return false;
+    switch (primitive->getType()) {
+    case PrimitiveType::Circle: {
+        auto* c = static_cast<CirclePrimitive*>(primitive);
+        center = QPointF(c->getCenter().getX(), c->getCenter().getY());
+        return true;
+    }
+    case PrimitiveType::Arc: {
+        auto* a = static_cast<ArcPrimitive*>(primitive);
+        center = QPointF(a->getCenter().getX(), a->getCenter().getY());
+        return true;
+    }
+    case PrimitiveType::Ellipse: {
+        auto* e = static_cast<EllipsePrimitive*>(primitive);
+        center = QPointF(e->getCenter().getX(), e->getCenter().getY());
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+}
+
 RadialDimensionCreationTool::RadialDimensionCreationTool(QObject* parent)
     : BaseCreationTool(parent)
 {
@@ -25,9 +51,6 @@ void RadialDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
         const QPointF pos = snap.position;
         if (m_state == 0) {
             m_previewDimension = std::make_unique<RadialDimensionPrimitive>();
-            m_previewDimension->setCenterPoint(pos);
-            m_previewDimension->setRadiusPoint(pos);
-            m_previewDimension->setDimensionLinePos(pos);
             m_previewDimension->setDiameterMode(m_isDiameterMode);
 
             DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
@@ -36,15 +59,33 @@ void RadialDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
             style.textColor = m_currentColor;
             m_previewDimension->setStyle(style);
 
-            SnapManager::instance().setBasePoint(pos);
-            m_state = 1;
+            QPointF sourceCenter;
+            if (snap.type != SnapType::Center && circularPrimitiveCenter(snap.source, sourceCenter)) {
+                m_previewDimension->setCenterPoint(sourceCenter);
+                m_previewDimension->setRadiusPoint(pos);
+                m_previewDimension->setDimensionLinePos(pos);
+                m_previewDimension->setAssociatedPrimitive(
+                    snap.source,
+                    std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x()));
+                m_previewDimension->recalculateValue();
+                ObjectBindingManager::instance().setPrimitiveSnap(false);
+                m_state = 2;
+            } else {
+                m_previewDimension->setCenterPoint(pos);
+                m_previewDimension->setRadiusPoint(pos);
+                m_previewDimension->setDimensionLinePos(pos);
+                SnapManager::instance().setBasePoint(pos);
+                m_state = 1;
+            }
         } else if (m_state == 1) {
             m_previewDimension->setRadiusPoint(pos);
-            if (snap.source && (snap.source->getType() == PrimitiveType::Circle
-                                || snap.source->getType() == PrimitiveType::Arc
-                                || snap.source->getType() == PrimitiveType::Ellipse)) {
-                QPointF center = m_previewDimension->getCenterPoint();
-                m_previewDimension->setAssociatedPrimitive(snap.source, std::atan2(pos.y() - center.y(), pos.x() - center.x()));
+            QPointF sourceCenter;
+            if (snap.type != SnapType::Center && circularPrimitiveCenter(snap.source, sourceCenter)) {
+                m_previewDimension->setCenterPoint(sourceCenter);
+                m_previewDimension->setRadiusPoint(pos);
+                m_previewDimension->setAssociatedPrimitive(
+                    snap.source,
+                    std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x()));
             }
             m_previewDimension->recalculateValue();
             SnapManager::instance().clearBasePoint();

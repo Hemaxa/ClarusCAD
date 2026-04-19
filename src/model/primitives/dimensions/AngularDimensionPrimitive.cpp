@@ -60,6 +60,14 @@ void drawArrow(QPainter& painter, const QPointF& tip, double angle, const Dimens
     painter.restore();
 }
 
+void normalizeReadableScreenAngle(double& angleDeg)
+{
+    while (angleDeg <= -180.0) angleDeg += 360.0;
+    while (angleDeg > 180.0) angleDeg -= 360.0;
+    if (angleDeg > 90.0) angleDeg -= 180.0;
+    if (angleDeg < -90.0) angleDeg += 180.0;
+}
+
 bool lineIntersection(const QPointF& a1, const QPointF& a2, const QPointF& b1, const QPointF& b2, QPointF& out)
 {
     const double denom = (a1.x() - a2.x()) * (b1.y() - b2.y()) - (a1.y() - a2.y()) * (b1.x() - b2.x());
@@ -114,7 +122,8 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
 {
     painter.save();
 
-    double currentScale = std::abs(painter.transform().m11());
+    const QTransform worldTransform = painter.transform();
+    double currentScale = std::abs(worldTransform.m11());
     if (currentScale < 0.0001) currentScale = 1.0;
 
     const double radius = pointDistance(m_centerPoint, m_arcPoint);
@@ -167,11 +176,6 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         ? QString("%1°").arg(QString::number(m_measuredValue, 'f', 2))
         : m_customText;
 
-    QFont font(m_style.fontFamily);
-    font.setPointSizeF(m_style.textHeight / currentScale);
-    painter.setFont(font);
-    painter.setPen(isSelected ? Qt::red : m_style.textColor);
-
     const double midAngle = startAngleRad + sweepRad / 2.0;
     QPointF textPoint = getTextAnchor();
     if (!hasCustomTextPosition()) {
@@ -181,10 +185,22 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         textPoint += QPointF(std::cos(midAngle), std::sin(midAngle)) * (m_style.textGap / currentScale);
     }
 
-    painter.translate(textPoint);
-    double textAngle = midAngle * 180.0 / M_PI;
-    if (textAngle > 90.0) textAngle -= 180.0;
-    if (textAngle < -90.0) textAngle += 180.0;
+    const double tangentAngle = midAngle + (sweepRad >= 0.0 ? M_PI / 2.0 : -M_PI / 2.0);
+    const QPointF tangentPoint = textPoint + QPointF(std::cos(tangentAngle), std::sin(tangentAngle));
+    const QPointF screenA = worldTransform.map(textPoint);
+    const QPointF screenB = worldTransform.map(tangentPoint);
+    double textAngle = std::atan2(screenB.y() - screenA.y(), screenB.x() - screenA.x()) * 180.0 / M_PI;
+    normalizeReadableScreenAngle(textAngle);
+
+    painter.restore();
+    painter.save();
+    painter.resetTransform();
+
+    QFont font(m_style.fontFamily);
+    font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
+    painter.setFont(font);
+    painter.setPen(isSelected ? Qt::red : m_style.textColor);
+    painter.translate(screenA);
     painter.rotate(textAngle);
 
     QFontMetricsF fm(font);

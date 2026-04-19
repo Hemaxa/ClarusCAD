@@ -114,6 +114,71 @@ QPointF resolveAttachment(const LinearDimensionPrimitive::Attachment& a)
         return a.fallback;
     }
 }
+
+struct LinearGeometry {
+    QPointF baseStart;
+    QPointF baseEnd;
+    QPointF dimStart;
+    QPointF dimEnd;
+    double angle = 0.0;
+    double length = 0.0;
+};
+
+LinearGeometry buildGeometry(const QPointF& startPoint, const QPointF& endPoint,
+                             const QPointF& dimensionLinePos, LinearDimensionMode mode)
+{
+    LinearGeometry g;
+    double dx = endPoint.x() - startPoint.x();
+    double dy = endPoint.y() - startPoint.y();
+    double ux = 1.0;
+    double uy = 0.0;
+
+    switch (mode) {
+    case LinearDimensionMode::Horizontal:
+        g.angle = 0.0;
+        ux = 1.0;
+        uy = 0.0;
+        g.length = std::abs(dx);
+        g.baseStart = startPoint;
+        g.baseEnd = QPointF(endPoint.x(), startPoint.y());
+        break;
+    case LinearDimensionMode::Vertical:
+        g.angle = M_PI / 2.0;
+        ux = 0.0;
+        uy = 1.0;
+        g.length = std::abs(dy);
+        g.baseStart = startPoint;
+        g.baseEnd = QPointF(startPoint.x(), endPoint.y());
+        break;
+    case LinearDimensionMode::Aligned:
+    default:
+        g.length = std::sqrt(dx * dx + dy * dy);
+        if (g.length >= 0.0001) {
+            ux = dx / g.length;
+            uy = dy / g.length;
+            g.angle = std::atan2(dy, dx);
+        }
+        g.baseStart = startPoint;
+        g.baseEnd = endPoint;
+        break;
+    }
+
+    const double nx = -uy;
+    const double ny = ux;
+    const double dist = (dimensionLinePos.x() - g.baseStart.x()) * nx
+                      + (dimensionLinePos.y() - g.baseStart.y()) * ny;
+    g.dimStart = QPointF(g.baseStart.x() + nx * dist, g.baseStart.y() + ny * dist);
+    g.dimEnd = QPointF(g.baseEnd.x() + nx * dist, g.baseEnd.y() + ny * dist);
+    return g;
+}
+
+void normalizeReadableScreenAngle(double& angleDeg)
+{
+    while (angleDeg <= -180.0) angleDeg += 360.0;
+    while (angleDeg > 180.0) angleDeg -= 360.0;
+    if (angleDeg > 90.0) angleDeg -= 180.0;
+    if (angleDeg < -90.0) angleDeg += 180.0;
+}
 }
 
 void LinearDimensionPrimitive::recalculateValue() {
@@ -136,74 +201,34 @@ void LinearDimensionPrimitive::recalculateValue() {
 void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     painter.save();
 
-    double currentScale = std::abs(painter.transform().m11());
+    const QTransform worldTransform = painter.transform();
+    double currentScale = std::abs(worldTransform.m11());
     if (currentScale < 0.0001) currentScale = 1.0;
     
-    double textHeight = m_style.textHeight / currentScale;
     double arrowSize = m_style.arrowSize / currentScale;
     double extensionLineOffset = m_style.extensionLineOffset / currentScale;
     double extensionLineExtend = m_style.extensionLineExtend / currentScale;
     
-    double dx = m_endPoint.x() - m_startPoint.x();
-    double dy = m_endPoint.y() - m_startPoint.y();
-    double angle = 0.0;
-    double ux = 1.0;
-    double uy = 0.0;
-    double length = 0.0;
-
-    switch (m_mode) {
-    case LinearDimensionMode::Horizontal:
-        angle = 0.0;
-        ux = 1.0;
-        uy = 0.0;
-        length = std::abs(dx);
-        break;
-    case LinearDimensionMode::Vertical:
-        angle = M_PI / 2.0;
-        ux = 0.0;
-        uy = 1.0;
-        length = std::abs(dy);
-        break;
-    case LinearDimensionMode::Aligned:
-    default:
-        length = std::sqrt(dx * dx + dy * dy);
-        if (length >= 0.0001) {
-            ux = dx / length;
-            uy = dy / length;
-            angle = std::atan2(dy, dx);
-        }
-        break;
-    }
-
-    if (length < 0.0001) {
+    const LinearGeometry geom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
+    if (geom.length < 0.0001) {
         painter.restore();
         return;
     }
     
     // Normal vector
-    double nx = -uy;
-    double ny = ux;
+    double nx = -std::sin(geom.angle);
+    double ny = std::cos(geom.angle);
     
     // Calculate dimension line distance from startPoint along the normal
-    double vx = m_dimensionLinePos.x() - m_startPoint.x();
-    double vy = m_dimensionLinePos.y() - m_startPoint.y();
+    double vx = m_dimensionLinePos.x() - geom.baseStart.x();
+    double vy = m_dimensionLinePos.y() - geom.baseStart.y();
     double dist = vx * nx + vy * ny; 
     
     // Start and End points of the dimension line
-    QPointF baseStart = m_startPoint;
-    QPointF baseEnd = m_endPoint;
-    if (m_mode == LinearDimensionMode::Horizontal) {
-        baseStart.setY(m_startPoint.y());
-        baseEnd.setY(m_startPoint.y());
-        baseEnd.setX(m_endPoint.x());
-    } else if (m_mode == LinearDimensionMode::Vertical) {
-        baseStart.setX(m_startPoint.x());
-        baseEnd.setX(m_startPoint.x());
-        baseEnd.setY(m_endPoint.y());
-    }
-
-    QPointF dimStart(baseStart.x() + nx * dist, baseStart.y() + ny * dist);
-    QPointF dimEnd(baseEnd.x() + nx * dist, baseEnd.y() + ny * dist);
+    QPointF baseStart = geom.baseStart;
+    QPointF baseEnd = geom.baseEnd;
+    QPointF dimStart = geom.dimStart;
+    QPointF dimEnd = geom.dimEnd;
     
     // Direction of extension lines (from startPoint to dimStart)
     double extLen = std::abs(dist);
@@ -229,42 +254,44 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     LineStyleManager::instance().drawLine(painter, extStart2, extEnd2, m_style.extensionLineTypeId, extensionColor, false);
     
     // Draw dimension line
-    QPointF dimDrawStart(dimStart.x() - std::cos(angle) * (m_style.dimensionLineExtension / currentScale),
-                         dimStart.y() - std::sin(angle) * (m_style.dimensionLineExtension / currentScale));
-    QPointF dimDrawEnd(dimEnd.x() + std::cos(angle) * (m_style.dimensionLineExtension / currentScale),
-                       dimEnd.y() + std::sin(angle) * (m_style.dimensionLineExtension / currentScale));
+    QPointF dimDrawStart(dimStart.x() - std::cos(geom.angle) * (m_style.dimensionLineExtension / currentScale),
+                         dimStart.y() - std::sin(geom.angle) * (m_style.dimensionLineExtension / currentScale));
+    QPointF dimDrawEnd(dimEnd.x() + std::cos(geom.angle) * (m_style.dimensionLineExtension / currentScale),
+                       dimEnd.y() + std::sin(geom.angle) * (m_style.dimensionLineExtension / currentScale));
     LineStyleManager::instance().drawLine(painter, dimDrawStart, dimDrawEnd, m_style.dimensionLineTypeId, dimColor, false);
     
     // Draw arrows
-    drawDimensionArrow(painter, dimStart, angle, m_style, dimColor, arrowSize);
-    drawDimensionArrow(painter, dimEnd, angle + M_PI, m_style, dimColor, arrowSize);
+    drawDimensionArrow(painter, dimStart, geom.angle, m_style, dimColor, arrowSize);
+    drawDimensionArrow(painter, dimEnd, geom.angle + M_PI, m_style, dimColor, arrowSize);
     
     // Draw text
     QString text = m_customText.isEmpty() ? QString::number(m_measuredValue, 'f', 2) : m_customText;
     
-    QFont font(m_style.fontFamily);
-    font.setPointSizeF(textHeight);
-    painter.setFont(font);
-    
     QPointF midPoint = getTextAnchor();
     if (!hasCustomTextPosition()) {
-        midPoint += QPointF(std::cos(angle), std::sin(angle)) * (m_style.textAlongLineOffset / currentScale);
+        midPoint += QPointF(std::cos(geom.angle), std::sin(geom.angle)) * (m_style.textAlongLineOffset / currentScale);
     }
     
-    double textAngle = angle * 180.0 / M_PI;
-    
-    // Keep text upright
-    if (textAngle > 90.0) textAngle -= 180.0;
-    else if (textAngle < -90.0) textAngle += 180.0;
-    
-    painter.translate(midPoint);
-    painter.rotate(textAngle);
+    const QPointF screenStart = worldTransform.map(dimStart);
+    const QPointF screenEnd = worldTransform.map(dimEnd);
+    double textAngle = std::atan2(screenEnd.y() - screenStart.y(), screenEnd.x() - screenStart.x()) * 180.0 / M_PI;
+    normalizeReadableScreenAngle(textAngle);
+
+    painter.restore();
+    painter.save();
+    painter.resetTransform();
+
+    QFont font(m_style.fontFamily);
+    font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
+    painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
+    painter.translate(worldTransform.map(midPoint));
+    painter.rotate(textAngle);
     
     QFontMetricsF fm(font);
     double textWidth = fm.horizontalAdvance(text);
     double textH = fm.height();
-    double textOffset = m_style.textGap / currentScale;
+    double textOffset = m_style.textGap;
     
     painter.drawText(QRectF(-textWidth / 2.0, -textH - textOffset, textWidth, textH), Qt::AlignCenter, text);
     
@@ -273,33 +300,9 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
 
 QPointF LinearDimensionPrimitive::getDefaultTextAnchor() const
 {
-    double dx = m_endPoint.x() - m_startPoint.x();
-    double dy = m_endPoint.y() - m_startPoint.y();
-    double angle = 0.0;
-
-    switch (m_mode) {
-    case LinearDimensionMode::Horizontal:
-        angle = 0.0;
-        break;
-    case LinearDimensionMode::Vertical:
-        angle = M_PI / 2.0;
-        break;
-    case LinearDimensionMode::Aligned:
-    default:
-        angle = std::atan2(dy, dx);
-        break;
-    }
-
-    QPointF dimStart = m_startPoint;
-    QPointF dimEnd = m_endPoint;
-    if (m_mode == LinearDimensionMode::Horizontal) {
-        dimEnd.setY(dimStart.y());
-    } else if (m_mode == LinearDimensionMode::Vertical) {
-        dimEnd.setX(dimStart.x());
-    }
-
-    QPointF midPoint((dimStart.x() + dimEnd.x()) / 2.0, (dimStart.y() + dimEnd.y()) / 2.0);
-    return midPoint + QPointF(std::cos(angle), std::sin(angle)) * m_style.textAlongLineOffset;
+    const LinearGeometry geom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
+    return QPointF((geom.dimStart.x() + geom.dimEnd.x()) / 2.0,
+                   (geom.dimStart.y() + geom.dimEnd.y()) / 2.0);
 }
 
 QVector<QPointF> LinearDimensionPrimitive::getEditGripPoints() const

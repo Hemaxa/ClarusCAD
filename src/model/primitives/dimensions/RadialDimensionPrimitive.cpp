@@ -50,6 +50,14 @@ void drawArrow(QPainter& painter, const QPointF& tip, double angle, const Dimens
     }
     painter.restore();
 }
+
+void normalizeReadableScreenAngle(double& angleDeg)
+{
+    while (angleDeg <= -180.0) angleDeg += 360.0;
+    while (angleDeg > 180.0) angleDeg -= 360.0;
+    if (angleDeg > 90.0) angleDeg -= 180.0;
+    if (angleDeg < -90.0) angleDeg += 180.0;
+}
 }
 
 void RadialDimensionPrimitive::recalculateValue()
@@ -62,16 +70,20 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
 {
     painter.save();
 
-    double currentScale = std::abs(painter.transform().m11());
+    const QTransform worldTransform = painter.transform();
+    double currentScale = std::abs(worldTransform.m11());
     if (currentScale < 0.0001) currentScale = 1.0;
 
-    const QPointF dir = normalizedDirection(m_centerPoint, m_radiusPoint);
     const double radius = distance(m_centerPoint, m_radiusPoint);
     if (radius < 1e-6) {
         painter.restore();
         return;
     }
 
+    const QPointF dir = m_isDiameter
+        ? normalizedDirection(m_centerPoint, m_dimensionLinePos)
+        : normalizedDirection(m_centerPoint, m_radiusPoint);
+    const QPointF visibleRadiusPoint = m_centerPoint + QPointF(dir.x() * radius, dir.y() * radius);
     const QPointF oppositePoint = m_centerPoint - QPointF(dir.x() * radius, dir.y() * radius);
     const QPointF leaderEnd = m_dimensionLinePos;
     const QPointF leaderStart = m_isDiameter ? oppositePoint : m_centerPoint;
@@ -84,7 +96,7 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
     }
 
     const double arrowSize = m_style.arrowSize / currentScale;
-    drawArrow(painter, m_radiusPoint, std::atan2(m_centerPoint.y() - m_radiusPoint.y(), m_centerPoint.x() - m_radiusPoint.x()),
+    drawArrow(painter, visibleRadiusPoint, std::atan2(m_centerPoint.y() - visibleRadiusPoint.y(), m_centerPoint.x() - visibleRadiusPoint.x()),
               m_style, dimColor, arrowSize);
     if (m_isDiameter) {
         drawArrow(painter, oppositePoint, std::atan2(m_centerPoint.y() - oppositePoint.y(), m_centerPoint.x() - oppositePoint.x()),
@@ -95,40 +107,47 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         ? QString("%1%2").arg(m_isDiameter ? QStringLiteral("Ø") : QStringLiteral("R")).arg(QString::number(m_measuredValue, 'f', 2))
         : m_customText;
 
+    QPointF textPoint = getTextAnchor();
+    const double angleRad = std::atan2(leaderEnd.y() - visibleRadiusPoint.y(), leaderEnd.x() - visibleRadiusPoint.x());
+    if (!hasCustomTextPosition()) {
+        textPoint += QPointF(std::cos(angleRad), std::sin(angleRad)) * (m_style.textAlongLineOffset / currentScale);
+    }
+    const QPointF screenA = worldTransform.map(visibleRadiusPoint);
+    const QPointF screenB = worldTransform.map(leaderEnd);
+    double textAngle = std::atan2(screenB.y() - screenA.y(), screenB.x() - screenA.x()) * 180.0 / M_PI;
+    normalizeReadableScreenAngle(textAngle);
+
+    painter.restore();
+    painter.save();
+    painter.resetTransform();
+
     QFont font(m_style.fontFamily);
-    font.setPointSizeF(m_style.textHeight / currentScale);
+    font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
     painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
-
-    QPointF textPoint = getTextAnchor();
-    const double angleDeg = std::atan2(leaderEnd.y() - m_radiusPoint.y(), leaderEnd.x() - m_radiusPoint.x()) * 180.0 / M_PI;
-    if (!hasCustomTextPosition()) {
-        textPoint += QPointF(std::cos(angleDeg * M_PI / 180.0), std::sin(angleDeg * M_PI / 180.0)) * (m_style.textAlongLineOffset / currentScale);
-    }
-    double textAngle = angleDeg;
-    if (textAngle > 90.0) textAngle -= 180.0;
-    if (textAngle < -90.0) textAngle += 180.0;
-
-    painter.translate(textPoint);
+    painter.translate(worldTransform.map(textPoint));
     painter.rotate(textAngle);
     QFontMetricsF fm(font);
     const double textWidth = fm.horizontalAdvance(text);
     const double textHeight = fm.height();
-    painter.drawText(QRectF(-textWidth / 2.0, -textHeight - m_style.textGap / currentScale, textWidth, textHeight), Qt::AlignCenter, text);
+    painter.drawText(QRectF(-textWidth / 2.0, -textHeight - m_style.textGap, textWidth, textHeight), Qt::AlignCenter, text);
 
     painter.restore();
 }
 
 QRectF RadialDimensionPrimitive::getBoundingBox() const
 {
-    const QPointF dir = normalizedDirection(m_centerPoint, m_radiusPoint);
     const double radius = distance(m_centerPoint, m_radiusPoint);
+    const QPointF dir = m_isDiameter
+        ? normalizedDirection(m_centerPoint, m_dimensionLinePos)
+        : normalizedDirection(m_centerPoint, m_radiusPoint);
+    const QPointF visibleRadiusPoint = m_centerPoint + QPointF(dir.x() * radius, dir.y() * radius);
     const QPointF oppositePoint = m_centerPoint - QPointF(dir.x() * radius, dir.y() * radius);
 
-    const double minX = std::min({m_centerPoint.x(), m_radiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
-    const double maxX = std::max({m_centerPoint.x(), m_radiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
-    const double minY = std::min({m_centerPoint.y(), m_radiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
-    const double maxY = std::max({m_centerPoint.y(), m_radiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
+    const double minX = std::min({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
+    const double maxX = std::max({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
+    const double minY = std::min({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
+    const double maxY = std::max({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
 
     QRectF bbox(QPointF(minX, minY), QPointF(maxX, maxY));
     bbox.adjust(-25.0, -25.0, 25.0, 25.0);
@@ -159,8 +178,13 @@ QVector<QPointF> RadialDimensionPrimitive::getSnapPoints() const
 
 QPointF RadialDimensionPrimitive::getDefaultTextAnchor() const
 {
-    return QPointF((m_radiusPoint.x() + m_dimensionLinePos.x()) / 2.0,
-                   (m_radiusPoint.y() + m_dimensionLinePos.y()) / 2.0);
+    const double radius = distance(m_centerPoint, m_radiusPoint);
+    const QPointF dir = m_isDiameter
+        ? normalizedDirection(m_centerPoint, m_dimensionLinePos)
+        : normalizedDirection(m_centerPoint, m_radiusPoint);
+    const QPointF visibleRadiusPoint = m_centerPoint + QPointF(dir.x() * radius, dir.y() * radius);
+    return QPointF((visibleRadiusPoint.x() + m_dimensionLinePos.x()) / 2.0,
+                   (visibleRadiusPoint.y() + m_dimensionLinePos.y()) / 2.0);
 }
 
 QVector<QPointF> RadialDimensionPrimitive::getEditGripPoints() const
