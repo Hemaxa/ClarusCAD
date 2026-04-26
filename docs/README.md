@@ -117,7 +117,7 @@ ClarusCAD поддерживает:
 
 ## Скриншот интерфейса
 
-<img width="3683" height="2383" alt="ClarusCAD interface" src="https://github.com/user-attachments/assets/3f96d938-37a8-4c69-97fe-f7c336b4df88" />
+<img width="3680" height="2400" alt="2" src="https://github.com/user-attachments/assets/aff67341-0076-422a-9952-78053479c763" />
 
 ## Импорт и экспорт
 
