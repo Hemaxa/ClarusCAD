@@ -130,8 +130,8 @@ QWidget* SettingsWindow::createDimensionStylesTab()
         };
 
         const ArrowOption options[] = {
-            {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-closed.svg"},
-            {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-open.svg"},
+            {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-open.svg"},
+            {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-closed.svg"},
             {DimensionArrowType::Slash, "Засечка", ":/icons/icons/arrows/arrow-tick.svg"},
             {DimensionArrowType::Dot, "Точка", ":/icons/icons/arrows/arrow-dot.svg"},
         };

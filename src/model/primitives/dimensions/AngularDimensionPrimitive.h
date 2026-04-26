@@ -24,6 +24,7 @@ public:
         m_firstSource = first; m_firstEdgeIndex = firstEdge; m_secondSource = second; m_secondEdgeIndex = secondEdge;
     }
     void updateFromAssociation();
+    void toggleArcSide();
 
     void recalculateValue() override;
     bool applyMeasuredValueOverride(double value) override;

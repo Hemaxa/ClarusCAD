@@ -152,11 +152,7 @@ void AngularDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene
             m_previewDimension->setEndPoint(pos);
             m_previewDimension->setArcPoint(pos);
 
-            DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
-            style.dimensionLineColor = m_currentColor;
-            style.extensionLineColor = m_currentColor;
-            style.textColor = m_currentColor;
-            m_previewDimension->setStyle(style);
+            m_previewDimension->setStyle(SettingsManager::instance().getDefaultDimensionStyle());
 
             SnapManager::instance().setBasePoint(pos);
             m_state = 1;
@@ -190,11 +186,7 @@ void AngularDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene
                 dirLine.setLength(std::max(20.0, len * 0.6));
                 m_previewDimension->setArcPoint(center + (dirLine.p2() - QPointF(0, 0)));
 
-                DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
-                style.dimensionLineColor = m_currentColor;
-                style.extensionLineColor = m_currentColor;
-                style.textColor = m_currentColor;
-                m_previewDimension->setStyle(style);
+                m_previewDimension->setStyle(SettingsManager::instance().getDefaultDimensionStyle());
                 m_previewDimension->setEdgeAssociation(m_firstEdgeSource, m_firstEdgeIndex, edge.source, edge.edgeIndex);
                 m_previewDimension->recalculateValue();
 

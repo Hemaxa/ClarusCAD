@@ -16,24 +16,29 @@ void drawDimensionArrow(QPainter& painter, const QPointF& tip, double angle, con
 {
     painter.save();
     painter.setPen(QPen(color, 0));
-    painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
+    painter.setBrush(Qt::NoBrush);
 
     if (style.arrowType == DimensionArrowType::Slash) {
-        const double slashAngle = angle + M_PI / 2.0;
+        const double slashAngle = angle + M_PI / 3.0;
+        const QPointF slashDir(std::cos(slashAngle), std::sin(slashAngle));
         painter.drawLine(
-            QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
-            QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
+            tip - slashDir * (size * 0.8),
+            tip + slashDir * (size * 0.8)
         );
     } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.setBrush(color);
         painter.drawEllipse(tip, size * 0.35, size * 0.35);
+    } else if (style.arrowType == DimensionArrowType::ClosedOpen) {
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35)));
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35)));
     } else {
+        painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
         QPolygonF arrow;
         arrow << tip
               << QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35))
               << QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35));
-        if (style.arrowType == DimensionArrowType::ClosedOpen) {
-            painter.setBrush(Qt::NoBrush);
-        }
         painter.drawPolygon(arrow);
     }
 
@@ -55,6 +60,15 @@ QPointF projectPointOnInfiniteLine(const QPointF& point, const QPointF& origin, 
     const QPointF delta = point - origin;
     const double along = delta.x() * unitDir.x() + delta.y() * unitDir.y();
     return origin + unitDir * along;
+}
+
+QPointF normalizedDirection(const QPointF& from, const QPointF& to)
+{
+    const double dx = to.x() - from.x();
+    const double dy = to.y() - from.y();
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (len < 1e-9) return QPointF(1.0, 0.0);
+    return QPointF(dx / len, dy / len);
 }
 
 QPointF resolveAttachment(const LinearDimensionPrimitive::Attachment& a)
@@ -111,7 +125,11 @@ QPointF resolveAttachment(const LinearDimensionPrimitive::Attachment& a)
         auto* poly = static_cast<PolygonPrimitive*>(a.source);
         QVector<QPointF> verts = poly->getVertices();
         if (verts.isEmpty()) return a.fallback;
+        if (a.snapType == SnapType::Center) return QPointF(poly->getCenter().getX(), poly->getCenter().getY());
         if (a.snapType == SnapType::Endpoint && a.index >= 0 && a.index < verts.size()) return verts[a.index];
+        if (a.snapType == SnapType::Midpoint && a.index >= 0 && a.index < verts.size()) {
+            return (verts[a.index] + verts[(a.index + 1) % verts.size()]) / 2.0;
+        }
         if (a.snapType == SnapType::Nearest && a.index >= 0 && a.index < verts.size()) {
             QPointF p1 = verts[a.index];
             QPointF p2 = verts[(a.index + 1) % verts.size()];
@@ -222,6 +240,76 @@ bool moveAttachmentPoint(LinearDimensionPrimitive::Attachment& attachment, const
     }
 }
 
+double rectAttachmentFraction(const LinearDimensionPrimitive::Attachment& attachment)
+{
+    switch (attachment.snapType) {
+    case SnapType::Endpoint:
+        return (attachment.index % 2 == 0) ? 0.0 : 1.0;
+    case SnapType::Midpoint:
+        return 0.5;
+    case SnapType::Nearest:
+        return attachment.param;
+    default:
+        return 0.0;
+    }
+}
+
+bool isRectangleSameEdge(const LinearDimensionPrimitive::Attachment& a, const LinearDimensionPrimitive::Attachment& b, int& edgeIndex)
+{
+    if (a.snapType == SnapType::Midpoint || a.snapType == SnapType::Nearest) {
+        edgeIndex = a.index;
+    } else if (a.snapType == SnapType::Endpoint && b.snapType == SnapType::Endpoint) {
+        if ((a.index + 1) % 4 == b.index) edgeIndex = a.index;
+        else if ((b.index + 1) % 4 == a.index) edgeIndex = b.index;
+        else return false;
+    } else if (a.snapType == SnapType::Endpoint) {
+        if (a.index == b.index) edgeIndex = a.index;
+        else if ((a.index + 1) % 4 == b.index) edgeIndex = a.index;
+        else if ((b.index + 1) % 4 == a.index) edgeIndex = b.index;
+        else return false;
+    } else {
+        return false;
+    }
+
+    if (b.snapType == SnapType::Midpoint || b.snapType == SnapType::Nearest) {
+        return b.index == edgeIndex;
+    }
+    if (b.snapType == SnapType::Endpoint) {
+        return b.index == edgeIndex || b.index == ((edgeIndex + 1) % 4);
+    }
+    return false;
+}
+
+bool resizeAssociatedSegment(const LinearDimensionPrimitive::Attachment& startAttachment,
+                             const LinearDimensionPrimitive::Attachment& endAttachment,
+                             double value)
+{
+    if (!startAttachment.source || startAttachment.source != endAttachment.source) return false;
+    if (startAttachment.source->getType() != PrimitiveType::Segment) return false;
+
+    auto* seg = static_cast<SegmentPrimitive*>(startAttachment.source);
+    QPointF p1(seg->getStart().getX(), seg->getStart().getY());
+    QPointF p2(seg->getEnd().getX(), seg->getEnd().getY());
+    const QPointF dir = normalizedDirection(p1, p2);
+
+    double t1 = 0.0;
+    double t2 = 1.0;
+    auto fractionFor = [](const LinearDimensionPrimitive::Attachment& attachment) {
+        if (attachment.snapType == SnapType::Endpoint) return attachment.index == 0 ? 0.0 : 1.0;
+        if (attachment.snapType == SnapType::Midpoint) return 0.5;
+        if (attachment.snapType == SnapType::Nearest) return attachment.param;
+        return 0.0;
+    };
+    t1 = fractionFor(startAttachment);
+    t2 = fractionFor(endAttachment);
+    const double span = std::abs(t2 - t1);
+    if (span < 1e-6) return false;
+
+    const double fullLength = value / span;
+    seg->setEnd(PointPrimitive::fromPointF(p1 + dir * fullLength));
+    return true;
+}
+
 bool resizeAssociatedRectangle(const LinearDimensionPrimitive::Attachment& startAttachment,
                                const LinearDimensionPrimitive::Attachment& endAttachment,
                                LinearDimensionMode mode,
@@ -231,6 +319,31 @@ bool resizeAssociatedRectangle(const LinearDimensionPrimitive::Attachment& start
     if (startAttachment.source->getType() != PrimitiveType::Rectangle) return false;
 
     auto* rect = static_cast<RectanglePrimitive*>(startAttachment.source);
+    if (startAttachment.snapType == SnapType::Center || endAttachment.snapType == SnapType::Center) {
+        const bool widthDriven = (mode == LinearDimensionMode::Horizontal)
+            || (mode == LinearDimensionMode::Aligned && std::abs(resolveAttachment(startAttachment).x() - resolveAttachment(endAttachment).x())
+                >= std::abs(resolveAttachment(startAttachment).y() - resolveAttachment(endAttachment).y()));
+        if (widthDriven) {
+            rect->setWidth(value * 2.0);
+        } else {
+            rect->setHeight(value * 2.0);
+        }
+        return true;
+    }
+
+    int edgeIndex = -1;
+    if (isRectangleSameEdge(startAttachment, endAttachment, edgeIndex)) {
+        const double t1 = rectAttachmentFraction(startAttachment);
+        const double t2 = rectAttachmentFraction(endAttachment);
+        const double span = std::abs(t2 - t1);
+        if (span >= 1e-6) {
+            const double fullEdgeLength = value / span;
+            if (edgeIndex % 2 == 0) rect->setWidth(fullEdgeLength);
+            else rect->setHeight(fullEdgeLength);
+            return true;
+        }
+    }
+
     if (mode == LinearDimensionMode::Horizontal) {
         rect->setWidth(value);
     } else if (mode == LinearDimensionMode::Vertical) {
@@ -247,6 +360,79 @@ bool resizeAssociatedRectangle(const LinearDimensionPrimitive::Attachment& start
         }
     }
     return true;
+}
+
+bool resizeAssociatedPolygon(const LinearDimensionPrimitive::Attachment& startAttachment,
+                             const LinearDimensionPrimitive::Attachment& endAttachment,
+                             double value)
+{
+    if (!startAttachment.source || startAttachment.source != endAttachment.source) return false;
+    if (startAttachment.source->getType() != PrimitiveType::Polygon) return false;
+
+    auto* poly = static_cast<PolygonPrimitive*>(startAttachment.source);
+    const int sides = poly->getSides();
+    if (sides < 3) return false;
+
+    auto sideLengthToStoredRadius = [poly, sides](double sideLength) {
+        if (poly->getPolygonType() == PolygonType::Inscribed) {
+            return sideLength / (2.0 * std::sin(M_PI / sides));
+        }
+        return sideLength / (2.0 * std::tan(M_PI / sides));
+    };
+
+    if (startAttachment.snapType == SnapType::Center || endAttachment.snapType == SnapType::Center) {
+        const LinearDimensionPrimitive::Attachment& edgeAttachment =
+            (startAttachment.snapType == SnapType::Center) ? endAttachment : startAttachment;
+        if (edgeAttachment.snapType == SnapType::Endpoint) {
+            const double storedRadius = poly->getPolygonType() == PolygonType::Inscribed
+                ? value
+                : value * std::cos(M_PI / sides);
+            poly->setRadius(storedRadius);
+            return true;
+        }
+        if (edgeAttachment.snapType == SnapType::Midpoint || edgeAttachment.snapType == SnapType::Nearest) {
+            const double storedRadius = poly->getPolygonType() == PolygonType::Inscribed
+                ? value / std::cos(M_PI / sides)
+                : value;
+            poly->setRadius(storedRadius);
+            return true;
+        }
+    }
+
+    auto edgeOf = [sides](const LinearDimensionPrimitive::Attachment& attachment) {
+        if (attachment.snapType == SnapType::Midpoint || attachment.snapType == SnapType::Nearest) return attachment.index;
+        return attachment.index % sides;
+    };
+    auto fractionOf = [sides](const LinearDimensionPrimitive::Attachment& attachment) {
+        if (attachment.snapType == SnapType::Midpoint) return 0.5;
+        if (attachment.snapType == SnapType::Nearest) return attachment.param;
+        return 0.0;
+    };
+
+    int edgeIndex = -1;
+    if (startAttachment.snapType == SnapType::Endpoint && endAttachment.snapType == SnapType::Endpoint) {
+        if ((startAttachment.index + 1) % sides == endAttachment.index) edgeIndex = startAttachment.index;
+        else if ((endAttachment.index + 1) % sides == startAttachment.index) edgeIndex = endAttachment.index;
+    } else {
+        edgeIndex = edgeOf(startAttachment);
+        if (edgeOf(endAttachment) != edgeIndex) edgeIndex = -1;
+    }
+
+    if (edgeIndex >= 0) {
+        double t1 = 0.0;
+        double t2 = 1.0;
+        if (startAttachment.snapType == SnapType::Endpoint) t1 = (startAttachment.index == edgeIndex) ? 0.0 : 1.0;
+        else t1 = fractionOf(startAttachment);
+        if (endAttachment.snapType == SnapType::Endpoint) t2 = (endAttachment.index == edgeIndex) ? 0.0 : 1.0;
+        else t2 = fractionOf(endAttachment);
+        const double span = std::abs(t2 - t1);
+        if (span >= 1e-6) {
+            poly->setRadius(sideLengthToStoredRadius(value / span));
+            return true;
+        }
+    }
+
+    return false;
 }
 }
 
@@ -271,7 +457,9 @@ bool LinearDimensionPrimitive::applyMeasuredValueOverride(double value)
 {
     if (value <= 0.0) return false;
 
-    if (resizeAssociatedRectangle(m_startAttachment, m_endAttachment, m_mode, value)) {
+    if (resizeAssociatedSegment(m_startAttachment, m_endAttachment, value)
+        || resizeAssociatedRectangle(m_startAttachment, m_endAttachment, m_mode, value)
+        || resizeAssociatedPolygon(m_startAttachment, m_endAttachment, value)) {
         updateFromAttachments();
         return true;
     }
@@ -442,6 +630,7 @@ QVector<QPointF> LinearDimensionPrimitive::getEditGripPoints() const
 
 void LinearDimensionPrimitive::moveGripPoint(int index, const QPointF& newPos)
 {
+    const LinearGeometry oldGeom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
     if (index == 0) {
         m_startPoint = newPos;
         m_startAttachment = {};
@@ -451,7 +640,15 @@ void LinearDimensionPrimitive::moveGripPoint(int index, const QPointF& newPos)
         m_endAttachment = {};
         m_endAttachment.fallback = newPos;
     } else if (index == 2) {
-        m_dimensionLinePos = newPos;
+        if (hasCustomTextPosition() && oldGeom.length >= 1e-6) {
+            const QPointF lineDir(std::cos(oldGeom.angle), std::sin(oldGeom.angle));
+            const double along = QPointF::dotProduct(getCustomTextPosition() - oldGeom.dimStart, lineDir);
+            m_dimensionLinePos = newPos;
+            const LinearGeometry newGeom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
+            m_customTextPosition = newGeom.dimStart + lineDir * along;
+        } else {
+            m_dimensionLinePos = newPos;
+        }
     }
     recalculateValue();
 }

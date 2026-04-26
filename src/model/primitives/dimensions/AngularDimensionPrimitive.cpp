@@ -17,6 +17,15 @@ double pointDistance(const QPointF& a, const QPointF& b)
     return std::sqrt(dx * dx + dy * dy);
 }
 
+QPointF normalizedDirection(const QPointF& from, const QPointF& to)
+{
+    const double len = pointDistance(from, to);
+    if (len < 1e-6) {
+        return QPointF(1.0, 0.0);
+    }
+    return QPointF((to.x() - from.x()) / len, (to.y() - from.y()) / len);
+}
+
 double normalizeAngle(double angle)
 {
     while (angle < 0.0) angle += 2.0 * M_PI;
@@ -51,23 +60,28 @@ void drawArrow(QPainter& painter, const QPointF& tip, double angle, const Dimens
 {
     painter.save();
     painter.setPen(QPen(color, 0));
-    painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
+    painter.setBrush(Qt::NoBrush);
     if (style.arrowType == DimensionArrowType::Slash) {
-        const double slashAngle = angle + M_PI / 2.0;
+        const double slashAngle = angle + M_PI / 3.0;
+        const QPointF slashDir(std::cos(slashAngle), std::sin(slashAngle));
         painter.drawLine(
-            QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
-            QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
+            tip - slashDir * (size * 0.8),
+            tip + slashDir * (size * 0.8)
         );
     } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.setBrush(color);
         painter.drawEllipse(tip, size * 0.35, size * 0.35);
+    } else if (style.arrowType == DimensionArrowType::ClosedOpen) {
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35)));
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35)));
     } else {
+        painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
         QPolygonF arrow;
         arrow << tip
               << QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35))
               << QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35));
-        if (style.arrowType == DimensionArrowType::ClosedOpen) {
-            painter.setBrush(Qt::NoBrush);
-        }
         painter.drawPolygon(arrow);
     }
     painter.restore();
@@ -225,13 +239,14 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         : m_customText;
 
     const double midAngle = startAngleRad + sweepRad / 2.0;
-    QPointF textPoint = getTextAnchor();
+    QPointF anchorPoint = getTextAnchor();
     if (!hasCustomTextPosition()) {
-        textPoint = QPointF(
-        m_centerPoint.x() + (radius + 6.0 / currentScale) * std::cos(midAngle),
-        m_centerPoint.y() + (radius + 6.0 / currentScale) * std::sin(midAngle));
-        textPoint += QPointF(std::cos(midAngle), std::sin(midAngle)) * (m_style.textGap / currentScale);
+        anchorPoint = QPointF(
+            m_centerPoint.x() + radius * std::cos(midAngle),
+            m_centerPoint.y() + radius * std::sin(midAngle));
     }
+    const QPointF outwardDir = normalizedDirection(m_centerPoint, anchorPoint);
+    const QPointF textPoint = anchorPoint + outwardDir * (m_style.textGap / currentScale);
 
     const double arrowSize = m_style.arrowSize / currentScale;
     drawArrow(painter, startArcPoint, startAngleRad - (M_PI / 2.0), m_style, dimColor, arrowSize);
@@ -304,8 +319,8 @@ QPointF AngularDimensionPrimitive::getDefaultTextAnchor() const
     const double midAngle = startAngleRad + sweepRad / 2.0;
     const double radius = pointDistance(m_centerPoint, m_arcPoint);
     return QPointF(
-        m_centerPoint.x() + (radius + 6.0) * std::cos(midAngle),
-        m_centerPoint.y() + (radius + 6.0) * std::sin(midAngle));
+        m_centerPoint.x() + radius * std::cos(midAngle),
+        m_centerPoint.y() + radius * std::sin(midAngle));
 }
 
 QPointF AngularDimensionPrimitive::constrainTextAnchor(const QPointF& pos) const
@@ -330,9 +345,21 @@ QVector<QPointF> AngularDimensionPrimitive::getEditGripPoints() const
 
 void AngularDimensionPrimitive::moveGripPoint(int index, const QPointF& newPos)
 {
+    const double oldTextAngle = hasCustomTextPosition()
+        ? std::atan2(getCustomTextPosition().y() - m_centerPoint.y(), getCustomTextPosition().x() - m_centerPoint.x())
+        : 0.0;
     if (index == 0) m_startPoint = newPos;
     else if (index == 1) m_endPoint = newPos;
-    else if (index == 2) m_arcPoint = newPos;
+    else if (index == 2) {
+        m_arcPoint = newPos;
+        if (hasCustomTextPosition()) {
+            const double newRadius = pointDistance(m_centerPoint, m_arcPoint);
+            m_customTextPosition = QPointF(
+                m_centerPoint.x() + newRadius * std::cos(oldTextAngle),
+                m_centerPoint.y() + newRadius * std::sin(oldTextAngle));
+            m_customTextPosition = constrainTextAnchor(m_customTextPosition);
+        }
+    }
     recalculateValue();
 }
 
@@ -345,6 +372,9 @@ void AngularDimensionPrimitive::updateFromAssociation()
     QPointF center;
     if (!lineIntersection(a1, a2, b1, b2, center)) return;
     const double radius = pointDistance(m_centerPoint, m_arcPoint);
+    const double oldTextAngle = hasCustomTextPosition()
+        ? std::atan2(getCustomTextPosition().y() - center.y(), getCustomTextPosition().x() - center.x())
+        : 0.0;
 
     QLineF line1(center, a2);
     QLineF line2(center, b2);
@@ -355,5 +385,20 @@ void AngularDimensionPrimitive::updateFromAssociation()
     m_centerPoint = center;
     m_startPoint = line1.p2();
     m_endPoint = line2.p2();
+    if (hasCustomTextPosition()) {
+        m_customTextPosition = QPointF(
+            m_centerPoint.x() + radius * std::cos(oldTextAngle),
+            m_centerPoint.y() + radius * std::sin(oldTextAngle));
+        m_customTextPosition = constrainTextAnchor(m_customTextPosition);
+    }
+    recalculateValue();
+}
+
+void AngularDimensionPrimitive::toggleArcSide()
+{
+    std::swap(m_startPoint, m_endPoint);
+    if (hasCustomTextPosition()) {
+        clearCustomTextPosition();
+    }
     recalculateValue();
 }

@@ -21,6 +21,9 @@ public:
     void setDiameterMode(bool isDiameter) { m_isDiameter = isDiameter; recalculateValue(); }
     bool isDiameterMode() const { return m_isDiameter; }
     void setAssociatedPrimitive(BasePrimitive* primitive, double angle) { m_associatedPrimitive = primitive; m_associationAngle = angle; }
+    BasePrimitive* getAssociatedPrimitive() const { return m_associatedPrimitive; }
+    void setAssociationAngle(double angle) { m_associationAngle = angle; }
+    double getAssociationAngle() const { return m_associationAngle; }
     void updateFromAssociation();
 
     void recalculateValue() override;

@@ -53,21 +53,19 @@ void RadialDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
             m_previewDimension = std::make_unique<RadialDimensionPrimitive>();
             m_previewDimension->setDiameterMode(m_isDiameterMode);
 
-            DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
-            style.dimensionLineColor = m_currentColor;
-            style.extensionLineColor = m_currentColor;
-            style.textColor = m_currentColor;
-            m_previewDimension->setStyle(style);
+            m_previewDimension->setStyle(SettingsManager::instance().getDefaultDimensionStyle());
 
             QPointF sourceCenter;
             if (snap.type != SnapType::Center && circularPrimitiveCenter(snap.source, sourceCenter)) {
                 m_previewDimension->setCenterPoint(sourceCenter);
                 m_previewDimension->setRadiusPoint(pos);
-                m_previewDimension->setDimensionLinePos(pos);
-                m_previewDimension->setAssociatedPrimitive(
-                    snap.source,
-                    std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x()));
+                const double angle = std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x());
+                m_previewDimension->setAssociationAngle(angle);
+                m_previewDimension->setAssociatedPrimitive(snap.source, angle);
+                m_previewDimension->updateFromAssociation();
+                m_previewDimension->setDimensionLinePos(m_previewDimension->getRadiusPoint());
                 m_previewDimension->recalculateValue();
+                SnapManager::instance().clearBasePoint();
                 ObjectBindingManager::instance().setPrimitiveSnap(false);
                 m_state = 2;
             } else {
@@ -82,16 +80,20 @@ void RadialDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
             QPointF sourceCenter;
             if (snap.type != SnapType::Center && circularPrimitiveCenter(snap.source, sourceCenter)) {
                 m_previewDimension->setCenterPoint(sourceCenter);
-                m_previewDimension->setRadiusPoint(pos);
-                m_previewDimension->setAssociatedPrimitive(
-                    snap.source,
-                    std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x()));
+                const double angle = std::atan2(pos.y() - sourceCenter.y(), pos.x() - sourceCenter.x());
+                m_previewDimension->setAssociationAngle(angle);
+                m_previewDimension->setAssociatedPrimitive(snap.source, angle);
+                m_previewDimension->updateFromAssociation();
             }
             m_previewDimension->recalculateValue();
             SnapManager::instance().clearBasePoint();
             ObjectBindingManager::instance().setPrimitiveSnap(false);
             m_state = 2;
         } else if (m_state == 2) {
+            m_previewDimension->setDimensionLinePos(m_previewDimension->getRadiusPoint());
+            m_previewDimension->recalculateValue();
+            m_state = 3;
+        } else if (m_state == 3) {
             m_previewDimension->setDimensionLinePos(pos);
             m_previewDimension->recalculateValue();
             emit dimensionDataReady(m_previewDimension.release());
@@ -113,9 +115,22 @@ void RadialDimensionCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, 
     const QPointF pos = viewport->getSnappedPoint(event->position());
     if (m_state == 1) {
         m_previewDimension->setRadiusPoint(pos);
-        m_previewDimension->setDimensionLinePos(pos);
         m_previewDimension->recalculateValue();
     } else if (m_state == 2) {
+        const QPointF center = m_previewDimension->getCenterPoint();
+        const double angle = std::atan2(pos.y() - center.y(), pos.x() - center.x());
+        if (m_previewDimension->getAssociatedPrimitive()) {
+            m_previewDimension->setAssociationAngle(angle);
+            m_previewDimension->updateFromAssociation();
+        } else {
+            const double radius = QLineF(center, m_previewDimension->getRadiusPoint()).length();
+            if (radius > 1e-6) {
+                m_previewDimension->setRadiusPoint(center + QPointF(std::cos(angle) * radius, std::sin(angle) * radius));
+                m_previewDimension->recalculateValue();
+            }
+        }
+        m_previewDimension->setDimensionLinePos(m_previewDimension->getRadiusPoint());
+    } else if (m_state == 3) {
         m_previewDimension->setDimensionLinePos(pos);
         m_previewDimension->recalculateValue();
     }
@@ -139,7 +154,7 @@ void RadialDimensionCreationTool::reset()
 
 void RadialDimensionCreationTool::onPaint(QPainter& painter)
 {
-    if (m_previewDimension && (m_state == 1 || m_state == 2)) {
+    if (m_previewDimension && (m_state >= 1 && m_state <= 3)) {
         m_previewDimension->draw(painter, false);
     }
 }

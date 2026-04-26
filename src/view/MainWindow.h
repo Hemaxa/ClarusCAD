@@ -148,6 +148,7 @@ private:
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
     void refreshAssociativeDimensions();
+    void applyGlobalDimensionStyleToScene();
 
     void showEvent(QShowEvent* event) override; //переопределение метода создания первичного окна приложения
 

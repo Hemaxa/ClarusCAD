@@ -21,6 +21,7 @@ public:
 
 signals:
     void dimensionPropertiesApplied();
+    void angularDimensionArcSideToggled();
 
 
 protected:
@@ -37,6 +38,7 @@ private slots:
     void onTextColorClicked();
     void onExtensionColorClicked();
     void onDimensionLineColorClicked();
+    void onToggleAngularArcSideClicked();
 
 private:
     void applyStyleToSelection();
@@ -55,4 +57,5 @@ private:
     QPushButton* m_textColorButton;
     QPushButton* m_extensionColorButton;
     QPushButton* m_dimensionLineColorButton;
+    QPushButton* m_toggleAngularArcSideButton;
 };

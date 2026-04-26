@@ -41,6 +41,10 @@ LinearDimensionPrimitive::Attachment makeAttachment(const SnapPoint& snap, const
     }
     case PrimitiveType::Rectangle: {
         auto pts = snap.source->getSnapPoints();
+        if (snap.type == SnapType::Center) {
+            a.index = -1;
+            break;
+        }
         if (snap.type == SnapType::Endpoint) {
             double best = 1e18;
             for (int i = 0; i < 4; ++i) {
@@ -72,11 +76,22 @@ LinearDimensionPrimitive::Attachment makeAttachment(const SnapPoint& snap, const
     case PrimitiveType::Polygon: {
         auto* poly = static_cast<PolygonPrimitive*>(snap.source);
         auto verts = poly->getVertices();
+        if (snap.type == SnapType::Center) {
+            a.index = -1;
+            break;
+        }
         if (snap.type == SnapType::Endpoint) {
             double best = 1e18;
             for (int i = 0; i < verts.size(); ++i) {
                 double d = QLineF(pos, verts[i]).length();
                 if (d < best) { best = d; a.index = i; }
+            }
+        } else if (snap.type == SnapType::Midpoint) {
+            double best = 1e18;
+            for (int i = 0; i < verts.size(); ++i) {
+                QPointF midpoint = (verts[i] + verts[(i + 1) % verts.size()]) / 2.0;
+                double d = QLineF(pos, midpoint).length();
+                if (d < best) { best = d; a.index = i; a.param = 0.5; }
             }
         } else if (snap.type == SnapType::Nearest) {
             double best = 1e18;
@@ -119,11 +134,7 @@ void LinearDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene,
             m_previewDimension->setMode(m_mode);
             m_previewDimension->setStartAttachment(makeAttachment(snap, pos));
             
-            DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
-            style.dimensionLineColor = m_currentColor;
-            style.extensionLineColor = m_currentColor;
-            style.textColor = m_currentColor;
-            m_previewDimension->setStyle(style);
+            m_previewDimension->setStyle(SettingsManager::instance().getDefaultDimensionStyle());
             
             SnapManager::instance().setBasePoint(pos);
             
@@ -228,9 +239,7 @@ void LinearDimensionCreationTool::onPaint(QPainter& painter) {
 void LinearDimensionCreationTool::setColor(const QColor& color) {
     m_currentColor = color;
     if (m_previewDimension) {
-        DimensionStyle style = m_previewDimension->getStyle();
-        style.dimensionLineColor = color;
-        m_previewDimension->setStyle(style);
+        m_previewDimension->setColor(color);
     }
 }
 

@@ -36,6 +36,7 @@
 #include "SceneSettingsPanelWidget.h"
 #include "ToolbarPanelWidget.h"
 #include "ViewportPanelWidget.h"
+#include "BaseDimensionPrimitive.h"
 
 #include "SettingsWindow.h"
 #include "LineStyleManager.h"
@@ -45,6 +46,7 @@
 #include "DxfImporter.h"
 
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QMessageBox>
 
 #include <QDockWidget>
@@ -319,6 +321,20 @@ void MainWindow::createConnections()
 
     connect(m_deleteTool, &DeleteTool::primitiveHit, this, &MainWindow::deletePrimitive);
     connect(m_viewportPanel, &ViewportPanelWidget::mouseMoved, m_moveTool, &MoveTool::updateMousePosition);
+    connect(m_viewportPanel, &ViewportPanelWidget::dimensionValueEditRequested, this, [this](BaseDimensionPrimitive* dim) {
+        if (!dim) return;
+        bool ok = false;
+        const double currentValue = dim->getMeasuredValue();
+        const double value = QInputDialog::getDouble(this, "Изменить размер", "Новое значение:",
+                                                     currentValue, 0.001, 1000000.0, 3, &ok);
+        if (!ok) return;
+        if (dim->applyMeasuredValueOverride(value)) {
+            dim->setCustomText(QString());
+            refreshAssociativeDimensions();
+            emit sceneChanged(m_scene);
+            onSelectionChanged(m_selectedPrimitives);
+        }
+    });
 
     //- ViewportPanelWidget -
     connect(m_viewportPanel, &ViewportPanelWidget::selectionChanged, this, &MainWindow::onSelectionChanged);
@@ -334,6 +350,9 @@ void MainWindow::createConnections()
     // Новые подключения для параметров штриховки
     connect(&SettingsManager::instance(), &SettingsManager::dashLengthChanged, &LineStyleManager::instance(), &LineStyleManager::setDashLength);
     connect(&SettingsManager::instance(), &SettingsManager::dashSpaceChanged, &LineStyleManager::instance(), &LineStyleManager::setDashSpace);
+    connect(&SettingsManager::instance(), &SettingsManager::dimensionStyleChanged, this, [this]() {
+        applyGlobalDimensionStyleToScene();
+    });
 
     //менеджер линий сообщает об изменении стиля линий -> компоненты обновляются
     connect(&LineStyleManager::instance(), &LineStyleManager::stylesChanged, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
@@ -757,6 +776,19 @@ void MainWindow::refreshAssociativeDimensions()
             base->recalculateValue();
         }
     }
+}
+
+void MainWindow::applyGlobalDimensionStyleToScene()
+{
+    const DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        if (auto* dim = dynamic_cast<BaseDimensionPrimitive*>(primitive.get())) {
+            dim->setStyle(style);
+        }
+    }
+    refreshAssociativeDimensions();
+    onSelectionChanged(m_selectedPrimitives);
+    emit sceneChanged(m_scene);
 }
 
 void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center, double rad, double start, double span, const QColor& color, LineType type) {

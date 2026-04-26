@@ -3,6 +3,28 @@
 
 #include <QStringList>
 #include <QColor>
+#include <QFontDatabase>
+
+namespace {
+QString defaultDimensionFontFamily()
+{
+    const QStringList preferredFonts = {
+        "GOST Common",
+        "ISOCPEUR",
+        "PT Mono",
+        "Courier New",
+        "Menlo",
+        "Monaco"
+    };
+
+    for (const QString& family : preferredFonts) {
+        if (QFontDatabase::families().contains(family)) {
+            return family;
+        }
+    }
+    return QStringLiteral("Courier New");
+}
+}
 
 SettingsManager& SettingsManager::instance()
 {
@@ -33,7 +55,13 @@ void SettingsManager::loadSettings()
     m_kinkLength = m_settings.value("line/kink_length", 5.0).toDouble();
     m_kinkStraight = m_settings.value("line/kink_straight", 10.0).toDouble();
 
-    m_dimensionStyle.fontFamily = m_settings.value("dimension/font_family", "Monaco").toString();
+    const QString defaultFont = defaultDimensionFontFamily();
+    m_dimensionStyle.fontFamily = m_settings.contains("dimension/font_family")
+        ? m_settings.value("dimension/font_family").toString()
+        : defaultFont;
+    if (m_dimensionStyle.fontFamily == "Monaco") {
+        m_dimensionStyle.fontFamily = defaultFont;
+    }
     m_dimensionStyle.textHeight = m_settings.value("dimension/text_height", 18.0).toDouble();
     m_dimensionStyle.textGap = m_settings.value("dimension/text_gap", 12.0).toDouble();
     m_dimensionStyle.textAlongLineOffset = m_settings.value("dimension/text_along_offset", 0.0).toDouble();

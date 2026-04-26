@@ -110,6 +110,7 @@ public slots:
 signals:
     void mouseMoved(const QPoint& screenPos);
     void selectionChanged(const QList<BasePrimitive*>& primitives);
+    void dimensionValueEditRequested(BaseDimensionPrimitive* dimension);
 
 private slots:
     void onCameraUpdated();

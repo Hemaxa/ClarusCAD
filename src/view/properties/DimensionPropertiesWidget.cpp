@@ -2,6 +2,7 @@
 
 #include "DimensionPropertiesWidget.h"
 #include "BaseDimensionPrimitive.h"
+#include "../../model/primitives/dimensions/AngularDimensionPrimitive.h"
 #include "LineStyleManager.h"
 #include "SettingsManager.h"
 #include "ThemeManager.h"
@@ -98,6 +99,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_textColorButton = new QPushButton(this);
     m_extensionColorButton = new QPushButton(this);
     m_dimensionLineColorButton = new QPushButton(this);
+    m_toggleAngularArcSideButton = new QPushButton("Сменить сторону", this);
     for (auto* button : {m_textColorButton, m_extensionColorButton, m_dimensionLineColorButton}) {
         button->setFixedHeight(24);
         button->setMinimumWidth(120);
@@ -108,6 +110,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     formOf(valueGroup)->addRow("Задать:", m_measuredValueSpinBox);
     formOf(valueGroup)->addRow("Текст:", m_customTextEdit);
     formOf(valueGroup)->addRow("Слой:", m_layerEdit);
+    formOf(valueGroup)->addRow("", m_toggleAngularArcSideButton);
 
     formOf(styleGroup)->addRow("Выносные:", m_extensionLineTypeCombo);
     formOf(styleGroup)->addRow("Размерная:", m_dimensionLineTypeCombo);
@@ -129,6 +132,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     connect(m_textColorButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onTextColorClicked);
     connect(m_extensionColorButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onExtensionColorClicked);
     connect(m_dimensionLineColorButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onDimensionLineColorClicked);
+    connect(m_toggleAngularArcSideButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onToggleAngularArcSideClicked);
 }
 
 void DimensionPropertiesWidget::populateLocalLineTypeCombo(QComboBox* combo)
@@ -160,8 +164,8 @@ void DimensionPropertiesWidget::populateArrowTypeCombo()
     };
 
     const ArrowOption options[] = {
-        {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-closed.svg"},
-        {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-open.svg"},
+        {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-open.svg"},
+        {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-closed.svg"},
         {DimensionArrowType::Slash, "Засечка", ":/icons/icons/arrows/arrow-tick.svg"},
         {DimensionArrowType::Dot, "Точка", ":/icons/icons/arrows/arrow-dot.svg"},
     };
@@ -221,6 +225,7 @@ void DimensionPropertiesWidget::updateFieldValues()
         m_layerEdit->setText(m_currentPrimitive->getLayerName());
     }
 
+    m_toggleAngularArcSideButton->setVisible(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::AngularDimension);
     m_arrowTypeComboBox->setCurrentIndex(m_arrowTypeComboBox->findData(static_cast<int>(style.arrowType)));
     m_extensionLineTypeCombo->setCurrentIndex(m_extensionLineTypeCombo->findData(style.extensionLineTypeId));
     m_dimensionLineTypeCombo->setCurrentIndex(m_dimensionLineTypeCombo->findData(style.dimensionLineTypeId));
@@ -330,6 +335,21 @@ void DimensionPropertiesWidget::onDimensionLineColorClicked()
     if (!color.isValid()) return;
     updateColorButton(m_dimensionLineColorButton, color);
     onStyleValueChanged();
+}
+
+void DimensionPropertiesWidget::onToggleAngularArcSideClicked()
+{
+    if (m_selectedPrimitives.isEmpty()) return;
+
+    for (auto* prim : m_selectedPrimitives) {
+        if (prim && prim->getType() == PrimitiveType::AngularDimension) {
+            static_cast<AngularDimensionPrimitive*>(prim)->toggleArcSide();
+        }
+    }
+
+    updateFieldValues();
+    emit angularDimensionArcSideToggled();
+    emit dimensionPropertiesApplied();
 }
 
 void DimensionPropertiesWidget::updateColors()

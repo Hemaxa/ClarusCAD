@@ -221,6 +221,28 @@ bool ViewportPanelWidget::eventFilter(QObject* obj, QEvent* event)
             return true;
         }
 
+        case QEvent::MouseButtonDblClick: {
+            auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            if (mouseEvent->button() == Qt::LeftButton && !m_activeTool && m_scene) {
+                const QPointF worldClick = screenToWorld(mouseEvent->pos());
+                const double clickThreshold = 10.0 / getZoomFactor();
+                for (const auto& prim : m_scene->getPrimitives()) {
+                    if (!prim->hitTest(worldClick, clickThreshold)) {
+                        continue;
+                    }
+                    if (auto* dim = dynamic_cast<BaseDimensionPrimitive*>(prim.get())) {
+                        m_selectedPrimitives = {dim};
+                        emit selectionChanged(m_selectedPrimitives);
+                        emit dimensionValueEditRequested(dim);
+                        update();
+                        return true;
+                    }
+                    break;
+                }
+            }
+            return true;
+        }
+
         case QEvent::MouseButtonRelease: {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
 

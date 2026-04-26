@@ -34,28 +34,44 @@ QPointF projectPointOnRay(const QPointF& point, const QPointF& origin, const QPo
     return origin + unitDir * distanceOnRay;
 }
 
+QPointF lineOriginFor(const QPointF& centerPoint, const QPointF& radiusPoint, bool isDiameter)
+{
+    if (!isDiameter) {
+        return centerPoint;
+    }
+
+    const double radius = distance(centerPoint, radiusPoint);
+    const QPointF dir = normalizedDirection(centerPoint, radiusPoint);
+    return centerPoint - dir * radius;
+}
+
 void drawArrow(QPainter& painter, const QPointF& tip, double angle, const DimensionStyle& style,
                const QColor& color, double size)
 {
     painter.save();
     painter.setPen(QPen(color, 0));
-    painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
+    painter.setBrush(Qt::NoBrush);
     if (style.arrowType == DimensionArrowType::Slash) {
-        const double slashAngle = angle + M_PI / 2.0;
+        const double slashAngle = angle + M_PI / 3.0;
+        const QPointF slashDir(std::cos(slashAngle), std::sin(slashAngle));
         painter.drawLine(
-            QPointF(tip.x() - size * std::cos(slashAngle), tip.y() - size * std::sin(slashAngle)),
-            QPointF(tip.x() + size * std::cos(slashAngle), tip.y() + size * std::sin(slashAngle))
+            tip - slashDir * (size * 0.8),
+            tip + slashDir * (size * 0.8)
         );
     } else if (style.arrowType == DimensionArrowType::Dot) {
+        painter.setBrush(color);
         painter.drawEllipse(tip, size * 0.35, size * 0.35);
+    } else if (style.arrowType == DimensionArrowType::ClosedOpen) {
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35)));
+        painter.drawLine(tip,
+                         QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35)));
     } else {
+        painter.setBrush(style.arrowFilled ? color : Qt::NoBrush);
         QPolygonF arrow;
         arrow << tip
               << QPointF(tip.x() + size * std::cos(angle + 0.35), tip.y() + size * std::sin(angle + 0.35))
               << QPointF(tip.x() + size * std::cos(angle - 0.35), tip.y() + size * std::sin(angle - 0.35));
-        if (style.arrowType == DimensionArrowType::ClosedOpen) {
-            painter.setBrush(Qt::NoBrush);
-        }
         painter.drawPolygon(arrow);
     }
     painter.restore();
@@ -73,15 +89,14 @@ void normalizeReadableScreenAngle(double& angleDeg)
 void RadialDimensionPrimitive::setDimensionLinePos(const QPointF& pos)
 {
     const double radius = distance(m_centerPoint, m_radiusPoint);
-    QPointF dir = m_isDiameter
-        ? normalizedDirection(m_centerPoint, m_radiusPoint)
-        : normalizedDirection(m_centerPoint, m_radiusPoint);
+    QPointF dir = normalizedDirection(m_centerPoint, m_radiusPoint);
     if (radius < 1e-6 && distance(m_centerPoint, pos) > 1e-6) {
         dir = normalizedDirection(m_centerPoint, pos);
     }
 
-    const double minDistance = (radius > 1e-6) ? radius : 0.0;
-    m_dimensionLinePos = projectPointOnRay(pos, m_centerPoint, dir, minDistance);
+    const QPointF origin = lineOriginFor(m_centerPoint, m_radiusPoint, m_isDiameter);
+    const double minDistance = m_isDiameter ? 0.0 : ((radius > 1e-6) ? radius : 0.0);
+    m_dimensionLinePos = projectPointOnRay(pos, origin, dir, minDistance);
 }
 
 void RadialDimensionPrimitive::recalculateValue()
@@ -285,15 +300,47 @@ QVector<QPointF> RadialDimensionPrimitive::getEditGripPoints() const
 
 void RadialDimensionPrimitive::moveGripPoint(int index, const QPointF& newPos)
 {
-    if (index == 0) m_centerPoint = newPos;
-    else if (index == 1) m_radiusPoint = newPos;
-    else if (index == 2) setDimensionLinePos(newPos);
+    const QPointF oldOrigin = lineOriginFor(m_centerPoint, m_radiusPoint, m_isDiameter);
+    const double oldLeaderDistance = QLineF(oldOrigin, m_dimensionLinePos).length();
+    const double oldTextDistance = hasCustomTextPosition() ? QLineF(oldOrigin, getCustomTextPosition()).length() : 0.0;
+
+    if (index == 0) {
+        const QPointF delta = newPos - m_centerPoint;
+        m_centerPoint += delta;
+        m_radiusPoint += delta;
+        m_dimensionLinePos += delta;
+        if (hasCustomTextPosition()) {
+            m_customTextPosition += delta;
+        }
+    } else if (index == 1) {
+        const double newRadius = distance(m_centerPoint, newPos);
+        if (newRadius < 1e-6) {
+            return;
+        }
+
+        const QPointF newDir = normalizedDirection(m_centerPoint, newPos);
+        m_radiusPoint = m_centerPoint + newDir * newRadius;
+        m_associationAngle = std::atan2(newDir.y(), newDir.x());
+
+        const QPointF newOrigin = lineOriginFor(m_centerPoint, m_radiusPoint, m_isDiameter);
+        const double minLeaderDistance = m_isDiameter ? 0.0 : newRadius;
+        m_dimensionLinePos = newOrigin + newDir * std::max(oldLeaderDistance, minLeaderDistance);
+        if (hasCustomTextPosition()) {
+            m_customTextPosition = constrainTextAnchor(newOrigin + newDir * oldTextDistance);
+        }
+    } else if (index == 2) {
+        setDimensionLinePos(newPos);
+    }
     recalculateValue();
 }
 
 void RadialDimensionPrimitive::updateFromAssociation()
 {
     if (!m_associatedPrimitive) return;
+
+    const QPointF oldOrigin = lineOriginFor(m_centerPoint, m_radiusPoint, m_isDiameter);
+    const double oldLeaderDistance = QLineF(oldOrigin, m_dimensionLinePos).length();
+    const double oldTextDistance = hasCustomTextPosition() ? QLineF(oldOrigin, getCustomTextPosition()).length() : 0.0;
 
     switch (m_associatedPrimitive->getType()) {
     case PrimitiveType::Circle: {
@@ -322,6 +369,15 @@ void RadialDimensionPrimitive::updateFromAssociation()
     }
     default:
         break;
+    }
+
+    const QPointF newDir = normalizedDirection(m_centerPoint, m_radiusPoint);
+    const QPointF newOrigin = lineOriginFor(m_centerPoint, m_radiusPoint, m_isDiameter);
+    const double radius = distance(m_centerPoint, m_radiusPoint);
+    const double minLeaderDistance = m_isDiameter ? 0.0 : radius;
+    m_dimensionLinePos = newOrigin + newDir * std::max(oldLeaderDistance, minLeaderDistance);
+    if (hasCustomTextPosition()) {
+        m_customTextPosition = constrainTextAnchor(newOrigin + newDir * oldTextDistance);
     }
     recalculateValue();
 }
