@@ -50,9 +50,9 @@ ToolbarPanelWidget::ToolbarPanelWidget(const QString& title, QWidget* parent) : 
 
     // === FLYOUT КНОПКА ДЛЯ РАЗМЕРОВ ===
     m_createDimensionBtn = new FlyoutToolButton(this);
-    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearAligned), ":/icons/icons/tools/dimension_linear.svg", "Линейный выровненный [D]");
-    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearHorizontal), ":/icons/icons/tools/dimension_linear.svg", "Линейный горизонтальный");
-    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearVertical), ":/icons/icons/tools/dimension_linear.svg", "Линейный вертикальный");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearAligned), ":/icons/icons/tools/dimension_aligned.svg", "Линейный выровненный [D]");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearHorizontal), ":/icons/icons/tools/dimension_horizontal.svg", "Линейный горизонтальный");
+    m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::LinearVertical), ":/icons/icons/tools/dimension_vertical.svg", "Линейный вертикальный");
     m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Radius), ":/icons/icons/tools/dimension_radius.svg", "Радиальный размер");
     m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Diameter), ":/icons/icons/tools/dimension_diameter.svg", "Диаметральный размер");
     m_createDimensionBtn->addMode(static_cast<int>(DimensionCreationMode::Angular), ":/icons/icons/tools/dimension_angular.svg", "Угловой размер");

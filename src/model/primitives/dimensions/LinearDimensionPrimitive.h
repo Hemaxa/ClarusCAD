@@ -58,6 +58,7 @@ public:
     virtual bool intersects(const QRectF& rect) const override;
     virtual bool inside(const QRectF& rect) const override;
     QPointF getDefaultTextAnchor() const override;
+    QPointF constrainTextAnchor(const QPointF& pos) const override;
     QVector<QPointF> getEditGripPoints() const override;
     void moveGripPoint(int index, const QPointF& newPos) override;
     virtual void setColor(const QColor& color) override {

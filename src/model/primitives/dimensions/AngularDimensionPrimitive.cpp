@@ -24,15 +24,26 @@ double normalizeAngle(double angle)
     return angle;
 }
 
-double deltaAngle(double start, double end)
+double positiveSweepAngle(double start, double end)
 {
     double delta = normalizeAngle(end) - normalizeAngle(start);
     while (delta < 0.0) delta += 2.0 * M_PI;
     while (delta >= 2.0 * M_PI) delta -= 2.0 * M_PI;
-    if (delta > M_PI) {
-        delta -= 2.0 * M_PI;
-    }
     return delta;
+}
+
+bool angleInSweep(double testAngle, double startAngle, double endAngle)
+{
+    const double sweep = positiveSweepAngle(startAngle, endAngle);
+    const double delta = positiveSweepAngle(startAngle, testAngle);
+    return delta <= sweep;
+}
+
+QPointF projectPointToAngleArc(const QPointF& center, const QPointF& point, double angle)
+{
+    const double radius = pointDistance(center, point);
+    return QPointF(center.x() + radius * std::cos(angle),
+                   center.y() + radius * std::sin(angle));
 }
 
 void drawArrow(QPainter& painter, const QPointF& tip, double angle, const DimensionStyle& style,
@@ -127,7 +138,7 @@ void AngularDimensionPrimitive::recalculateValue()
 {
     const double startAngle = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
     const double endAngle = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
-    m_measuredValue = std::abs(deltaAngle(startAngle, endAngle)) * 180.0 / M_PI;
+    m_measuredValue = positiveSweepAngle(startAngle, endAngle) * 180.0 / M_PI;
 }
 
 bool AngularDimensionPrimitive::applyMeasuredValueOverride(double value)
@@ -136,9 +147,7 @@ bool AngularDimensionPrimitive::applyMeasuredValueOverride(double value)
 
     const double startAngle = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
     const double endAngle = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
-    const double currentSweep = deltaAngle(startAngle, endAngle);
-    const double sign = currentSweep >= 0.0 ? 1.0 : -1.0;
-    const double newEndAngle = startAngle + sign * value * M_PI / 180.0;
+    const double newEndAngle = startAngle + value * M_PI / 180.0;
     const double endRadius = pointDistance(m_centerPoint, m_endPoint);
     if (endRadius < 1e-6) return false;
 
@@ -178,8 +187,8 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
 
     const double startAngleRad = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
     const double endAngleRad = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
-    const double sweepRad = deltaAngle(startAngleRad, endAngleRad);
-    if (std::abs(sweepRad) < 1e-6) {
+    const double sweepRad = positiveSweepAngle(startAngleRad, endAngleRad);
+    if (sweepRad < 1e-6) {
         painter.restore();
         return;
     }
@@ -211,11 +220,6 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
     painter.setBrush(Qt::NoBrush);
     painter.drawArc(arcRect, static_cast<int>(-startAngleRad * 180.0 / M_PI * 16.0), static_cast<int>(-sweepRad * 180.0 / M_PI * 16.0));
 
-    const double arrowSize = m_style.arrowSize / currentScale;
-    const double directionSign = sweepRad >= 0.0 ? -1.0 : 1.0;
-    drawArrow(painter, startArcPoint, startAngleRad + directionSign * (M_PI / 2.0), m_style, dimColor, arrowSize);
-    drawArrow(painter, endArcPoint, endAngleRad - directionSign * (M_PI / 2.0), m_style, dimColor, arrowSize);
-
     QString text = m_customText.isEmpty()
         ? QString("%1°").arg(QString::number(m_measuredValue, 'f', 2))
         : m_customText;
@@ -229,7 +233,11 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         textPoint += QPointF(std::cos(midAngle), std::sin(midAngle)) * (m_style.textGap / currentScale);
     }
 
-    const double tangentAngle = midAngle + (sweepRad >= 0.0 ? M_PI / 2.0 : -M_PI / 2.0);
+    const double arrowSize = m_style.arrowSize / currentScale;
+    drawArrow(painter, startArcPoint, startAngleRad - (M_PI / 2.0), m_style, dimColor, arrowSize);
+    drawArrow(painter, endArcPoint, endAngleRad + (M_PI / 2.0), m_style, dimColor, arrowSize);
+
+    const double tangentAngle = midAngle + M_PI / 2.0;
     const QPointF tangentPoint = textPoint + QPointF(std::cos(tangentAngle), std::sin(tangentAngle));
     const QPointF screenA = worldTransform.map(textPoint);
     const QPointF screenB = worldTransform.map(tangentPoint);
@@ -292,12 +300,27 @@ QPointF AngularDimensionPrimitive::getDefaultTextAnchor() const
 {
     const double startAngleRad = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
     const double endAngleRad = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
-    const double sweepRad = deltaAngle(startAngleRad, endAngleRad);
+    const double sweepRad = positiveSweepAngle(startAngleRad, endAngleRad);
     const double midAngle = startAngleRad + sweepRad / 2.0;
     const double radius = pointDistance(m_centerPoint, m_arcPoint);
     return QPointF(
         m_centerPoint.x() + (radius + 6.0) * std::cos(midAngle),
         m_centerPoint.y() + (radius + 6.0) * std::sin(midAngle));
+}
+
+QPointF AngularDimensionPrimitive::constrainTextAnchor(const QPointF& pos) const
+{
+    const double startAngleRad = std::atan2(m_startPoint.y() - m_centerPoint.y(), m_startPoint.x() - m_centerPoint.x());
+    const double endAngleRad = std::atan2(m_endPoint.y() - m_centerPoint.y(), m_endPoint.x() - m_centerPoint.x());
+    const double targetAngle = std::atan2(pos.y() - m_centerPoint.y(), pos.x() - m_centerPoint.x());
+    if (angleInSweep(targetAngle, startAngleRad, endAngleRad)) {
+        return projectPointToAngleArc(m_centerPoint, m_arcPoint, targetAngle);
+    }
+
+    const double distToStart = std::abs(positiveSweepAngle(startAngleRad, targetAngle));
+    const double distToEnd = std::abs(positiveSweepAngle(targetAngle, endAngleRad));
+    const double clampedAngle = (distToStart < distToEnd) ? startAngleRad : endAngleRad;
+    return projectPointToAngleArc(m_centerPoint, m_arcPoint, clampedAngle);
 }
 
 QVector<QPointF> AngularDimensionPrimitive::getEditGripPoints() const

@@ -32,6 +32,7 @@ private:
     bool m_hasFirstEdge = false;
     QPointF m_firstEdgeA;
     QPointF m_firstEdgeB;
+    QPointF m_firstEdgePicked;
     int m_state = 0;
     std::unique_ptr<AngularDimensionPrimitive> m_previewDimension;
     QColor m_currentColor = Qt::white;

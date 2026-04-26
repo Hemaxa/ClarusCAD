@@ -1,6 +1,7 @@
 #include "SettingsWindow.h"
 #include "SettingsManager.h"
 #include "LineStyleManager.h"
+#include "ThemeManager.h"
 
 #include <QComboBox>
 #include <QSpinBox>
@@ -119,6 +120,26 @@ QWidget* SettingsWindow::createDimensionStylesTab()
         combo->addItem("Штрих-пунктирная", static_cast<int>(LineType::DashDotThin));
         combo->addItem("Две точки", static_cast<int>(LineType::DashDotDot));
     };
+    auto populateArrowTypes = [](QComboBox* combo) {
+        combo->clear();
+        const QColor iconColor = ThemeManager::instance().getIconColor();
+        struct ArrowOption {
+            DimensionArrowType type;
+            const char* title;
+            const char* iconPath;
+        };
+
+        const ArrowOption options[] = {
+            {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-closed.svg"},
+            {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-open.svg"},
+            {DimensionArrowType::Slash, "Засечка", ":/icons/icons/arrows/arrow-tick.svg"},
+            {DimensionArrowType::Dot, "Точка", ":/icons/icons/arrows/arrow-dot.svg"},
+        };
+
+        for (const auto& option : options) {
+            combo->addItem(ThemeManager::colorizeSvg(option.iconPath, iconColor), QString::fromUtf8(option.title), static_cast<int>(option.type));
+        }
+    };
     auto setButtonColor = [](QPushButton* button, const QColor& color) {
         button->setStyleSheet(QString("background-color: %1;").arg(color.name()));
         button->setText(color.name());
@@ -143,10 +164,7 @@ QWidget* SettingsWindow::createDimensionStylesTab()
     m_dimensionArrowSizeSpinBox->setSuffix(" px");
 
     m_dimensionArrowTypeComboBox = new QComboBox();
-    m_dimensionArrowTypeComboBox->addItem("Классическая (закрытая)", static_cast<int>(DimensionArrowType::ClosedFilled));
-    m_dimensionArrowTypeComboBox->addItem("Разомкнутая (открытая)", static_cast<int>(DimensionArrowType::ClosedOpen));
-    m_dimensionArrowTypeComboBox->addItem("Засечка", static_cast<int>(DimensionArrowType::Slash));
-    m_dimensionArrowTypeComboBox->addItem("Точка", static_cast<int>(DimensionArrowType::Dot));
+    populateArrowTypes(m_dimensionArrowTypeComboBox);
     m_dimensionArrowTypeComboBox->setCurrentIndex(m_dimensionArrowTypeComboBox->findData(static_cast<int>(SettingsManager::instance().getDimensionArrowType())));
 
     m_dimensionArrowFilledCheck = new QCheckBox("Заполненные стрелки");

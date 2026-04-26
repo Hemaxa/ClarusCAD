@@ -10,6 +10,7 @@
 #include "../../../model/primitives/PolygonPrimitive.h"
 
 #include <QMouseEvent>
+#include <cmath>
 
 namespace {
 struct EdgeCandidate {
@@ -43,6 +44,26 @@ bool lineIntersection(const QPointF& a1, const QPointF& a2, const QPointF& b1, c
         ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
     );
     return true;
+}
+
+double normalizeAngle(double angle)
+{
+    while (angle < 0.0) angle += 2.0 * M_PI;
+    while (angle >= 2.0 * M_PI) angle -= 2.0 * M_PI;
+    return angle;
+}
+
+double positiveSweepAngle(double start, double end)
+{
+    double delta = normalizeAngle(end) - normalizeAngle(start);
+    while (delta < 0.0) delta += 2.0 * M_PI;
+    while (delta >= 2.0 * M_PI) delta -= 2.0 * M_PI;
+    return delta;
+}
+
+bool angleInsideSweep(double testAngle, double startAngle, double endAngle)
+{
+    return positiveSweepAngle(startAngle, testAngle) <= positiveSweepAngle(startAngle, endAngle);
 }
 
 void considerEdge(const QPointF& mousePos, BasePrimitive* source, int edgeIndex, const QPointF& a, const QPointF& b, EdgeCandidate& best)
@@ -119,6 +140,7 @@ void AngularDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene
                 m_firstEdgeIndex = edge.edgeIndex;
                 m_firstEdgeA = edge.a;
                 m_firstEdgeB = edge.b;
+                m_firstEdgePicked = edge.picked;
                 m_state = 10;
                 viewport->update();
                 return;
@@ -144,8 +166,20 @@ void AngularDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene
             if (edge.valid && lineIntersection(m_firstEdgeA, m_firstEdgeB, edge.a, edge.b, center)) {
                 m_previewDimension = std::make_unique<AngularDimensionPrimitive>();
                 m_previewDimension->setCenterPoint(center);
-                m_previewDimension->setStartPoint(closestPointOnSegment(edge.picked, m_firstEdgeA, m_firstEdgeB));
-                m_previewDimension->setEndPoint(closestPointOnSegment(edge.picked, edge.a, edge.b));
+                QPointF firstRayPoint = closestPointOnSegment(m_firstEdgePicked, m_firstEdgeA, m_firstEdgeB);
+                QPointF secondRayPoint = closestPointOnSegment(edge.picked, edge.a, edge.b);
+                const double firstAngle = std::atan2(firstRayPoint.y() - center.y(), firstRayPoint.x() - center.x());
+                const double secondAngle = std::atan2(secondRayPoint.y() - center.y(), secondRayPoint.x() - center.x());
+                const double pickedAngle = std::atan2(pos.y() - center.y(), pos.x() - center.x());
+
+                if (angleInsideSweep(pickedAngle, firstAngle, secondAngle)) {
+                    m_previewDimension->setStartPoint(firstRayPoint);
+                    m_previewDimension->setEndPoint(secondRayPoint);
+                } else {
+                    m_previewDimension->setStartPoint(secondRayPoint);
+                    m_previewDimension->setEndPoint(firstRayPoint);
+                }
+
                 QPointF avgDir = (m_previewDimension->getStartPoint() - center) + (m_previewDimension->getEndPoint() - center);
                 if (QLineF(QPointF(0, 0), avgDir).length() < 1e-6) {
                     avgDir = QPointF(1.0, 0.0);
@@ -171,6 +205,7 @@ void AngularDimensionCreationTool::onMousePress(QMouseEvent* event, Scene* scene
                 m_hasFirstEdge = false;
                 m_firstEdgeSource = nullptr;
                 m_firstEdgeIndex = -1;
+                m_firstEdgePicked = QPointF();
                 m_state = 0;
             }
         } else if (m_state == 1) {
@@ -228,6 +263,7 @@ void AngularDimensionCreationTool::reset()
     m_hasFirstEdge = false;
     m_firstEdgeSource = nullptr;
     m_firstEdgeIndex = -1;
+    m_firstEdgePicked = QPointF();
     m_previewDimension.reset();
     SnapManager::instance().clearBasePoint();
     ObjectBindingManager::instance().setPrimitiveSnap(true);

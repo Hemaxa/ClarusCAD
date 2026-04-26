@@ -60,12 +60,13 @@ public:
      */
     virtual bool applyMeasuredValueOverride(double value) { Q_UNUSED(value); return false; }
 
-    void setCustomTextPosition(const QPointF& pos) { m_hasCustomTextPosition = true; m_customTextPosition = pos; }
+    void setCustomTextPosition(const QPointF& pos) { m_hasCustomTextPosition = true; m_customTextPosition = constrainTextAnchor(pos); }
     void clearCustomTextPosition() { m_hasCustomTextPosition = false; }
     bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
     QPointF getCustomTextPosition() const { return m_customTextPosition; }
 
     virtual QPointF getDefaultTextAnchor() const = 0;
+    virtual QPointF constrainTextAnchor(const QPointF& pos) const = 0;
     QPointF getTextAnchor() const { return m_hasCustomTextPosition ? m_customTextPosition : getDefaultTextAnchor(); }
     virtual QVector<QPointF> getEditGripPoints() const = 0;
     virtual void moveGripPoint(int index, const QPointF& newPos) = 0;

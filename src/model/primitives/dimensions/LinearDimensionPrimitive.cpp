@@ -50,6 +50,13 @@ QPointF closestPointOnSegment(const QPointF& p, const QPointF& a, const QPointF&
     return QPointF(a.x() + t * dx, a.y() + t * dy);
 }
 
+QPointF projectPointOnInfiniteLine(const QPointF& point, const QPointF& origin, const QPointF& unitDir)
+{
+    const QPointF delta = point - origin;
+    const double along = delta.x() * unitDir.x() + delta.y() * unitDir.y();
+    return origin + unitDir * along;
+}
+
 QPointF resolveAttachment(const LinearDimensionPrimitive::Attachment& a)
 {
     if (!a.source) return a.fallback;
@@ -359,24 +366,33 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     LineStyleManager::instance().drawLine(painter, extStart1, extEnd1, m_style.extensionLineTypeId, extensionColor, false);
     LineStyleManager::instance().drawLine(painter, extStart2, extEnd2, m_style.extensionLineTypeId, extensionColor, false);
     
-    // Draw dimension line
-    QPointF dimDrawStart(dimStart.x() - std::cos(geom.angle) * (m_style.dimensionLineExtension / currentScale),
-                         dimStart.y() - std::sin(geom.angle) * (m_style.dimensionLineExtension / currentScale));
-    QPointF dimDrawEnd(dimEnd.x() + std::cos(geom.angle) * (m_style.dimensionLineExtension / currentScale),
-                       dimEnd.y() + std::sin(geom.angle) * (m_style.dimensionLineExtension / currentScale));
+    QString text = m_customText.isEmpty() ? QString::number(m_measuredValue, 'f', 2) : m_customText;
+
+    QPointF midPoint = getTextAnchor();
+    const QPointF lineDir(std::cos(geom.angle), std::sin(geom.angle));
+    if (!hasCustomTextPosition()) {
+        midPoint += lineDir * (m_style.textAlongLineOffset / currentScale);
+    }
+
+    QFont font(m_style.fontFamily);
+    font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
+    QFontMetricsF fm(font);
+    const double textHalfWidthWorld = fm.horizontalAdvance(text) / (2.0 * currentScale);
+    const double textMarginWorld = std::max(2.0, m_style.textGap * 0.25) / currentScale;
+    const double textAlong = (midPoint.x() - dimStart.x()) * lineDir.x()
+                           + (midPoint.y() - dimStart.y()) * lineDir.y();
+    const double minAlong = std::min(0.0, textAlong - textHalfWidthWorld - textMarginWorld);
+    const double maxAlong = std::max(geom.length, textAlong + textHalfWidthWorld + textMarginWorld);
+    const double dimExtension = m_style.dimensionLineExtension / currentScale;
+
+    // When the label is dragged beyond an extension line, keep the dimension line attached and extend it.
+    QPointF dimDrawStart = dimStart + lineDir * (minAlong - dimExtension);
+    QPointF dimDrawEnd = dimStart + lineDir * (maxAlong + dimExtension);
     LineStyleManager::instance().drawLine(painter, dimDrawStart, dimDrawEnd, m_style.dimensionLineTypeId, dimColor, false);
     
     // Draw arrows
     drawDimensionArrow(painter, dimStart, geom.angle, m_style, dimColor, arrowSize);
     drawDimensionArrow(painter, dimEnd, geom.angle + M_PI, m_style, dimColor, arrowSize);
-    
-    // Draw text
-    QString text = m_customText.isEmpty() ? QString::number(m_measuredValue, 'f', 2) : m_customText;
-    
-    QPointF midPoint = getTextAnchor();
-    if (!hasCustomTextPosition()) {
-        midPoint += QPointF(std::cos(geom.angle), std::sin(geom.angle)) * (m_style.textAlongLineOffset / currentScale);
-    }
     
     const QPointF screenStart = worldTransform.map(dimStart);
     const QPointF screenEnd = worldTransform.map(dimEnd);
@@ -387,14 +403,11 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     painter.save();
     painter.resetTransform();
 
-    QFont font(m_style.fontFamily);
-    font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
     painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
     painter.translate(worldTransform.map(midPoint));
     painter.rotate(textAngle);
     
-    QFontMetricsF fm(font);
     double textWidth = fm.horizontalAdvance(text);
     double textH = fm.height();
     double textOffset = m_style.textGap;
@@ -409,6 +422,17 @@ QPointF LinearDimensionPrimitive::getDefaultTextAnchor() const
     const LinearGeometry geom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
     return QPointF((geom.dimStart.x() + geom.dimEnd.x()) / 2.0,
                    (geom.dimStart.y() + geom.dimEnd.y()) / 2.0);
+}
+
+QPointF LinearDimensionPrimitive::constrainTextAnchor(const QPointF& pos) const
+{
+    const LinearGeometry geom = buildGeometry(m_startPoint, m_endPoint, m_dimensionLinePos, m_mode);
+    if (geom.length < 1e-6) {
+        return getDefaultTextAnchor();
+    }
+
+    const QPointF lineDir(std::cos(geom.angle), std::sin(geom.angle));
+    return projectPointOnInfiniteLine(pos, geom.dimStart, lineDir);
 }
 
 QVector<QPointF> LinearDimensionPrimitive::getEditGripPoints() const

@@ -15,7 +15,7 @@ public:
     void setRadiusPoint(const QPointF& point) { m_radiusPoint = point; }
     QPointF getRadiusPoint() const { return m_radiusPoint; }
 
-    void setDimensionLinePos(const QPointF& pos) { m_dimensionLinePos = pos; }
+    void setDimensionLinePos(const QPointF& pos);
     QPointF getDimensionLinePos() const { return m_dimensionLinePos; }
 
     void setDiameterMode(bool isDiameter) { m_isDiameter = isDiameter; recalculateValue(); }
@@ -33,6 +33,7 @@ public:
     bool intersects(const QRectF& rect) const override;
     bool inside(const QRectF& rect) const override;
     QPointF getDefaultTextAnchor() const override;
+    QPointF constrainTextAnchor(const QPointF& pos) const override;
     QVector<QPointF> getEditGripPoints() const override;
     void moveGripPoint(int index, const QPointF& newPos) override;
     void setColor(const QColor& color) override {

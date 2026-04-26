@@ -7,7 +7,9 @@
         <file>icons/tools/ellipse.svg</file>
         <file>icons/tools/polygon.svg</file>
         <file>icons/tools/spline.svg</file>
-        <file>icons/tools/dimension_linear.svg</file>
+        <file>icons/tools/dimension_aligned.svg</file>
+        <file>icons/tools/dimension_horizontal.svg</file>
+        <file>icons/tools/dimension_vertical.svg</file>
         <file>icons/tools/dimension_radius.svg</file>
         <file>icons/tools/dimension_diameter.svg</file>
         <file>icons/tools/dimension_angular.svg</file>
@@ -46,6 +48,11 @@
         <file>icons/lines/line-dashdotdot.svg</file>
         <file>icons/lines/line-wavy.svg</file>
         <file>icons/lines/line-zigzag.svg</file>
+        <!-- Dimension arrows -->
+        <file>icons/arrows/arrow-closed.svg</file>
+        <file>icons/arrows/arrow-open.svg</file>
+        <file>icons/arrows/arrow-tick.svg</file>
+        <file>icons/arrows/arrow-dot.svg</file>
     </qresource>
     <qresource prefix="/promts">
         <file>promts/segment-promt.svg</file>
