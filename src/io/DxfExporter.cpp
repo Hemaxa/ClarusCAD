@@ -11,12 +11,17 @@
 #include "PolygonPrimitive.h"
 #include "SplinePrimitive.h"
 #include "RectanglePrimitive.h"
+#include "../model/primitives/dimensions/BaseDimensionPrimitive.h"
+#include "../model/primitives/dimensions/LinearDimensionPrimitive.h"
+#include "../model/primitives/dimensions/RadialDimensionPrimitive.h"
+#include "../model/primitives/dimensions/AngularDimensionPrimitive.h"
 #include "EnumManager.h"
 #include "LineStyleManager.h"
 
 #include <QFile>
 #include <QTextStream>
 #include <QSet>
+#include <QHash>
 #include <QColor>
 #include <QLocale>
 #include <QDebug>
@@ -264,6 +269,56 @@ static QVector<QPointF> generateWaveArcPoints(const QPointF& center, double radi
         pts.append(QPointF(x, y));
     }
     return pts;
+}
+
+static QString primitiveTypeToken(PrimitiveType type)
+{
+    switch (type) {
+    case PrimitiveType::Segment: return "SEGMENT";
+    case PrimitiveType::Circle: return "CIRCLE";
+    case PrimitiveType::Arc: return "ARC";
+    case PrimitiveType::Rectangle: return "RECTANGLE";
+    case PrimitiveType::Ellipse: return "ELLIPSE";
+    case PrimitiveType::Polygon: return "POLYGON";
+    case PrimitiveType::Spline: return "SPLINE";
+    case PrimitiveType::LinearDimension: return "LINEAR_DIMENSION";
+    case PrimitiveType::RadialDimension: return "RADIAL_DIMENSION";
+    case PrimitiveType::AngularDimension: return "ANGULAR_DIMENSION";
+    case PrimitiveType::Point: return "POINT";
+    case PrimitiveType::Generic:
+    default:
+        return "GENERIC";
+    }
+}
+
+static QString linearModeToken(LinearDimensionMode mode)
+{
+    switch (mode) {
+    case LinearDimensionMode::Horizontal: return "HORIZONTAL";
+    case LinearDimensionMode::Vertical: return "VERTICAL";
+    case LinearDimensionMode::Aligned:
+    default:
+        return "ALIGNED";
+    }
+}
+
+static QString snapTypeToken(SnapType type)
+{
+    switch (type) {
+    case SnapType::Endpoint: return "ENDPOINT";
+    case SnapType::Midpoint: return "MIDPOINT";
+    case SnapType::Center: return "CENTER";
+    case SnapType::Intersection: return "INTERSECTION";
+    case SnapType::Perpendicular: return "PERPENDICULAR";
+    case SnapType::Tangent: return "TANGENT";
+    case SnapType::Quadrant: return "QUADRANT";
+    case SnapType::Grid: return "GRID";
+    case SnapType::Nearest: return "NEAREST";
+    case SnapType::All: return "ALL";
+    case SnapType::None:
+    default:
+        return "NONE";
+    }
 }
 
 bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) {
@@ -613,6 +668,12 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(0, "SECTION");
     writeCode(2, "ENTITIES");
 
+    QHash<const BasePrimitive*, int> clarusIds;
+    int nextClarusId = 1;
+    for (const auto& prim : primitives) {
+        clarusIds.insert(prim.get(), nextClarusId++);
+    }
+
     for (const auto& prim : primitives) {
         
         // Общие свойства для AC1015: handle + AcDbEntity subclass + свойства
@@ -635,8 +696,52 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
             writeCode(999, QString("CLARUSCAD_LTYPE:%1").arg(static_cast<int>(prim->getLineType())));
         };
 
+        auto writeClarusEntityId = [&writeCode, &prim, &clarusIds]() {
+            writeCode(999, QString("CLARUSCAD_ID:%1").arg(clarusIds.value(prim.get(), -1)));
+            writeCode(999, QString("CLARUSCAD_PRIMITIVE:%1").arg(primitiveTypeToken(prim->getType())));
+        };
+
+        auto writeDimensionStyleMeta = [&writeCode](const BaseDimensionPrimitive* dim) {
+            const DimensionStyle style = dim->getStyle();
+            writeCode(999, QString("CLARUSCAD_DIM_FONT:%1").arg(style.fontFamily));
+            writeCode(999, QString("CLARUSCAD_DIM_TEXT_HEIGHT:%1").arg(style.textHeight, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_TEXT_GAP:%1").arg(style.textGap, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_TEXT_ALONG:%1").arg(style.textAlongLineOffset, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_ARROW_SIZE:%1").arg(style.arrowSize, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_ARROW_TYPE:%1").arg(static_cast<int>(style.arrowType)));
+            writeCode(999, QString("CLARUSCAD_DIM_ARROW_FILLED:%1").arg(style.arrowFilled ? 1 : 0));
+            writeCode(999, QString("CLARUSCAD_DIM_EXT_OFFSET:%1").arg(style.extensionLineOffset, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_EXT_EXTEND:%1").arg(style.extensionLineExtend, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_LINE_EXT:%1").arg(style.dimensionLineExtension, 0, 'f', 10));
+            writeCode(999, QString("CLARUSCAD_DIM_EXT_LTYPE:%1").arg(style.extensionLineTypeId));
+            writeCode(999, QString("CLARUSCAD_DIM_LINE_LTYPE:%1").arg(style.dimensionLineTypeId));
+            writeCode(999, QString("CLARUSCAD_DIM_TEXT_COLOR:%1").arg(style.textColor.rgba()));
+            writeCode(999, QString("CLARUSCAD_DIM_EXT_COLOR:%1").arg(style.extensionLineColor.rgba()));
+            writeCode(999, QString("CLARUSCAD_DIM_LINE_COLOR:%1").arg(style.dimensionLineColor.rgba()));
+            writeCode(999, QString("CLARUSCAD_DIM_CUSTOM_TEXT:%1").arg(dim->getCustomText()));
+            writeCode(999, QString("CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS:%1").arg(dim->hasCustomTextPosition() ? 1 : 0));
+            if (dim->hasCustomTextPosition()) {
+                const QPointF pos = dim->getCustomTextPosition();
+                writeCode(999, QString("CLARUSCAD_DIM_TEXT_POS_X:%1").arg(pos.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_TEXT_POS_Y:%1").arg(pos.y(), 0, 'f', 10));
+            }
+        };
+
+        auto writeLinearAttachmentMeta =
+            [&writeCode, &clarusIds](const QString& prefix, const LinearDimensionPrimitive::Attachment& attachment) {
+                writeCode(999, QString("CLARUSCAD_%1_SNAP:%2").arg(prefix, snapTypeToken(attachment.snapType)));
+                writeCode(999, QString("CLARUSCAD_%1_INDEX:%2").arg(prefix).arg(attachment.index));
+                writeCode(999, QString("CLARUSCAD_%1_PARAM:%2").arg(prefix).arg(attachment.param, 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_%1_FALLBACK_X:%2").arg(prefix).arg(attachment.fallback.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_%1_FALLBACK_Y:%2").arg(prefix).arg(attachment.fallback.y(), 0, 'f', 10));
+                if (attachment.source) {
+                    writeCode(999, QString("CLARUSCAD_%1_SOURCE:%2").arg(prefix).arg(clarusIds.value(attachment.source, -1)));
+                    writeCode(999, QString("CLARUSCAD_%1_SOURCE_TYPE:%2").arg(prefix, primitiveTypeToken(attachment.source->getType())));
+                }
+            };
+
         // Лямбда для записи POLYLINE из набора точек (AC1015)
-        auto writePolyline = [&writeCode, &nextHandle, &prim, &writeXData](
+        auto writePolyline = [&writeCode, &nextHandle, &prim, &writeXData, &writeClarusEntityId](
                                   const QVector<QPointF>& pts, bool closed) {
             writeCode(0, "POLYLINE");
             writeCode(5, nextHandle());
@@ -656,6 +761,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
             writeCode(20, 0.0);
             writeCode(30, 0.0);
             writeXData();
+            writeClarusEntityId();
             for (const auto& pt : pts) {
                 writeCode(0, "VERTEX");
                 writeCode(5, nextHandle());
@@ -699,6 +805,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(21, end.y());
                     writeCode(31, 0.0);
                     writeXData();
+                    writeClarusEntityId();
                 }
             }
         }
@@ -718,6 +825,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(30, 0.0);
                     writeCode(40, circle->getRadius());
                     writeXData();
+                    writeClarusEntityId();
                 }
             }
         }
@@ -771,6 +879,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(50, dxfStart);
                     writeCode(51, dxfEnd);
                     writeXData();
+                    writeClarusEntityId();
                 }
             }
         }
@@ -823,6 +932,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(41, 0.0);
                     writeCode(42, 2.0 * M_PI);
                     writeXData();
+                    writeClarusEntityId();
                 }
             }
         }
@@ -863,6 +973,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(20, 0.0);
                     writeCode(30, 0.0);
                     writeXData();
+                    writeClarusEntityId();
                     
                     const auto& pts = poly->getVertices();
                     for (const auto& pt : pts) {
@@ -918,6 +1029,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(20, 0.0);
                     writeCode(30, 0.0);
                     writeXData();
+                    writeClarusEntityId();
                     
                     auto pts = spline->calculateSplinePoints();
                     for (const auto& pt : pts) {
@@ -992,6 +1104,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(20, 0.0);
                     writeCode(30, 0.0);
                     writeXData();
+                    writeClarusEntityId();
                     
                     for (int i = 0; i < 4; ++i) {
                         writeCode(0, "VERTEX");
@@ -1009,6 +1122,186 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                     writeCode(5, nextHandle());
                     writeCode(100, "AcDbEntity");
                     writeCode(8, prim->getLayerName());
+                }
+            }
+        }
+        else if (type == PrimitiveType::LinearDimension) {
+            auto* dim = dynamic_cast<LinearDimensionPrimitive*>(prim.get());
+            if (dim) {
+                const QPointF start = dim->getStartPoint();
+                const QPointF end = dim->getEndPoint();
+                const QPointF linePos = dim->getDimensionLinePos();
+                const QPointF textAnchor = dim->getTextAnchor();
+                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
+                const bool hasCustomText = !dim->getCustomText().isEmpty();
+
+                writeCode(0, "DIMENSION");
+                writeCode(5, nextHandle());
+                writeCode(100, "AcDbEntity");
+                writeCode(8, prim->getLayerName());
+                writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                writeCode(420, getTrueColor24Bit(prim->getColor()));
+                writeCode(370, getDxfLineWeight(prim->getLineType()));
+                writeCode(100, "AcDbDimension");
+                writeCode(2, blockName);
+                writeCode(10, textAnchor.x());
+                writeCode(20, textAnchor.y());
+                writeCode(30, 0.0);
+                writeCode(11, linePos.x());
+                writeCode(21, linePos.y());
+                writeCode(31, 0.0);
+                writeCode(70, dim->getMode() == LinearDimensionMode::Aligned ? 1 : 0);
+                if (hasCustomText) {
+                    writeCode(1, dim->getCustomText());
+                }
+                writeCode(3, "STANDARD");
+                writeCode(42, dim->getMeasuredValue());
+                writeCode(100, "AcDbAlignedDimension");
+                writeCode(13, start.x());
+                writeCode(23, start.y());
+                writeCode(33, 0.0);
+                writeCode(14, end.x());
+                writeCode(24, end.y());
+                writeCode(34, 0.0);
+                writeCode(15, linePos.x());
+                writeCode(25, linePos.y());
+                writeCode(35, 0.0);
+                if (dim->getMode() != LinearDimensionMode::Aligned) {
+                    const double angleDeg = dim->getMode() == LinearDimensionMode::Vertical ? 90.0 : 0.0;
+                    writeCode(50, angleDeg);
+                }
+                writeXData();
+                writeClarusEntityId();
+                writeCode(999, "CLARUSCAD_DIM_KIND:LINEAR");
+                writeCode(999, QString("CLARUSCAD_DIM_MODE:%1").arg(linearModeToken(dim->getMode())));
+                writeCode(999, QString("CLARUSCAD_DIM_LINE_X:%1").arg(linePos.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_LINE_Y:%1").arg(linePos.y(), 0, 'f', 10));
+                writeDimensionStyleMeta(dim);
+                writeLinearAttachmentMeta("DIM_START", dim->getStartAttachment());
+                writeLinearAttachmentMeta("DIM_END", dim->getEndAttachment());
+            }
+        }
+        else if (type == PrimitiveType::RadialDimension) {
+            auto* dim = dynamic_cast<RadialDimensionPrimitive*>(prim.get());
+            if (dim) {
+                const QPointF center = dim->getCenterPoint();
+                const QPointF radiusPoint = dim->getRadiusPoint();
+                const QPointF linePos = dim->getDimensionLinePos();
+                const QPointF textAnchor = dim->getTextAnchor();
+                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
+                const bool hasCustomText = !dim->getCustomText().isEmpty();
+                const double leaderLength = QLineF(center, linePos).length();
+
+                writeCode(0, "DIMENSION");
+                writeCode(5, nextHandle());
+                writeCode(100, "AcDbEntity");
+                writeCode(8, prim->getLayerName());
+                writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                writeCode(420, getTrueColor24Bit(prim->getColor()));
+                writeCode(370, getDxfLineWeight(prim->getLineType()));
+                writeCode(100, "AcDbDimension");
+                writeCode(2, blockName);
+                writeCode(10, textAnchor.x());
+                writeCode(20, textAnchor.y());
+                writeCode(30, 0.0);
+                writeCode(11, linePos.x());
+                writeCode(21, linePos.y());
+                writeCode(31, 0.0);
+                writeCode(70, dim->isDiameterMode() ? 3 : 4);
+                if (hasCustomText) {
+                    writeCode(1, dim->getCustomText());
+                }
+                writeCode(3, "STANDARD");
+                writeCode(42, dim->getMeasuredValue());
+                writeCode(100, dim->isDiameterMode() ? "AcDbDiametricDimension" : "AcDbRadialDimension");
+                writeCode(15, center.x());
+                writeCode(25, center.y());
+                writeCode(35, 0.0);
+                writeCode(16, radiusPoint.x());
+                writeCode(26, radiusPoint.y());
+                writeCode(36, 0.0);
+                writeCode(40, leaderLength);
+                writeXData();
+                writeClarusEntityId();
+                writeCode(999, QString("CLARUSCAD_DIM_KIND:%1").arg(dim->isDiameterMode() ? "DIAMETER" : "RADIUS"));
+                writeDimensionStyleMeta(dim);
+                writeCode(999, QString("CLARUSCAD_DIM_CENTER_X:%1").arg(center.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_CENTER_Y:%1").arg(center.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_RADIUS_X:%1").arg(radiusPoint.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_RADIUS_Y:%1").arg(radiusPoint.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_LINE_X:%1").arg(linePos.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_LINE_Y:%1").arg(linePos.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_ASSOC_ANGLE:%1").arg(dim->getAssociationAngle(), 0, 'f', 10));
+                if (dim->getAssociatedPrimitive()) {
+                    writeCode(999, QString("CLARUSCAD_DIM_ASSOC_SOURCE:%1").arg(clarusIds.value(dim->getAssociatedPrimitive(), -1)));
+                    writeCode(999, QString("CLARUSCAD_DIM_ASSOC_SOURCE_TYPE:%1").arg(primitiveTypeToken(dim->getAssociatedPrimitive()->getType())));
+                }
+            }
+        }
+        else if (type == PrimitiveType::AngularDimension) {
+            auto* dim = dynamic_cast<AngularDimensionPrimitive*>(prim.get());
+            if (dim) {
+                const QPointF center = dim->getCenterPoint();
+                const QPointF start = dim->getStartPoint();
+                const QPointF end = dim->getEndPoint();
+                const QPointF arcPoint = dim->getArcPoint();
+                const QPointF textAnchor = dim->getTextAnchor();
+                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
+                const bool hasCustomText = !dim->getCustomText().isEmpty();
+
+                writeCode(0, "DIMENSION");
+                writeCode(5, nextHandle());
+                writeCode(100, "AcDbEntity");
+                writeCode(8, prim->getLayerName());
+                writeCode(62, getAutoCadColorIndex(prim->getColor()));
+                writeCode(420, getTrueColor24Bit(prim->getColor()));
+                writeCode(370, getDxfLineWeight(prim->getLineType()));
+                writeCode(100, "AcDbDimension");
+                writeCode(2, blockName);
+                writeCode(10, textAnchor.x());
+                writeCode(20, textAnchor.y());
+                writeCode(30, 0.0);
+                writeCode(11, arcPoint.x());
+                writeCode(21, arcPoint.y());
+                writeCode(31, 0.0);
+                writeCode(70, 5);
+                if (hasCustomText) {
+                    writeCode(1, dim->getCustomText());
+                }
+                writeCode(3, "STANDARD");
+                writeCode(42, dim->getMeasuredValue());
+                writeCode(100, "AcDb3PointAngularDimension");
+                writeCode(13, start.x());
+                writeCode(23, start.y());
+                writeCode(33, 0.0);
+                writeCode(14, end.x());
+                writeCode(24, end.y());
+                writeCode(34, 0.0);
+                writeCode(15, center.x());
+                writeCode(25, center.y());
+                writeCode(35, 0.0);
+                writeCode(16, arcPoint.x());
+                writeCode(26, arcPoint.y());
+                writeCode(36, 0.0);
+                writeXData();
+                writeClarusEntityId();
+                writeCode(999, "CLARUSCAD_DIM_KIND:ANGULAR");
+                writeDimensionStyleMeta(dim);
+                writeCode(999, QString("CLARUSCAD_DIM_CENTER_X:%1").arg(center.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_CENTER_Y:%1").arg(center.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_START_X:%1").arg(start.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_START_Y:%1").arg(start.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_END_X:%1").arg(end.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_END_Y:%1").arg(end.y(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_ARC_X:%1").arg(arcPoint.x(), 0, 'f', 10));
+                writeCode(999, QString("CLARUSCAD_DIM_ARC_Y:%1").arg(arcPoint.y(), 0, 'f', 10));
+                if (dim->getFirstAssociatedPrimitive()) {
+                    writeCode(999, QString("CLARUSCAD_DIM_FIRST_SOURCE:%1").arg(clarusIds.value(dim->getFirstAssociatedPrimitive(), -1)));
+                    writeCode(999, QString("CLARUSCAD_DIM_FIRST_EDGE:%1").arg(dim->getFirstAssociatedEdgeIndex()));
+                }
+                if (dim->getSecondAssociatedPrimitive()) {
+                    writeCode(999, QString("CLARUSCAD_DIM_SECOND_SOURCE:%1").arg(clarusIds.value(dim->getSecondAssociatedPrimitive(), -1)));
+                    writeCode(999, QString("CLARUSCAD_DIM_SECOND_EDGE:%1").arg(dim->getSecondAssociatedEdgeIndex()));
                 }
             }
         }

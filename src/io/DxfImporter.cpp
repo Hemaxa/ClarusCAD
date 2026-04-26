@@ -10,12 +10,18 @@
 #include "PolygonPrimitive.h"
 #include "SplinePrimitive.h"
 #include "RectanglePrimitive.h"
+#include "../model/primitives/dimensions/BaseDimensionPrimitive.h"
+#include "../model/primitives/dimensions/LinearDimensionPrimitive.h"
+#include "../model/primitives/dimensions/RadialDimensionPrimitive.h"
+#include "../model/primitives/dimensions/AngularDimensionPrimitive.h"
 #include "EnumManager.h"
+#include "../view/managers/SettingsManager.h"
 
 #include <QFile>
 #include <QTextStream>
 #include <QColor>
 #include <QMap>
+#include <QHash>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -79,6 +85,19 @@ struct EntityProps {
     QColor color = Qt::white;
 };
 
+struct ImportedEntityRef {
+    BasePrimitive* primary = nullptr;
+    QVector<BasePrimitive*> edges;
+};
+
+struct DimensionAssociationMap {
+    QHash<int, ImportedEntityRef> byId;
+};
+
+struct DxfMeta {
+    QHash<QString, QString> values;
+};
+
 static EntityProps extractCommonProps(const QVector<DxfPair>& data) {
     EntityProps props;
     bool hasTrueColor = false;
@@ -108,21 +127,188 @@ static void applyProps(BasePrimitive* p, const EntityProps& props) {
     p->setLineType(props.lineType);
 }
 
+static DxfMeta extractMeta(const QVector<DxfPair>& data)
+{
+    DxfMeta meta;
+    for (const auto& d : data) {
+        if (d.code != 999) continue;
+        const int sep = d.value.indexOf(':');
+        if (sep <= 0) continue;
+        meta.values.insert(d.value.left(sep), d.value.mid(sep + 1));
+    }
+    return meta;
+}
+
+static QString metaValue(const DxfMeta& meta, const QString& key, const QString& fallback = QString())
+{
+    return meta.values.value(key, fallback);
+}
+
+static int metaInt(const DxfMeta& meta, const QString& key, int fallback = 0)
+{
+    bool ok = false;
+    const int value = meta.values.value(key).toInt(&ok);
+    return ok ? value : fallback;
+}
+
+static double metaDouble(const DxfMeta& meta, const QString& key, double fallback = 0.0)
+{
+    bool ok = false;
+    const double value = meta.values.value(key).toDouble(&ok);
+    return ok ? value : fallback;
+}
+
+static bool metaBool(const DxfMeta& meta, const QString& key, bool fallback = false)
+{
+    if (!meta.values.contains(key)) return fallback;
+    const QString value = meta.values.value(key).trimmed().toLower();
+    return value == "1" || value == "true" || value == "yes";
+}
+
+static PrimitiveType primitiveTypeFromToken(const QString& token)
+{
+    const QString upper = token.trimmed().toUpper();
+    if (upper == "SEGMENT") return PrimitiveType::Segment;
+    if (upper == "CIRCLE") return PrimitiveType::Circle;
+    if (upper == "ARC") return PrimitiveType::Arc;
+    if (upper == "RECTANGLE") return PrimitiveType::Rectangle;
+    if (upper == "ELLIPSE") return PrimitiveType::Ellipse;
+    if (upper == "POLYGON") return PrimitiveType::Polygon;
+    if (upper == "SPLINE") return PrimitiveType::Spline;
+    if (upper == "LINEAR_DIMENSION") return PrimitiveType::LinearDimension;
+    if (upper == "RADIAL_DIMENSION") return PrimitiveType::RadialDimension;
+    if (upper == "ANGULAR_DIMENSION") return PrimitiveType::AngularDimension;
+    if (upper == "POINT") return PrimitiveType::Point;
+    return PrimitiveType::Generic;
+}
+
+static SnapType snapTypeFromToken(const QString& token)
+{
+    const QString upper = token.trimmed().toUpper();
+    if (upper == "ENDPOINT") return SnapType::Endpoint;
+    if (upper == "MIDPOINT") return SnapType::Midpoint;
+    if (upper == "CENTER") return SnapType::Center;
+    if (upper == "INTERSECTION") return SnapType::Intersection;
+    if (upper == "PERPENDICULAR") return SnapType::Perpendicular;
+    if (upper == "TANGENT") return SnapType::Tangent;
+    if (upper == "QUADRANT") return SnapType::Quadrant;
+    if (upper == "GRID") return SnapType::Grid;
+    if (upper == "NEAREST") return SnapType::Nearest;
+    if (upper == "ALL") return SnapType::All;
+    return SnapType::None;
+}
+
+static LinearDimensionMode linearModeFromToken(const QString& token)
+{
+    const QString upper = token.trimmed().toUpper();
+    if (upper == "HORIZONTAL") return LinearDimensionMode::Horizontal;
+    if (upper == "VERTICAL") return LinearDimensionMode::Vertical;
+    return LinearDimensionMode::Aligned;
+}
+
+static DimensionStyle extractDimensionStyle(const DxfMeta& meta)
+{
+    DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
+    if (meta.values.contains("CLARUSCAD_DIM_FONT")) style.fontFamily = metaValue(meta, "CLARUSCAD_DIM_FONT");
+    if (meta.values.contains("CLARUSCAD_DIM_TEXT_HEIGHT")) style.textHeight = metaDouble(meta, "CLARUSCAD_DIM_TEXT_HEIGHT", style.textHeight);
+    if (meta.values.contains("CLARUSCAD_DIM_TEXT_GAP")) style.textGap = metaDouble(meta, "CLARUSCAD_DIM_TEXT_GAP", style.textGap);
+    if (meta.values.contains("CLARUSCAD_DIM_TEXT_ALONG")) style.textAlongLineOffset = metaDouble(meta, "CLARUSCAD_DIM_TEXT_ALONG", style.textAlongLineOffset);
+    if (meta.values.contains("CLARUSCAD_DIM_ARROW_SIZE")) style.arrowSize = metaDouble(meta, "CLARUSCAD_DIM_ARROW_SIZE", style.arrowSize);
+    if (meta.values.contains("CLARUSCAD_DIM_ARROW_TYPE")) style.arrowType = static_cast<DimensionArrowType>(metaInt(meta, "CLARUSCAD_DIM_ARROW_TYPE", static_cast<int>(style.arrowType)));
+    if (meta.values.contains("CLARUSCAD_DIM_ARROW_FILLED")) style.arrowFilled = metaBool(meta, "CLARUSCAD_DIM_ARROW_FILLED", style.arrowFilled);
+    if (meta.values.contains("CLARUSCAD_DIM_EXT_OFFSET")) style.extensionLineOffset = metaDouble(meta, "CLARUSCAD_DIM_EXT_OFFSET", style.extensionLineOffset);
+    if (meta.values.contains("CLARUSCAD_DIM_EXT_EXTEND")) style.extensionLineExtend = metaDouble(meta, "CLARUSCAD_DIM_EXT_EXTEND", style.extensionLineExtend);
+    if (meta.values.contains("CLARUSCAD_DIM_LINE_EXT")) style.dimensionLineExtension = metaDouble(meta, "CLARUSCAD_DIM_LINE_EXT", style.dimensionLineExtension);
+    if (meta.values.contains("CLARUSCAD_DIM_EXT_LTYPE")) style.extensionLineTypeId = metaInt(meta, "CLARUSCAD_DIM_EXT_LTYPE", style.extensionLineTypeId);
+    if (meta.values.contains("CLARUSCAD_DIM_LINE_LTYPE")) style.dimensionLineTypeId = metaInt(meta, "CLARUSCAD_DIM_LINE_LTYPE", style.dimensionLineTypeId);
+    if (meta.values.contains("CLARUSCAD_DIM_TEXT_COLOR")) style.textColor = QColor::fromRgba(static_cast<QRgb>(metaInt(meta, "CLARUSCAD_DIM_TEXT_COLOR", style.textColor.rgba())));
+    if (meta.values.contains("CLARUSCAD_DIM_EXT_COLOR")) style.extensionLineColor = QColor::fromRgba(static_cast<QRgb>(metaInt(meta, "CLARUSCAD_DIM_EXT_COLOR", style.extensionLineColor.rgba())));
+    if (meta.values.contains("CLARUSCAD_DIM_LINE_COLOR")) style.dimensionLineColor = QColor::fromRgba(static_cast<QRgb>(metaInt(meta, "CLARUSCAD_DIM_LINE_COLOR", style.dimensionLineColor.rgba())));
+    return style;
+}
+
+static void applyDimensionMeta(BaseDimensionPrimitive* dim, const DxfMeta& meta)
+{
+    dim->setStyle(extractDimensionStyle(meta));
+    dim->setCustomText(metaValue(meta, "CLARUSCAD_DIM_CUSTOM_TEXT"));
+    if (metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false)) {
+        dim->setCustomTextPosition(QPointF(metaDouble(meta, "CLARUSCAD_DIM_TEXT_POS_X"), metaDouble(meta, "CLARUSCAD_DIM_TEXT_POS_Y")));
+    }
+}
+
+static LinearDimensionPrimitive::Attachment loadAttachment(const DxfMeta& meta, const QString& prefix,
+                                                           const DimensionAssociationMap& associations)
+{
+    LinearDimensionPrimitive::Attachment attachment;
+    attachment.snapType = snapTypeFromToken(metaValue(meta, QString("CLARUSCAD_%1_SNAP").arg(prefix)));
+    attachment.index = metaInt(meta, QString("CLARUSCAD_%1_INDEX").arg(prefix), -1);
+    attachment.param = metaDouble(meta, QString("CLARUSCAD_%1_PARAM").arg(prefix), 0.0);
+    attachment.fallback = QPointF(metaDouble(meta, QString("CLARUSCAD_%1_FALLBACK_X").arg(prefix), 0.0),
+                                  metaDouble(meta, QString("CLARUSCAD_%1_FALLBACK_Y").arg(prefix), 0.0));
+    const int sourceId = metaInt(meta, QString("CLARUSCAD_%1_SOURCE").arg(prefix), -1);
+    if (sourceId >= 0 && associations.byId.contains(sourceId)) {
+        const ImportedEntityRef ref = associations.byId.value(sourceId);
+        BasePrimitive* source = ref.primary;
+        bool resolved = true;
+        if (!ref.edges.isEmpty()) {
+            const PrimitiveType sourceType = primitiveTypeFromToken(metaValue(meta, QString("CLARUSCAD_%1_SOURCE_TYPE").arg(prefix)));
+            if (sourceType == PrimitiveType::Rectangle || sourceType == PrimitiveType::Polygon) {
+                if ((attachment.snapType == SnapType::Endpoint
+                     || attachment.snapType == SnapType::Midpoint
+                     || attachment.snapType == SnapType::Nearest)
+                    && attachment.index >= 0 && attachment.index < ref.edges.size()) {
+                    source = ref.edges[attachment.index];
+                    attachment.index = 0;
+                } else {
+                    resolved = false;
+                }
+            }
+        }
+        attachment.source = resolved ? source : nullptr;
+    }
+    return attachment;
+}
+
+static void registerImportedPrimitive(const DxfMeta& meta, BasePrimitive* primitive,
+                                      DimensionAssociationMap& associations)
+{
+    const int clarusId = metaInt(meta, "CLARUSCAD_ID", -1);
+    if (clarusId < 0 || !primitive) return;
+    ImportedEntityRef ref;
+    ref.primary = primitive;
+    ref.edges.append(primitive);
+    associations.byId.insert(clarusId, ref);
+}
+
+static void registerImportedEdges(const DxfMeta& meta, const QVector<BasePrimitive*>& edges,
+                                  DimensionAssociationMap& associations)
+{
+    const int clarusId = metaInt(meta, "CLARUSCAD_ID", -1);
+    if (clarusId < 0 || edges.isEmpty()) return;
+    ImportedEntityRef ref;
+    ref.primary = edges.first();
+    ref.edges = edges;
+    associations.byId.insert(clarusId, ref);
+}
+
 // Прямая обработка одной сущности — добавляет примитивы в сцену
 // Возвращает true, если обработана
 static void processEntity(const DxfEntity& entity, Scene& scene,
                            const QMap<QString, DxfBlock>& blocks,
+                           DimensionAssociationMap& associations,
                            int depth = 0);
 
 // Обработка полилинии из набора вершин
-static void createPolylineSegments(Scene& scene, const QVector<QPointF>& vertices,
+static QVector<BasePrimitive*> createPolylineSegments(Scene& scene, const QVector<QPointF>& vertices,
                                      bool closed, const EntityProps& props) {
-    if (vertices.size() < 2) return;
+    QVector<BasePrimitive*> created;
+    if (vertices.size() < 2) return created;
     for (int i = 0; i < vertices.size() - 1; ++i) {
         auto* seg = new SegmentPrimitive(
             PointPrimitive(vertices[i].x(), vertices[i].y()),
             PointPrimitive(vertices[i+1].x(), vertices[i+1].y()));
         applyProps(seg, props);
+        created.append(seg);
         scene.addPrimitive(std::unique_ptr<BasePrimitive>(seg));
     }
     if (closed && vertices.size() > 2) {
@@ -130,18 +316,22 @@ static void createPolylineSegments(Scene& scene, const QVector<QPointF>& vertice
             PointPrimitive(vertices.last().x(), vertices.last().y()),
             PointPrimitive(vertices.first().x(), vertices.first().y()));
         applyProps(seg, props);
+        created.append(seg);
         scene.addPrimitive(std::unique_ptr<BasePrimitive>(seg));
     }
+    return created;
 }
 
 static void processEntity(const DxfEntity& entity, Scene& scene,
                            const QMap<QString, DxfBlock>& blocks,
+                           DimensionAssociationMap& associations,
                            int depth) {
     // Защита от бесконечной рекурсии (максимум 10 уровней вложенности)
     if (depth > 10) return;
 
     const auto& data = entity.data;
     EntityProps props = extractCommonProps(data);
+    const DxfMeta meta = extractMeta(data);
 
     if (entity.type == "LINE") {
         double x1=0, y1=0, x2=0, y2=0;
@@ -154,6 +344,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
         auto* seg = new SegmentPrimitive(PointPrimitive(x1, y1), PointPrimitive(x2, y2));
         applyProps(seg, props);
         scene.addPrimitive(std::unique_ptr<BasePrimitive>(seg));
+        registerImportedPrimitive(meta, seg, associations);
     }
     else if (entity.type == "CIRCLE") {
         double x=0, y=0, r=0;
@@ -166,6 +357,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             auto* circ = new CirclePrimitive(PointPrimitive(x, y), r);
             applyProps(circ, props);
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(circ));
+            registerImportedPrimitive(meta, circ, associations);
         }
     }
     else if (entity.type == "ARC") {
@@ -192,6 +384,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             auto* arc = new ArcPrimitive(PointPrimitive(x, y), r, qtStart, qtSpan);
             applyProps(arc, props);
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(arc));
+            registerImportedPrimitive(meta, arc, associations);
         }
     }
     else if (entity.type == "ELLIPSE") {
@@ -214,6 +407,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             auto* ell = new EllipsePrimitive(PointPrimitive(cx, cy), majorRadius, minorRadius, rotation);
             applyProps(ell, props);
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(ell));
+            registerImportedPrimitive(meta, ell, associations);
         }
     }
     else if (entity.type == "SPLINE") {
@@ -230,6 +424,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             spline->setClosed(isClosed);
             applyProps(spline, props);
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(spline));
+            registerImportedPrimitive(meta, spline, associations);
         }
     }
     else if (entity.type == "LWPOLYLINE") {
@@ -248,7 +443,141 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
                 hasX = false;
             }
         }
-        createPolylineSegments(scene, pts, closed, props);
+        const QVector<BasePrimitive*> edges = createPolylineSegments(scene, pts, closed, props);
+        registerImportedEdges(meta, edges, associations);
+    }
+    else if (entity.type == "DIMENSION") {
+        QString kind = metaValue(meta, "CLARUSCAD_DIM_KIND").trimmed().toUpper();
+        if (kind.isEmpty()) {
+            int dimType = 0;
+            for (const auto& d : data) {
+                if (d.code == 70) {
+                    dimType = d.value.toInt() & 0x0F;
+                    break;
+                }
+            }
+            if (dimType == 0 || dimType == 1) kind = "LINEAR";
+            else if (dimType == 3) kind = "DIAMETER";
+            else if (dimType == 4) kind = "RADIUS";
+            else if (dimType == 2 || dimType == 5) kind = "ANGULAR";
+        }
+        if (kind == "LINEAR") {
+            auto* dim = new LinearDimensionPrimitive();
+            QPointF start(metaDouble(meta, "CLARUSCAD_DIM_START_FALLBACK_X"), metaDouble(meta, "CLARUSCAD_DIM_START_FALLBACK_Y"));
+            QPointF end(metaDouble(meta, "CLARUSCAD_DIM_END_FALLBACK_X"), metaDouble(meta, "CLARUSCAD_DIM_END_FALLBACK_Y"));
+            for (const auto& d : data) {
+                if (d.code == 13) start.setX(d.value.toDouble());
+                if (d.code == 23) start.setY(d.value.toDouble());
+                if (d.code == 14) end.setX(d.value.toDouble());
+                if (d.code == 24) end.setY(d.value.toDouble());
+            }
+            dim->setStartPoint(start);
+            dim->setEndPoint(end);
+            dim->setDimensionLinePos(QPointF(0.0, 0.0));
+            dim->setMode(linearModeFromToken(metaValue(meta, "CLARUSCAD_DIM_MODE")));
+            dim->setStartAttachment(loadAttachment(meta, "DIM_START", associations));
+            dim->setEndAttachment(loadAttachment(meta, "DIM_END", associations));
+            dim->updateFromAttachments();
+
+            QPointF linePos;
+            bool hasLineMeta = meta.values.contains("CLARUSCAD_DIM_LINE_X") && meta.values.contains("CLARUSCAD_DIM_LINE_Y");
+            if (hasLineMeta) {
+                linePos = QPointF(metaDouble(meta, "CLARUSCAD_DIM_LINE_X"), metaDouble(meta, "CLARUSCAD_DIM_LINE_Y"));
+            } else {
+                for (const auto& d : data) {
+                    if (d.code == 11) linePos.setX(d.value.toDouble());
+                    if (d.code == 21) linePos.setY(d.value.toDouble());
+                }
+            }
+            dim->setDimensionLinePos(linePos);
+            applyProps(dim, props);
+            applyDimensionMeta(dim, meta);
+            dim->recalculateValue();
+            scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
+            registerImportedPrimitive(meta, dim, associations);
+        }
+        else if (kind == "RADIUS" || kind == "DIAMETER") {
+            auto* dim = new RadialDimensionPrimitive();
+            QPointF center(metaDouble(meta, "CLARUSCAD_DIM_CENTER_X"), metaDouble(meta, "CLARUSCAD_DIM_CENTER_Y"));
+            QPointF radiusPoint(metaDouble(meta, "CLARUSCAD_DIM_RADIUS_X"), metaDouble(meta, "CLARUSCAD_DIM_RADIUS_Y"));
+            QPointF linePos(metaDouble(meta, "CLARUSCAD_DIM_LINE_X"), metaDouble(meta, "CLARUSCAD_DIM_LINE_Y"));
+            if (!meta.values.contains("CLARUSCAD_DIM_CENTER_X") || !meta.values.contains("CLARUSCAD_DIM_RADIUS_X")) {
+                for (const auto& d : data) {
+                    if (d.code == 15) center.setX(d.value.toDouble());
+                    if (d.code == 25) center.setY(d.value.toDouble());
+                    if (d.code == 16) radiusPoint.setX(d.value.toDouble());
+                    if (d.code == 26) radiusPoint.setY(d.value.toDouble());
+                    if (d.code == 11) linePos.setX(d.value.toDouble());
+                    if (d.code == 21) linePos.setY(d.value.toDouble());
+                }
+            }
+            dim->setCenterPoint(center);
+            dim->setRadiusPoint(radiusPoint);
+            dim->setDiameterMode(kind == "DIAMETER");
+            dim->setDimensionLinePos(linePos);
+
+            const int sourceId = metaInt(meta, "CLARUSCAD_DIM_ASSOC_SOURCE", -1);
+            if (sourceId >= 0 && associations.byId.contains(sourceId)) {
+                dim->setAssociatedPrimitive(associations.byId.value(sourceId).primary,
+                                            metaDouble(meta, "CLARUSCAD_DIM_ASSOC_ANGLE", 0.0));
+                dim->updateFromAssociation();
+            }
+
+            applyProps(dim, props);
+            applyDimensionMeta(dim, meta);
+            dim->recalculateValue();
+            scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
+            registerImportedPrimitive(meta, dim, associations);
+        }
+        else if (kind == "ANGULAR") {
+            auto* dim = new AngularDimensionPrimitive();
+            QPointF center(metaDouble(meta, "CLARUSCAD_DIM_CENTER_X"), metaDouble(meta, "CLARUSCAD_DIM_CENTER_Y"));
+            QPointF start(metaDouble(meta, "CLARUSCAD_DIM_START_X"), metaDouble(meta, "CLARUSCAD_DIM_START_Y"));
+            QPointF end(metaDouble(meta, "CLARUSCAD_DIM_END_X"), metaDouble(meta, "CLARUSCAD_DIM_END_Y"));
+            QPointF arcPoint(metaDouble(meta, "CLARUSCAD_DIM_ARC_X"), metaDouble(meta, "CLARUSCAD_DIM_ARC_Y"));
+            if (!meta.values.contains("CLARUSCAD_DIM_CENTER_X")) {
+                for (const auto& d : data) {
+                    if (d.code == 13) start.setX(d.value.toDouble());
+                    if (d.code == 23) start.setY(d.value.toDouble());
+                    if (d.code == 14) end.setX(d.value.toDouble());
+                    if (d.code == 24) end.setY(d.value.toDouble());
+                    if (d.code == 15) center.setX(d.value.toDouble());
+                    if (d.code == 25) center.setY(d.value.toDouble());
+                    if (d.code == 16) arcPoint.setX(d.value.toDouble());
+                    if (d.code == 26) arcPoint.setY(d.value.toDouble());
+                }
+            }
+            dim->setCenterPoint(center);
+            dim->setStartPoint(start);
+            dim->setEndPoint(end);
+            dim->setArcPoint(arcPoint);
+
+            const int firstSourceId = metaInt(meta, "CLARUSCAD_DIM_FIRST_SOURCE", -1);
+            const int secondSourceId = metaInt(meta, "CLARUSCAD_DIM_SECOND_SOURCE", -1);
+            if (firstSourceId >= 0 && secondSourceId >= 0
+                && associations.byId.contains(firstSourceId)
+                && associations.byId.contains(secondSourceId)) {
+                ImportedEntityRef firstRef = associations.byId.value(firstSourceId);
+                ImportedEntityRef secondRef = associations.byId.value(secondSourceId);
+                const int firstEdge = metaInt(meta, "CLARUSCAD_DIM_FIRST_EDGE", 0);
+                const int secondEdge = metaInt(meta, "CLARUSCAD_DIM_SECOND_EDGE", 0);
+                BasePrimitive* firstSource = !firstRef.edges.isEmpty() && firstEdge >= 0 && firstEdge < firstRef.edges.size()
+                    ? firstRef.edges[firstEdge]
+                    : firstRef.primary;
+                BasePrimitive* secondSource = !secondRef.edges.isEmpty() && secondEdge >= 0 && secondEdge < secondRef.edges.size()
+                    ? secondRef.edges[secondEdge]
+                    : secondRef.primary;
+                dim->setEdgeAssociation(firstSource, 0, secondSource, 0);
+                dim->updateFromAssociation();
+                dim->setArcPoint(arcPoint);
+            }
+
+            applyProps(dim, props);
+            applyDimensionMeta(dim, meta);
+            dim->recalculateValue();
+            scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
+            registerImportedPrimitive(meta, dim, associations);
+        }
     }
     else if (entity.type == "INSERT") {
         // INSERT — вставка блока. Находим блок по имени и обрабатываем его сущности
@@ -268,7 +597,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
         if (blocks.contains(blockName)) {
             const DxfBlock& block = blocks[blockName];
             for (const auto& blockEntity : block.entities) {
-                processEntity(blockEntity, scene, blocks, depth + 1);
+                processEntity(blockEntity, scene, blocks, associations, depth + 1);
             }
         }
     }
@@ -303,6 +632,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
 
     int totalPairs = pairs.size();
     if (totalPairs == 0) return false;
+    DimensionAssociationMap associations;
 
     // 2. Вспомогательная функция: собрать данные одной entity начиная с позиции после entity type
     //    Возвращает позицию следующего кода 0 (entity type) или конца секции
@@ -473,7 +803,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
                     polyEntity.data.append({10, QString::number(pt.x(), 'f', 10)});
                     polyEntity.data.append({20, QString::number(pt.y(), 'f', 10)});
                 }
-                processEntity(polyEntity, scene, blocks);
+                processEntity(polyEntity, scene, blocks, associations);
                 readingPolyline = false;
             }
             break;
@@ -511,7 +841,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
                 polyEntity.data.append({10, QString::number(pt.x(), 'f', 10)});
                 polyEntity.data.append({20, QString::number(pt.y(), 'f', 10)});
             }
-            processEntity(polyEntity, scene, blocks);
+            processEntity(polyEntity, scene, blocks, associations);
             readingPolyline = false;
             currentPolyVertices.clear();
         }
@@ -519,7 +849,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
             DxfEntity ent;
             ent.type = entityType;
             ent.data = entData;
-            processEntity(ent, scene, blocks);
+            processEntity(ent, scene, blocks, associations);
         }
     }
 

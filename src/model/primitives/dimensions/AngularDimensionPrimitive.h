@@ -23,6 +23,10 @@ public:
     void setEdgeAssociation(BasePrimitive* first, int firstEdge, BasePrimitive* second, int secondEdge) {
         m_firstSource = first; m_firstEdgeIndex = firstEdge; m_secondSource = second; m_secondEdgeIndex = secondEdge;
     }
+    BasePrimitive* getFirstAssociatedPrimitive() const { return m_firstSource; }
+    BasePrimitive* getSecondAssociatedPrimitive() const { return m_secondSource; }
+    int getFirstAssociatedEdgeIndex() const { return m_firstEdgeIndex; }
+    int getSecondAssociatedEdgeIndex() const { return m_secondEdgeIndex; }
     void updateFromAssociation();
     void toggleArcSide();
 

@@ -42,6 +42,8 @@ public:
     QPointF getDimensionLinePos() const { return m_dimensionLinePos; }
     void setStartAttachment(const Attachment& a) { m_startAttachment = a; }
     void setEndAttachment(const Attachment& a) { m_endAttachment = a; }
+    Attachment getStartAttachment() const { return m_startAttachment; }
+    Attachment getEndAttachment() const { return m_endAttachment; }
     void updateFromAttachments();
 
     void setMode(LinearDimensionMode mode) { m_mode = mode; recalculateValue(); }
