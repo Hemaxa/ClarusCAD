@@ -209,6 +209,8 @@ jobs:
 
           "$MACDEPLOYQT" "$APP_BUNDLE" -verbose=1
 
+          codesign --force --deep --sign - "$APP_BUNDLE"
+
           ditto -c -k --sequesterRsrc --keepParent \
             "$APP_BUNDLE" \
             "ClarusCAD_v${VERSION}_macOS.app.zip"
