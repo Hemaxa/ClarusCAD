@@ -68,9 +68,9 @@ jobs:
           - os: macos-14
             qt_version: "6.5.3"
             qt_arch: "clang_64"
-            package_type: "dmg"
+            package_type: "macos-app"
             artifact_name: "ClarusCAD-macos"
-            artifact_path: "ClarusCAD_v*_macOS.dmg"
+            artifact_path: "ClarusCAD_v*_macOS.app.zip"
 
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
@@ -191,19 +191,27 @@ jobs:
 
           Move-Item $installer.FullName "ClarusCAD_v${env:VERSION}_windows.exe"
 
-      - name: Package macOS installer
-        if: matrix.package_type == 'dmg'
+      - name: Package macOS app bundle
+        if: matrix.package_type == 'macos-app'
         shell: bash
         run: |
-          cmake --build build --config Release --target package
-
-          DMG_FILE=$(find build -name '*.dmg' | head -n1)
-          if [ -z "$DMG_FILE" ]; then
-            echo "DMG installer was not created" >&2
+          APP_BUNDLE=$(find build -type d -name 'ClarusCAD.app' | head -n1)
+          if [ -z "$APP_BUNDLE" ]; then
+            echo "ClarusCAD.app was not created" >&2
             exit 1
           fi
 
-          mv "$DMG_FILE" "ClarusCAD_v${VERSION}_macOS.dmg"
+          MACDEPLOYQT="$QT_ROOT_DIR/bin/macdeployqt"
+          if [ ! -x "$MACDEPLOYQT" ]; then
+            echo "macdeployqt was not found at $MACDEPLOYQT" >&2
+            exit 1
+          fi
+
+          "$MACDEPLOYQT" "$APP_BUNDLE" -verbose=1
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP_BUNDLE" \
+            "ClarusCAD_v${VERSION}_macOS.app.zip"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
