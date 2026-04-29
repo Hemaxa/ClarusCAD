@@ -223,8 +223,6 @@ if(APPLE)
 
     #поиск необходимых утилит для сборки проекта
     find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS ${Qt6_DIR}/../../../bin)
-    find_program(PKGBUILD_EXECUTABLE pkgbuild)
-    find_program(PRODUCTBUILD_EXECUTABLE productbuild)
 
     #копирование иконки в .app
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.icns")
@@ -233,34 +231,16 @@ if(APPLE)
         )
     endif()
 
-    #создание и настройка .pkg
-    if(PKGBUILD_EXECUTABLE AND PRODUCTBUILD_EXECUTABLE)
+    #создание и настройка .dmg
+    if(MACDEPLOYQT_EXECUTABLE)
         add_custom_target(package
-            #запуск macdeployqt
-            COMMAND ${MACDEPLOYQT_EXECUTABLE} "$<TARGET_BUNDLE_DIR:ClarusCAD>" -verbose=1
+            #деплой зависимостей и создание dmg
+            COMMAND ${MACDEPLOYQT_EXECUTABLE} "$<TARGET_BUNDLE_DIR:ClarusCAD>" -dmg -verbose=1
 
-            #подпись приложения
-            COMMAND codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:ClarusCAD>"
-
-            #создание временной директории
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/package/root/Applications"
-
-            #перемещение .app во временную директорию
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "$<TARGET_BUNDLE_DIR:ClarusCAD>" "${CMAKE_BINARY_DIR}/package/root/Applications/ClarusCAD.app"
-
-            #упаковка в .pkg
-            COMMAND ${PKGBUILD_EXECUTABLE}
-                --root "${CMAKE_BINARY_DIR}/package/root"
-                --identifier "com.clarus.cad"
-                --version "${PROJECT_VERSION}"
-                --install-location "/" "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg"
-
-            #настройка .pkg
-            COMMAND ${PRODUCTBUILD_EXECUTABLE}
-                --package "${CMAKE_BINARY_DIR}/package/ClarusCAD.pkg" "${CMAKE_BINARY_DIR}/ClarusCAD_v${PROJECT_VERSION}_macOS_ARM.pkg"
-
-            #удаление временной директории
-            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/package"
+            #переименование итогового dmg
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/ClarusCAD.dmg"
+                "${CMAKE_BINARY_DIR}/ClarusCAD_v${PROJECT_VERSION}_macOS.dmg"
 
             DEPENDS ClarusCAD
             VERBATIM

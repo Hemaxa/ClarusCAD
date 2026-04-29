@@ -37,8 +37,8 @@ jobs:
             exit 1
           fi
 
-          TAG_NAME="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
-          RELEASE_NAME="ClarusCAD ${VERSION} build ${GITHUB_RUN_NUMBER}"
+          TAG_NAME="v${VERSION}"
+          RELEASE_NAME="ClarusCAD v${VERSION}"
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
@@ -58,9 +58,9 @@ jobs:
             artifact_name: "ClarusCAD-linux"
             artifact_path: "ClarusCAD_v*_linux.AppImage"
 
-          - os: windows-latest
+          - os: windows-2022
             qt_version: "6.5.3"
-            qt_arch: "win64_msvc2022_64"
+            qt_arch: "win64_msvc2019_64"
             package_type: "nsis"
             artifact_name: "ClarusCAD-windows"
             artifact_path: "ClarusCAD_v*_windows.exe"
@@ -68,9 +68,9 @@ jobs:
           - os: macos-14
             qt_version: "6.5.3"
             qt_arch: "clang_64"
-            package_type: "pkg"
+            package_type: "dmg"
             artifact_name: "ClarusCAD-macos"
-            artifact_path: "ClarusCAD_v*_macOS.pkg"
+            artifact_path: "ClarusCAD_v*_macOS.dmg"
 
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
@@ -192,18 +192,18 @@ jobs:
           Move-Item $installer.FullName "ClarusCAD_v${env:VERSION}_windows.exe"
 
       - name: Package macOS installer
-        if: matrix.package_type == 'pkg'
+        if: matrix.package_type == 'dmg'
         shell: bash
         run: |
           cmake --build build --config Release --target package
 
-          PKG_FILE=$(find build -name '*.pkg' | head -n1)
-          if [ -z "$PKG_FILE" ]; then
-            echo "PKG installer was not created" >&2
+          DMG_FILE=$(find build -name '*.dmg' | head -n1)
+          if [ -z "$DMG_FILE" ]; then
+            echo "DMG installer was not created" >&2
             exit 1
           fi
 
-          mv "$PKG_FILE" "ClarusCAD_v${VERSION}_macOS.pkg"
+          mv "$DMG_FILE" "ClarusCAD_v${VERSION}_macOS.dmg"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
@@ -236,5 +236,6 @@ jobs:
           name: ${{ needs.prepare.outputs.release_name }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          overwrite_files: true
           files: |
             release-artifacts/*
