@@ -1,6 +1,7 @@
 #include "CommandParser.h"
 #include "SettingsManager.h"
 #include "LinearDimensionCreationTool.h"
+#include "ThemeManager.h"
 
 #include <QRegularExpression>
 
@@ -17,7 +18,7 @@ CommandParser::CommandParser(QObject* parent) : QObject(parent)
 ParsedCommand CommandParser::parse(const QString& commandString) const
 {
     ParsedCommand result;
-    result.color = Qt::white;
+    result.color = ThemeManager::instance().getColor("drawingColor");
     QString trimmedCommand = commandString.trimmed();
 
     //обработка пустой строки

@@ -1,175 +1,170 @@
 /*
     Тема Hello Kitty
-    @iconColor: #DE62A7;
-    @backgroundColor: #FCEFF5;
-    @textColor: #3D2431;
-    @panelBackgroundColor: #FADCEB;
-    @borderColor: #F7C8E0;
-    @accentColor: #DE62A7;
-    @hoverColor: #FADCEB;
-    @selectionColor: #DE62A7;
-    @axisScaleColor: #DE62A7;
+    @iconColor: #df6da5;
+    @backgroundColor: #fff5f9;
+    @textColor: #4d2d3c;
+    @panelBackgroundColor: #fde6f0;
+    @borderColor: #efbfd2;
+    @accentColor: #df6da5;
+    @hoverColor: #f9d8e7;
+    @selectionColor: #df6da5;
+    @axisScaleColor: #b57d98;
+    @drawingColor: #ff4fa0;
 */
 
-/* --- Общие стили для окон и диалогов --- */
 QMainWindow, QDialog {
-    background-color: #FCEFF5;
-    color: #3D2431;
-}
-
-/* --- Заголовки панелей --- */
-QDockWidget::title {
-    background-color: #FADCEB;
-    padding: 5px;
-    border-radius: 4px;
-    border-bottom: 1px solid #DE62A7;
-    color: #3D2431;
+    background-color: #fff5f9;
+    color: #4d2d3c;
 }
 
 QWidget {
+    color: #4d2d3c;
     border: none;
     font-size: 13px;
-    color: #3D2431;
 }
 
-/* --- Информационная панель во вьюпорте --- */
+QDockWidget {
+    background-color: #fde6f0;
+}
+
+QDockWidget::title {
+    background-color: #fde6f0;
+    color: #4d2d3c;
+    padding: 6px 8px;
+    border-radius: 4px;
+    border-bottom: 1px solid #df6da5;
+}
+
 QLabel#InfoLabel {
-    background-color: rgba(250, 220, 235, 0.9);
-    color: #3D2431;
+    background-color: rgba(253, 230, 240, 0.94);
+    color: #4d2d3c;
     padding: 5px;
     border-radius: 4px;
-    border: 1px solid #F7C8E0;
+    border: 1px solid #efbfd2;
     font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
     font-size: 12px;
 }
 
-/* --- Кнопки на панели инструментов --- */
+QToolTip {
+    background-color: #fde6f0;
+    color: #4d2d3c;
+    border: 1px solid #efbfd2;
+    padding: 4px 6px;
+}
+
+QMenu {
+    background-color: #fde6f0;
+    color: #4d2d3c;
+    border: 1px solid #efbfd2;
+}
+
+QMenu::item {
+    padding: 6px 12px;
+}
+
+QMenu::item:selected {
+    background-color: #f9d8e7;
+    color: #df6da5;
+}
+
 QToolButton {
     background-color: transparent;
-    border: 1px solid #F7C8E0;
+    border: 1px solid #efbfd2;
     border-radius: 4px;
     padding: 5px;
 }
 
 QToolButton:hover, QToolButton:checked {
-    background-color: #FADCEB;
-    border: 1px solid #DE62A7;
+    background-color: #f9d8e7;
+    border: 1px solid #df6da5;
 }
 
-/* --- Обычные кнопки --- */
 QPushButton {
-    background-color: #FADCEB;
-    border: 1px solid #DE62A7;
-    color: #DE62A7;
+    background-color: #fde6f0;
+    border: 1px solid #df6da5;
+    color: #df6da5;
     padding: 5px 10px;
     border-radius: 4px;
 }
 
 QPushButton:hover {
-    background-color: #DE62A7;
-    color: #FFFFFF;
+    background-color: #df6da5;
+    color: #ffffff;
 }
 
-/* --- Поля ввода --- */
-QLineEdit {
-    background-color: #FFFFFF;
-    border: 1px solid #F7C8E0;
-    padding: 4px;
-    border-radius: 4px;
-    min-width: 25px;
-    height: 20px;
+QPushButton:disabled {
+    background-color: #f6e8ef;
+    border-color: #efbfd2;
+    color: #c497ad;
 }
 
-/* --- Комбо бокс типа линии в панели свойств --- */
-QComboBox#LineTypeComboBox {
-    background-color: #FFFFFF;
-    border: 1px solid #F7C8E0;
-    padding: 4px;
-    border-radius: 4px;
-    height: 20px;
+QLineEdit, QTextEdit, QPlainTextEdit,
+QComboBox, QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    color: #4d2d3c;
+    border: 1px solid #efbfd2;
+    border-radius: 6px;
+    padding: 4px 6px;
 }
 
-QComboBox::drop-down#LineTypeComboBox {
-    width: 15px;
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus,
+QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 1px solid #df6da5;
+}
+
+QComboBox::drop-down {
+    width: 18px;
     border: none;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    background-color: #F7C8E0;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background-color: #df6da5;
 }
 
-/* --- Список объектов --- */
+QSpinBox::up-button, QDoubleSpinBox::up-button,
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    width: 18px;
+    border: none;
+    background-color: #df6da5;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    color: #4d2d3c;
+    border: 1px solid #efbfd2;
+    selection-background-color: #df6da5;
+    selection-color: #ffffff;
+    min-height: 180px;
+    padding: 4px;
+}
+
 QListWidget {
-    background-color: #FCEFF5;
+    background-color: #fff5f9;
     border-radius: 4px;
-    border: 1px solid #F7C8E0;
+    border: 1px solid #efbfd2;
 }
 
 QListWidget::item:hover {
-    background-color: #F7C8E0;
+    background-color: #f9d8e7;
 }
 
 QListWidget::item:selected {
-    background-color: #DE62A7;
-    color: #FFFFFF;
+    background-color: #df6da5;
+    color: #ffffff;
 }
 
-/* --- Стили для окна настроек --- */
 QGroupBox {
-    border: 1px solid #DE62A7;
+    border: 1px solid #df6da5;
     border-radius: 4px;
     margin-top: 1ex;
     font-weight: bold;
     padding-top: 10px;
-    color: #3D2431;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top center;
     padding: 0 3px;
-    color: #3D2431;
 }
-
-QComboBox, QSpinBox, QDoubleSpinBox {
-    background-color: #FADCEB;
-    border: 1px solid #DE62A7;
-    border-radius: 6px;
-    padding: 4px;
-}
-
-QComboBox::drop-down {
-    width: 15px;
-    border: none;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    background-color: #DE62A7;
-}
-
-QComboBox {
-    width: 110px;
-}
-
-QSpinBox::up-button, QDoubleSpinBox::up-button {
-    width: 15px;
-    border: none;
-    border-top-right-radius: 4px;
-    background-color: #DE62A7;
-}
-
-QSpinBox::down-button, QDoubleSpinBox::down-button {
-    width: 15px;
-    border: none;
-    border-bottom-right-radius: 4px;
-    background-color: #DE62A7;
-}
-
-QSpinBox, QDoubleSpinBox {
-    width: 114px;
-}
-
-/* ======================================================= */
-/* --- ПАНЕЛЬ СВОЙСТВ ПРИМИТИВОВ --- */
-/* ======================================================= */
 
 QLineEdit#PropertiesInput {
     min-width: 70px;
@@ -177,17 +172,11 @@ QLineEdit#PropertiesInput {
     min-height: 24px;
     max-height: 24px;
     padding: 2px 6px;
-    border: 1px solid #F7C8E0;
-    border-radius: 4px;
-}
-
-QLineEdit#PropertiesInput:focus {
-    border: 1px solid #DE62A7;
 }
 
 QComboBox#PropertiesComboBox {
-    min-width: 100px;
-    max-width: 130px;
+    min-width: 120px;
+    max-width: 220px;
     min-height: 24px;
     max-height: 24px;
     padding: 2px 6px;
@@ -212,8 +201,8 @@ BasePropertiesWidget QComboBox,
 CirclePropertiesWidget QComboBox,
 RectanglePropertiesWidget QComboBox,
 ArcPropertiesWidget QComboBox {
-    min-width: 100px;
-    max-width: 130px;
+    min-width: 120px;
+    max-width: 220px;
     min-height: 24px;
     max-height: 24px;
 }
@@ -226,7 +215,6 @@ BasePropertiesWidget QLabel {
     min-height: 20px;
 }
 
-/* Чекбоксы */
 QCheckBox {
     spacing: 5px;
 }
@@ -234,19 +222,15 @@ QCheckBox {
 QCheckBox::indicator {
     width: 16px;
     height: 16px;
-    border: 1px solid #F7C8E0;
+    border: 1px solid #efbfd2;
     border-radius: 3px;
-    background-color: #FFFFFF;
+    background-color: #ffffff;
 }
 
 QCheckBox::indicator:checked {
-    background-color: #DE62A7;
-    border-color: #DE62A7;
+    background-color: #df6da5;
+    border-color: #df6da5;
 }
-
-/* ======================================================= */
-/* --- SCROLLAREA --- */
-/* ======================================================= */
 
 QScrollArea {
     background-color: transparent;
@@ -259,80 +243,68 @@ QScrollArea > QWidget > QWidget {
 
 QScrollBar:vertical {
     border: none;
-    background: #FADCEB;
+    background: #fde6f0;
     width: 10px;
-    margin: 0px;
+    margin: 0;
 }
 
 QScrollBar::handle:vertical {
-    background: #DE62A7;
+    background: #df6da5;
     border-radius: 5px;
     min-height: 20px;
 }
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0px;
+    height: 0;
 }
 
 QScrollBar:horizontal {
     border: none;
-    background: #FADCEB;
+    background: #fde6f0;
     height: 10px;
-    margin: 0px;
+    margin: 0;
 }
 
 QScrollBar::handle:horizontal {
-    background: #DE62A7;
+    background: #df6da5;
     border-radius: 5px;
     min-width: 20px;
 }
 
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-    width: 0px;
+    width: 0;
 }
 
-/* ======================================================= */
-/* --- ВКЛАДКИ (TABWIDGET) --- */
-/* ======================================================= */
-
 QTabWidget::pane {
-    border: 1px solid #F7C8E0;
-    border-bottom: 1px solid #DE62A7;
+    border: 1px solid #efbfd2;
+    border-bottom: 1px solid #df6da5;
 }
 
 QTabBar::tab {
-    background: #FADCEB;
-    color: #3D2431;
+    background: #fde6f0;
+    color: #4d2d3c;
     padding: 8px 12px;
-    border: 1px solid #F7C8E0;
+    border: 1px solid #efbfd2;
     margin-right: 2px;
 }
 
 QTabBar::tab:selected {
-    background: #FCEFF5;
-    color: #DE62A7;
-    border-color: #DE62A7;
-    border-top: 1px solid #FCEFF5;
+    background: #fff5f9;
+    color: #df6da5;
+    border-color: #df6da5;
+    border-top: 1px solid #fff5f9;
 }
 
 QTabBar::tab:hover {
-    background: #F7C8E0;
+    background: #f9d8e7;
 }
 
-/* ======================================================= */
-/* --- СПЕЦИАЛЬНЫЕ МЕТКИ --- */
-/* ======================================================= */
-
 QLabel#PatternPreviewLabel {
-    color: #DE62A7;
+    color: #df6da5;
     font-weight: bold;
 }
 
-/* ======================================================= */
-/* --- КНОПКА ВЫБОРА ЦВЕТА --- */
-/* ======================================================= */
-
 QPushButton#ColorButton {
     border-radius: 12px;
-    border: 1px solid gray;
+    border: 1px solid #efbfd2;
 }

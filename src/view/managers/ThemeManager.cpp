@@ -126,6 +126,22 @@ QString ThemeManager::readAndReplaceSvg(const QString& path, const QMap<QString,
         svgData.replace(it.key(), it.value().name(QColor::HexRgb));
     }
 
+    if (colorMap.contains("currentColor")) {
+        const QString themedColor = colorMap.value("currentColor").name(QColor::HexRgb);
+        const QStringList legacyThemeColors = {
+            "#00ff7f",
+            "#00FF7F",
+            "#00ff80",
+            "#00FF80",
+            "rgb(0,255,127)",
+            "rgb(0, 255, 127)"
+        };
+
+        for (const QString& legacyColor : legacyThemeColors) {
+            svgData.replace(legacyColor, themedColor);
+        }
+    }
+
     return svgData;
 }
 

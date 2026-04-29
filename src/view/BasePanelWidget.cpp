@@ -1,6 +1,7 @@
 #include "BasePanelWidget.h"
 #include "ThemeManager.h"
 #include "AnimationManager.h"
+#include "FlyoutToolButton.h"
 
 #include <QColor>
 
@@ -25,6 +26,13 @@ void BasePanelWidget::updateColors()
     for (AnimationManager* button : buttons) {
         if (button) {
             button->updateIconColor(iconColor);
+        }
+    }
+
+    const auto flyoutButtons = this->findChildren<FlyoutToolButton*>();
+    for (FlyoutToolButton* button : flyoutButtons) {
+        if (button) {
+            button->updateColors();
         }
     }
 }

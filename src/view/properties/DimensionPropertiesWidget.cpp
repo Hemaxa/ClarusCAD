@@ -20,6 +20,8 @@
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include <QAbstractItemView>
+#include <QFontMetrics>
 #include <algorithm>
 
 namespace {
@@ -54,6 +56,33 @@ QFormLayout* formOf(QWidget* column)
     auto* columnLayout = qobject_cast<QVBoxLayout*>(column->layout());
     return static_cast<QFormLayout*>(columnLayout->itemAt(1)->layout());
 }
+
+void configureComboPopup(QComboBox* combo, int minPopupWidth = 220, int maxVisibleItems = 10)
+{
+    if (!combo) {
+        return;
+    }
+
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    combo->setMaxVisibleItems(maxVisibleItems);
+
+    auto* view = combo->view();
+    if (!view) {
+        return;
+    }
+
+    view->setTextElideMode(Qt::ElideNone);
+
+    const QFontMetrics metrics(combo->font());
+    int widestText = 0;
+    for (int i = 0; i < combo->count(); ++i) {
+        widestText = std::max(widestText, metrics.horizontalAdvance(combo->itemText(i)));
+    }
+
+    const int popupWidth = std::max(minPopupWidth, widestText + combo->iconSize().width() + 72);
+    view->setMinimumWidth(popupWidth);
+    view->setMinimumHeight(std::max(view->minimumHeight(), 180));
+}
 }
 
 DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BasePropertiesWidget(parent)
@@ -80,8 +109,12 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_measuredValueSpinBox->setObjectName("PropertiesInput");
     m_measuredValueSpinBox->setToolTip("Меняет измеряемую геометрию выбранного размера.");
 
-    m_prefixEdit = new QLineEdit(this);
-    m_prefixEdit->setPlaceholderText("Например: R или Ø");
+    m_prefixComboBox = new QComboBox(this);
+    m_prefixComboBox->setObjectName("PropertiesComboBox");
+    m_prefixComboBox->setMinimumWidth(120);
+    m_prefixComboBox->addItem("Без префикса", "");
+    m_prefixComboBox->addItem("Радиус (R)", "R");
+    m_prefixComboBox->addItem("Диаметр (Ø)", QString::fromUtf8("Ø"));
 
     m_customTextEdit = new QLineEdit(this);
     m_customTextEdit->setPlaceholderText("Авто: вычисленное значение");
@@ -96,7 +129,9 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     for (auto* combo : {m_extensionLineTypeCombo, m_dimensionLineTypeCombo, m_arrowTypeComboBox}) {
         combo->setObjectName("PropertiesComboBox");
         combo->setMinimumWidth(170);
+        configureComboPopup(combo, 240, 10);
     }
+    configureComboPopup(m_prefixComboBox, 220, 8);
 
     populateLocalLineTypeCombo(m_extensionLineTypeCombo);
     populateLocalLineTypeCombo(m_dimensionLineTypeCombo);
@@ -114,7 +149,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     formOf(valueGroup)->addRow("Тип:", m_typeLabel);
     formOf(valueGroup)->addRow("Авто:", m_measuredValueLabel);
     formOf(valueGroup)->addRow("Задать:", m_measuredValueSpinBox);
-    formOf(valueGroup)->addRow("Префикс:", m_prefixEdit);
+    formOf(valueGroup)->addRow("Префикс:", m_prefixComboBox);
     formOf(valueGroup)->addRow("Текст:", m_customTextEdit);
     formOf(valueGroup)->addRow("Слой:", m_layerEdit);
     formOf(valueGroup)->addRow("", m_toggleAngularArcSideButton);
@@ -131,7 +166,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     columnsLayout->addStretch();
     centralLayout->addLayout(columnsLayout);
 
-    connect(m_prefixEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onPrefixChanged);
+    connect(m_prefixComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() { onPrefixChanged(); });
     connect(m_customTextEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onCustomTextChanged);
     connect(m_measuredValueSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &DimensionPropertiesWidget::onMeasuredValueChanged);
     connect(m_layerEdit, &QLineEdit::editingFinished, this, &DimensionPropertiesWidget::onLayerEdited);
@@ -174,8 +209,8 @@ void DimensionPropertiesWidget::populateArrowTypeCombo()
     };
 
     const ArrowOption options[] = {
-        {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-open.svg"},
-        {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-closed.svg"},
+        {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-closed.svg"},
+        {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-open.svg"},
         {DimensionArrowType::Slash, "Засечка", ":/icons/icons/arrows/arrow-tick.svg"},
         {DimensionArrowType::Dot, "Точка", ":/icons/icons/arrows/arrow-dot.svg"},
     };
@@ -191,6 +226,7 @@ void DimensionPropertiesWidget::populateArrowTypeCombo()
     }
     m_arrowTypeComboBox->setCurrentIndex(std::max(0, currentIndex));
     m_arrowTypeComboBox->blockSignals(false);
+    configureComboPopup(m_arrowTypeComboBox, 240, 10);
 }
 
 void DimensionPropertiesWidget::updateColorButton(QPushButton* button, const QColor& color)
@@ -207,7 +243,7 @@ void DimensionPropertiesWidget::updateFieldValues()
         : SettingsManager::instance().getDefaultDimensionStyle();
 
     QSignalBlocker b1(m_customTextEdit);
-    QSignalBlocker b2(m_prefixEdit);
+    QSignalBlocker b2(m_prefixComboBox);
     QSignalBlocker b3(m_measuredValueSpinBox);
     QSignalBlocker b4(m_layerEdit);
     QSignalBlocker b5(m_arrowTypeComboBox);
@@ -219,7 +255,7 @@ void DimensionPropertiesWidget::updateFieldValues()
         m_typeLabel->setText("-");
         m_measuredValueLabel->setText("Создание нового размера");
         m_measuredValueSpinBox->setValue(1.0);
-        m_prefixEdit->clear();
+        m_prefixComboBox->setCurrentIndex(0);
         m_customTextEdit->clear();
         m_layerEdit->setText("0");
     } else {
@@ -235,16 +271,18 @@ void DimensionPropertiesWidget::updateFieldValues()
         m_measuredValueLabel->setText(QString::number(dim->getMeasuredValue(), 'f', 2));
         m_measuredValueSpinBox->setValue(dim->getMeasuredValue());
         if (type == PrimitiveType::LinearDimension) {
-            m_prefixEdit->setText(static_cast<LinearDimensionPrimitive*>(m_currentPrimitive)->getTextPrefix());
+            auto* linear = static_cast<LinearDimensionPrimitive*>(m_currentPrimitive);
+            int prefixIndex = m_prefixComboBox->findData(linear->getTextPrefix());
+            m_prefixComboBox->setCurrentIndex(std::max(0, prefixIndex));
         } else {
-            m_prefixEdit->clear();
+            m_prefixComboBox->setCurrentIndex(0);
         }
         m_customTextEdit->setText(dim->getCustomText());
         m_layerEdit->setText(m_currentPrimitive->getLayerName());
     }
 
     m_toggleAngularArcSideButton->setVisible(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::AngularDimension);
-    m_prefixEdit->setEnabled(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::LinearDimension);
+    m_prefixComboBox->setEnabled(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::LinearDimension);
     m_arrowTypeComboBox->setCurrentIndex(m_arrowTypeComboBox->findData(static_cast<int>(style.arrowType)));
     m_extensionLineTypeCombo->setCurrentIndex(m_extensionLineTypeCombo->findData(style.extensionLineTypeId));
     m_dimensionLineTypeCombo->setCurrentIndex(m_dimensionLineTypeCombo->findData(style.dimensionLineTypeId));
@@ -269,13 +307,14 @@ void DimensionPropertiesWidget::onCustomTextChanged(const QString& text)
     emit dimensionPropertiesApplied();
 }
 
-void DimensionPropertiesWidget::onPrefixChanged(const QString& text)
+void DimensionPropertiesWidget::onPrefixChanged()
 {
     if (m_selectedPrimitives.isEmpty()) return;
+    const QString prefix = m_prefixComboBox->currentData().toString();
 
     for (auto* prim : m_selectedPrimitives) {
         if (prim && prim->getType() == PrimitiveType::LinearDimension) {
-            static_cast<LinearDimensionPrimitive*>(prim)->setTextPrefix(text);
+            static_cast<LinearDimensionPrimitive*>(prim)->setTextPrefix(prefix);
         }
     }
     emit dimensionPropertiesApplied();

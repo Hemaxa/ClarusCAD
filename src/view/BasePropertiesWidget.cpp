@@ -18,6 +18,38 @@
 #include <QPainter>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QAbstractItemView>
+#include <QFontMetrics>
+#include <algorithm>
+
+namespace {
+void configureComboPopup(QComboBox* combo, int minPopupWidth = 220, int maxVisibleItems = 10)
+{
+    if (!combo) {
+        return;
+    }
+
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    combo->setMaxVisibleItems(maxVisibleItems);
+
+    auto* view = combo->view();
+    if (!view) {
+        return;
+    }
+
+    view->setTextElideMode(Qt::ElideNone);
+
+    const QFontMetrics metrics(combo->font());
+    int widestText = 0;
+    for (int i = 0; i < combo->count(); ++i) {
+        widestText = std::max(widestText, metrics.horizontalAdvance(combo->itemText(i)));
+    }
+
+    const int popupWidth = std::max(minPopupWidth, widestText + combo->iconSize().width() + 72);
+    view->setMinimumWidth(popupWidth);
+    view->setMinimumHeight(std::max(view->minimumHeight(), 180));
+}
+}
 
 BasePropertiesWidget::BasePropertiesWidget(QWidget* parent) : QWidget(parent)
 {
@@ -115,7 +147,7 @@ void BasePropertiesWidget::setPrimitives(const QList<BasePrimitive*>& primitives
     if (m_selectedPrimitives.isEmpty() || (m_selectedPrimitives.size() == 1 && !m_selectedPrimitives.first())) {
         // Режим создания
         m_currentPrimitive = nullptr;
-        m_selectedColor = Qt::white;
+        m_selectedColor = ThemeManager::instance().getColor("drawingColor");
         m_selectedLineTypeId = (int)LineType::SolidMain;
         m_selectedLayerName = "0";
         m_applyButton->setText("Создать");
@@ -189,8 +221,9 @@ void BasePropertiesWidget::applyCompactMetrics()
         if (combo == m_lineTypeComboBox) continue;
         if (combo->objectName() == "PropertiesComboBox") {
             combo->setFixedHeight(24);
-            combo->setMinimumWidth(110);
-            combo->setMaximumWidth(170);
+            combo->setMinimumWidth(130);
+            combo->setMaximumWidth(220);
+            configureComboPopup(combo);
         }
     }
 
@@ -344,4 +377,8 @@ void BasePropertiesWidget::populateLineTypeComboBox()
 void BasePropertiesWidget::updateColors()
 {
     populateLineTypeComboBox();
+    configureComboPopup(m_lineTypeComboBox, 260, 12);
+    if (!m_currentPrimitive && m_selectedPrimitives.isEmpty()) {
+        updateColor(ThemeManager::instance().getColor("drawingColor"), false);
+    }
 }

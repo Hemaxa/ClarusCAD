@@ -80,6 +80,33 @@ int FlyoutToolButton::getCurrentMode() const
     return m_currentModeId;
 }
 
+void FlyoutToolButton::updateColors()
+{
+    for (const auto& mode : m_modes) {
+        if (mode.modeId == m_currentModeId) {
+            updateButtonIcon(this, mode.iconPath);
+            break;
+        }
+    }
+
+    const auto buttons = m_flyoutWidget->findChildren<QToolButton*>();
+    for (QToolButton* button : buttons) {
+        if (!button) {
+            continue;
+        }
+
+        const int modeId = button->property("modeId").toInt();
+        for (const auto& mode : m_modes) {
+            if (mode.modeId == modeId) {
+                updateButtonIcon(button, mode.iconPath);
+                break;
+            }
+        }
+    }
+
+    update();
+}
+
 void FlyoutToolButton::setFlyoutDelay(int ms)
 {
     m_flyoutDelay = ms;

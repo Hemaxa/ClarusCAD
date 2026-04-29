@@ -1,211 +1,240 @@
-name: Build ClarusCAD
+name: Build And Release ClarusCAD
 
 on:
   push:
-    branches: [ main, dev4 ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, dev4 ]
+    branches:
+      - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag_name: ${{ steps.meta.outputs.tag_name }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt | head -n1)
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract project version from CMakeLists.txt" >&2
+            exit 1
+          fi
+
+          TAG_NAME="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
+          RELEASE_NAME="ClarusCAD ${VERSION} build ${GITHUB_RUN_NUMBER}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: prepare
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
-            qt_version: '6.5.0'
-            qt_arch: 'gcc_64'
-            artifact_name: 'ClarusCAD_linux_artifact'
-            package_type: 'appimage'
+            qt_version: "6.5.3"
+            qt_arch: "gcc_64"
+            package_type: "appimage"
+            artifact_name: "ClarusCAD-linux"
+            artifact_path: "ClarusCAD_v*_linux.AppImage"
 
           - os: windows-latest
-            qt_version: '6.5.0'
-            qt_arch: 'win64_msvc2019_64'
-            artifact_name: 'ClarusCAD_windows_artifact'
-            package_type: 'nsis'
+            qt_version: "6.5.3"
+            qt_arch: "win64_msvc2022_64"
+            package_type: "nsis"
+            artifact_name: "ClarusCAD-windows"
+            artifact_path: "ClarusCAD_v*_windows.exe"
 
           - os: macos-14
-            qt_version: '6.5.0'
-            qt_arch: 'clang_64'
-            artifact_name: 'ClarusCAD_macOS_artifact'
-            package_type: 'pkg'
+            qt_version: "6.5.3"
+            qt_arch: "clang_64"
+            package_type: "pkg"
+            artifact_name: "ClarusCAD-macos"
+            artifact_path: "ClarusCAD_v*_macOS.pkg"
 
-    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
 
     steps:
-    # Скачивание кода из репозитория на виртуальную машину
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Получение версии программы из CMakeLists.txt
-    - name: Extract Version (Cross-platform)
-      id: get_version
-      shell: bash
-      run: |
-        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$RUNNER_OS" == "Windows" ]]; then
-          VERSION=$(awk '/project\(ClarusCAD VERSION/ {match($0, /VERSION ([0-9.]+)/, arr); print arr[1]}' CMakeLists.txt)
-        else
-          VERSION=$(sed -n 's/.*project(ClarusCAD VERSION \([0-9\.]*\)).*/\1/p' CMakeLists.txt)
-        fi
-        if [ -z "$VERSION" ]; then
-          VERSION=$(grep "project(ClarusCAD VERSION" CMakeLists.txt | sed 's/.*VERSION \([0-9\.]*\).*/\1/')
-        fi
-        echo "Extracted version: $VERSION"
-        if [ -z "$VERSION" ]; then
-          echo "Error: Could not extract version from CMakeLists.txt"
-          exit 1
-        fi
-        echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
-        echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgl1-mesa-dev \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libfuse2 \
+            patchelf
 
-    # Зависимости для Linux
-    - name: Install Linux Dependencies
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libgl1-mesa-dev patchelf fakeroot libfuse2 libxcb-cursor0
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
 
-    # Установка Qt
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ matrix.qt_version }}
-        arch: ${{ matrix.qt_arch }}
-        cache: true
+      - name: Configure CMake (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr
 
-    # Настройка CMake
-    - name: Configure CMake (Linux/macOS)
-      if: runner.os != 'Windows'
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\install"
 
-    - name: Configure CMake (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install"
+      - name: Build project
+        shell: bash
+        run: cmake --build build --config Release --parallel
 
-    # Сборка проекта
-    - name: Build Project
-      run: cmake --build build --config Release
+      - name: Install NSIS
+        if: matrix.package_type == 'nsis'
+        shell: pwsh
+        run: choco install nsis --no-progress -y
 
-    # Установка NSIS
-    - name: Install NSIS
-      if: matrix.package_type == 'nsis'
-      run: choco install nsis
+      - name: Package Linux AppImage
+        if: matrix.package_type == 'appimage'
+        shell: bash
+        run: |
+          wget -qO linuxdeployqt.AppImage https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
+          chmod +x linuxdeployqt.AppImage
 
-    # Сборка под Linux
-    - name: Package Linux (AppImage)
-      if: matrix.package_type == 'appimage'
-      run: |
-        wget -qO linuxdeployqt.AppImage https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
-        chmod +x linuxdeployqt.AppImage
+          cmake --install build --prefix AppDir/usr --config Release
 
-        cmake --install build --prefix AppDir/usr --config Release
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
 
-        mkdir -p AppDir/usr/share/applications
-        if [ ! -f "AppDir/usr/share/applications/ClarusCAD.desktop" ]; then
-          cat > AppDir/usr/share/applications/ClarusCAD.desktop << EOF
-        [Desktop Entry]
-        Type=Application
-        Name=ClarusCAD
-        Exec=ClarusCAD
-        Icon=ClarusCAD
-        Comment=CAD Application
-        Categories=Graphics;Engineering;
-        EOF
-        fi
-
-        mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-        if [ -f "res/app-icon/icon.png" ]; then
-          cp res/app-icon/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
-        elif [ -f "AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png" ]; then
-          echo "Icon already in place"
-        else
-          sudo apt-get install -y imagemagick 2>/dev/null || true
-          if command -v convert >/dev/null 2>&1; then
-            convert -size 256x256 xc:blue AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
-          else
-            touch AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
+          if [ ! -f "AppDir/usr/share/applications/ClarusCAD.desktop" ]; then
+            printf '%s\n' \
+              '[Desktop Entry]' \
+              'Type=Application' \
+              'Name=ClarusCAD' \
+              'Exec=ClarusCAD' \
+              'Icon=ClarusCAD' \
+              'Comment=2D CAD system' \
+              'Categories=Graphics;Engineering;' \
+              > AppDir/usr/share/applications/ClarusCAD.desktop
           fi
-        fi
 
-        cp AppDir/usr/share/applications/ClarusCAD.desktop AppDir/
-        cp AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png AppDir/
+          if [ ! -f "AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png" ]; then
+            cp res/icons/app/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png
+          fi
 
-        ./linuxdeployqt.AppImage AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes
+          cp AppDir/usr/share/applications/ClarusCAD.desktop AppDir/ClarusCAD.desktop
+          cp AppDir/usr/share/icons/hicolor/256x256/apps/ClarusCAD.png AppDir/ClarusCAD.png
 
-        mv ClarusCAD-*.AppImage ClarusCAD_v${{ env.APP_VERSION }}_linux.AppImage || echo "No AppImage found to rename"
+          ./linuxdeployqt.AppImage AppDir/usr/bin/ClarusCAD -appimage -extra-plugins=iconengines,imageformats,platformthemes
 
-    # Сборка под Windows
-    - name: Package Windows (NSIS)
-      if: matrix.package_type == 'nsis'
-      shell: pwsh
-      run: |
-        cmake --build build --config Release --target INSTALL
-        $windeployqt = Get-Command "$env:QT_ROOT_DIR\bin\windeployqt.exe" -ErrorAction SilentlyContinue
-        if (-not $windeployqt) {
-          Write-Error "windeployqt.exe not found in $env:QT_ROOT_DIR\bin"
-          exit 1
-        }
-        & "$env:QT_ROOT_DIR\bin\windeployqt.exe" --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}\install\bin\ClarusCAD.exe"
+          APPIMAGE_FILE=$(find . -maxdepth 1 -name 'ClarusCAD*.AppImage' | head -n1)
+          if [ -z "$APPIMAGE_FILE" ]; then
+            echo "AppImage was not created" >&2
+            exit 1
+          fi
+          mv "$APPIMAGE_FILE" "ClarusCAD_v${VERSION}_linux.AppImage"
 
-        Push-Location build
-        cpack -G NSIS -C Release
-        Pop-Location
+      - name: Package Windows installer
+        if: matrix.package_type == 'nsis'
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --target INSTALL
 
-        $installer = Get-ChildItem -Path "build" -Name "*.exe" | Select-Object -First 1
-        if ($installer) {
-          Move-Item "build\$installer" "ClarusCAD_v${{ env.APP_VERSION }}_windows.exe"
-          Write-Host "Created installer: ClarusCAD_v${{ env.APP_VERSION }}_windows.exe"
-        } else {
-          Write-Host "No installer found in build directory"
-          Get-ChildItem -Path "build" -Recurse -Name "*.exe"
-        }
+          $windeployqt = Join-Path $env:QT_ROOT_DIR "bin\windeployqt.exe"
+          if (-not (Test-Path $windeployqt)) {
+            Write-Error "windeployqt.exe not found at $windeployqt"
+            exit 1
+          }
 
-    # Сборка под macOS
-    - name: Package macOS (PKG)
-      if: matrix.package_type == 'pkg'
-      run: |
-        cmake --build build --config Release --target package
-        if [ -f "build/ClarusCAD_v"*"_macOS_ARM.pkg" ]; then
-          mv build/ClarusCAD_v*_macOS_ARM.pkg ClarusCAD_v${{ env.APP_VERSION }}_macOS.pkg
-        else
-          find build -name "*.pkg" -exec mv {} ClarusCAD_v${{ env.APP_VERSION }}_macOS.pkg \; 2>/dev/null || echo "No PKG found"
-        fi
+          & $windeployqt --release --no-compiler-runtime --no-opengl-sw --no-translations "${{ github.workspace }}\install\bin\ClarusCAD.exe"
 
-    # Загрузка артифактов
-    - name: Upload Artifact (Linux)
-      if: matrix.package_type == 'appimage'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_linux.AppImage
+          Push-Location build
+          cpack -G NSIS -C Release -B package
+          Pop-Location
 
-    - name: Upload Artifact (Windows)
-      if: matrix.package_type == 'nsis'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_windows.exe
+          $installer = Get-ChildItem -Path "build/package" -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            Write-Error "NSIS installer was not created"
+            exit 1
+          }
 
-    - name: Upload Artifact (macOS)
-      if: matrix.package_type == 'pkg'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ClarusCAD_v*_macOS.pkg
+          Move-Item $installer.FullName "ClarusCAD_v${env:VERSION}_windows.exe"
 
-  # Настройка релиза
+      - name: Package macOS installer
+        if: matrix.package_type == 'pkg'
+        shell: bash
+        run: |
+          cmake --build build --config Release --target package
+
+          PKG_FILE=$(find build -name '*.pkg' | head -n1)
+          if [ -z "$PKG_FILE" ]; then
+            echo "PKG installer was not created" >&2
+            exit 1
+          fi
+
+          mv "$PKG_FILE" "ClarusCAD_v${VERSION}_macOS.pkg"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
   release:
-    needs: build
+    needs:
+      - prepare
+      - build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev4')
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
 
-    - name: Display structure of downloaded files
-      run: ls -la artifacts/*/
+      - name: Show downloaded files
+        shell: bash
+        run: find release-artifacts -maxdepth 2 -type f | sort
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag_name }}
+          name: ${{ needs.prepare.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            release-artifacts/*

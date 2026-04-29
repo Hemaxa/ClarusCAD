@@ -29,6 +29,11 @@ public:
      */
     void saveSettings();
 
+    /**
+     * @brief Подтянуть цветовые дефолты, зависящие от активной темы.
+     */
+    void syncThemeDerivedDefaults();
+
     // Геттеры и сеттеры для настроек
     
     /**
@@ -151,4 +156,5 @@ private:
     double m_kinkStraight;
 
     DimensionStyle m_dimensionStyle;
+    bool m_dimensionColorsFollowTheme = true;
 };

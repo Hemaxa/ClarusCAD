@@ -1,5 +1,6 @@
 #include "SettingsManager.h"
 #include "LineStyleManager.h"
+#include "ThemeManager.h"
 
 #include <QStringList>
 #include <QColor>
@@ -68,6 +69,7 @@ void SettingsManager::loadSettings()
     m_dimensionStyle.arrowSize = m_settings.value("dimension/arrow_size", 12.0).toDouble();
     m_dimensionStyle.arrowType = static_cast<DimensionArrowType>(m_settings.value("dimension/arrow_type", static_cast<int>(DimensionArrowType::ClosedFilled)).toInt());
     m_dimensionStyle.arrowFilled = m_settings.value("dimension/arrow_filled", true).toBool();
+    m_dimensionColorsFollowTheme = m_settings.value("dimension/colors_follow_theme", true).toBool();
     m_dimensionStyle.extensionLineOffset = m_settings.value("dimension/extension_offset", 8.0).toDouble();
     m_dimensionStyle.extensionLineExtend = m_settings.value("dimension/extension_extend", 10.0).toDouble();
     m_dimensionStyle.dimensionLineExtension = m_settings.value("dimension/line_extension", 0.0).toDouble();
@@ -110,6 +112,30 @@ void SettingsManager::loadSettings()
     m_settings.endArray();
 }
 
+void SettingsManager::syncThemeDerivedDefaults()
+{
+    if (!m_dimensionColorsFollowTheme) {
+        return;
+    }
+
+    const QColor drawingColor = ThemeManager::instance().getColor("drawingColor");
+    if (!drawingColor.isValid()) {
+        return;
+    }
+
+    const bool changed = m_dimensionStyle.textColor != drawingColor
+        || m_dimensionStyle.extensionLineColor != drawingColor
+        || m_dimensionStyle.dimensionLineColor != drawingColor;
+
+    m_dimensionStyle.textColor = drawingColor;
+    m_dimensionStyle.extensionLineColor = drawingColor;
+    m_dimensionStyle.dimensionLineColor = drawingColor;
+
+    if (changed) {
+        emit dimensionStyleChanged();
+    }
+}
+
 void SettingsManager::saveSettings()
 {
     //шаблон: "ключ настройки", "значение, которое нужно сохранить"
@@ -137,6 +163,7 @@ void SettingsManager::saveSettings()
     m_settings.setValue("dimension/arrow_size", m_dimensionStyle.arrowSize);
     m_settings.setValue("dimension/arrow_type", static_cast<int>(m_dimensionStyle.arrowType));
     m_settings.setValue("dimension/arrow_filled", m_dimensionStyle.arrowFilled);
+    m_settings.setValue("dimension/colors_follow_theme", m_dimensionColorsFollowTheme);
     m_settings.setValue("dimension/extension_offset", m_dimensionStyle.extensionLineOffset);
     m_settings.setValue("dimension/extension_extend", m_dimensionStyle.extensionLineExtend);
     m_settings.setValue("dimension/line_extension", m_dimensionStyle.dimensionLineExtension);
@@ -376,6 +403,7 @@ double SettingsManager::getDimensionLineExtension() const { return m_dimensionSt
 void SettingsManager::setDimensionTextColor(const QColor& val)
 {
     if (m_dimensionStyle.textColor != val) {
+        m_dimensionColorsFollowTheme = false;
         m_dimensionStyle.textColor = val;
         emit dimensionStyleChanged();
     }
@@ -386,6 +414,7 @@ QColor SettingsManager::getDimensionTextColor() const { return m_dimensionStyle.
 void SettingsManager::setDimensionExtensionLineColor(const QColor& val)
 {
     if (m_dimensionStyle.extensionLineColor != val) {
+        m_dimensionColorsFollowTheme = false;
         m_dimensionStyle.extensionLineColor = val;
         emit dimensionStyleChanged();
     }
@@ -396,6 +425,7 @@ QColor SettingsManager::getDimensionExtensionLineColor() const { return m_dimens
 void SettingsManager::setDimensionLineColor(const QColor& val)
 {
     if (m_dimensionStyle.dimensionLineColor != val) {
+        m_dimensionColorsFollowTheme = false;
         m_dimensionStyle.dimensionLineColor = val;
         emit dimensionStyleChanged();
     }

@@ -25,6 +25,11 @@ public:
     ~FlyoutToolButton();
 
     /**
+     * @brief Перекрасить основную иконку и элементы flyout в текущую тему.
+     */
+    void updateColors();
+
+    /**
      * @brief Добавить режим во всплывающее меню.
      * @param modeId ID режима.
      * @param iconPath Путь к иконке.

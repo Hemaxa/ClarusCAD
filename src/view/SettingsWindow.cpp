@@ -20,6 +20,38 @@
 #include <QScrollArea>
 #include <QColorDialog>
 #include <QFontComboBox>
+#include <QAbstractItemView>
+#include <QFontMetrics>
+#include <algorithm>
+
+namespace {
+void configureComboPopup(QComboBox* combo, int minPopupWidth = 240, int maxVisibleItems = 10)
+{
+    if (!combo) {
+        return;
+    }
+
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    combo->setMaxVisibleItems(maxVisibleItems);
+
+    auto* view = combo->view();
+    if (!view) {
+        return;
+    }
+
+    view->setTextElideMode(Qt::ElideNone);
+
+    const QFontMetrics metrics(combo->font());
+    int widestText = 0;
+    for (int i = 0; i < combo->count(); ++i) {
+        widestText = std::max(widestText, metrics.horizontalAdvance(combo->itemText(i)));
+    }
+
+    const int popupWidth = std::max(minPopupWidth, widestText + combo->iconSize().width() + 88);
+    view->setMinimumWidth(popupWidth);
+    view->setMinimumHeight(std::max(view->minimumHeight(), 180));
+}
+}
 
 SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
 {
@@ -51,6 +83,11 @@ SettingsWindow::SettingsWindow(QWidget* parent) : QDialog(parent)
     mainLayout->setSpacing(15);
     mainLayout->addWidget(m_tabWidget);
     mainLayout->addWidget(buttonBox);
+
+    const auto comboBoxes = findChildren<QComboBox*>();
+    for (QComboBox* combo : comboBoxes) {
+        configureComboPopup(combo);
+    }
 }
 
 QWidget* SettingsWindow::createAppearanceTab()
@@ -68,6 +105,7 @@ QWidget* SettingsWindow::createAppearanceTab()
     m_themeComboBox = new QComboBox();
     m_themeComboBox->setFixedHeight(30);
     populateThemeComboBox();
+    configureComboPopup(m_themeComboBox, 260, 8);
 
     //установка текущего
     int index = m_themeComboBox->findData(SettingsManager::instance().getThemeName());
@@ -130,8 +168,8 @@ QWidget* SettingsWindow::createDimensionStylesTab()
         };
 
         const ArrowOption options[] = {
-            {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-open.svg"},
-            {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-closed.svg"},
+            {DimensionArrowType::ClosedFilled, "Закрытая", ":/icons/icons/arrows/arrow-closed.svg"},
+            {DimensionArrowType::ClosedOpen, "Открытая", ":/icons/icons/arrows/arrow-open.svg"},
             {DimensionArrowType::Slash, "Засечка", ":/icons/icons/arrows/arrow-tick.svg"},
             {DimensionArrowType::Dot, "Точка", ":/icons/icons/arrows/arrow-dot.svg"},
         };
@@ -166,6 +204,7 @@ QWidget* SettingsWindow::createDimensionStylesTab()
     m_dimensionArrowTypeComboBox = new QComboBox();
     populateArrowTypes(m_dimensionArrowTypeComboBox);
     m_dimensionArrowTypeComboBox->setCurrentIndex(m_dimensionArrowTypeComboBox->findData(static_cast<int>(SettingsManager::instance().getDimensionArrowType())));
+    configureComboPopup(m_dimensionArrowTypeComboBox, 240, 8);
 
     m_dimensionArrowFilledCheck = new QCheckBox("Заполненные стрелки");
     m_dimensionArrowFilledCheck->setChecked(SettingsManager::instance().getDimensionArrowFilled());
@@ -188,10 +227,12 @@ QWidget* SettingsWindow::createDimensionStylesTab()
     m_dimensionExtLineTypeComboBox = new QComboBox();
     populateLineTypes(m_dimensionExtLineTypeComboBox);
     m_dimensionExtLineTypeComboBox->setCurrentIndex(m_dimensionExtLineTypeComboBox->findData(SettingsManager::instance().getDimensionExtensionLineType()));
+    configureComboPopup(m_dimensionExtLineTypeComboBox, 220, 8);
 
     m_dimensionLineTypeComboBox = new QComboBox();
     populateLineTypes(m_dimensionLineTypeComboBox);
     m_dimensionLineTypeComboBox->setCurrentIndex(m_dimensionLineTypeComboBox->findData(SettingsManager::instance().getDimensionLineType()));
+    configureComboPopup(m_dimensionLineTypeComboBox, 220, 8);
 
     m_dimensionTextColorButton = new QPushButton();
     m_dimensionExtColorButton = new QPushButton();
@@ -281,6 +322,7 @@ QWidget* SettingsWindow::createViewportTab()
     m_angleUnitComboBox->setFixedHeight(30);
     int unitIndex = m_angleUnitComboBox->findData(static_cast<int>(SettingsManager::instance().getAngleUnit()));
     if (unitIndex != -1) m_angleUnitComboBox->setCurrentIndex(unitIndex);
+    configureComboPopup(m_angleUnitComboBox, 220, 6);
 
     formLayout->addRow("Шаг сетки:", m_gridStepSpinBox);
     formLayout->addRow("Шаг зума:", m_zoomStepSpinBox);

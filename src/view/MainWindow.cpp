@@ -69,6 +69,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nul
 
     //применение выбранной темы
     ThemeManager::instance().applyTheme(SettingsManager::instance().getThemeName());
+    SettingsManager::instance().syncThemeDerivedDefaults();
 
     //применение выбранной толщины линий и параметров штриховки
     LineStyleManager::instance().setBaseLineThickness(SettingsManager::instance().getBaseLineThickness());
@@ -117,6 +118,22 @@ void MainWindow::createTools()
     m_linearDimCreationTool = new LinearDimensionCreationTool(this);
     m_radialDimCreationTool = new RadialDimensionCreationTool(this);
     m_angularDimCreationTool = new AngularDimensionCreationTool(this);
+
+    const QColor drawingColor = ThemeManager::instance().getColor("drawingColor");
+    for (BaseCreationTool* tool : {static_cast<BaseCreationTool*>(m_segmentCreationTool),
+                                   static_cast<BaseCreationTool*>(m_circleCreationTool),
+                                   static_cast<BaseCreationTool*>(m_rectCreationTool),
+                                   static_cast<BaseCreationTool*>(m_arcCreationTool),
+                                   static_cast<BaseCreationTool*>(m_ellipseCreationTool),
+                                   static_cast<BaseCreationTool*>(m_polygonCreationTool),
+                                   static_cast<BaseCreationTool*>(m_splineCreationTool),
+                                   static_cast<BaseCreationTool*>(m_linearDimCreationTool),
+                                   static_cast<BaseCreationTool*>(m_radialDimCreationTool),
+                                   static_cast<BaseCreationTool*>(m_angularDimCreationTool)}) {
+        if (tool) {
+            tool->setColor(drawingColor);
+        }
+    }
 }
 
 void MainWindow::createPanelWindows()
@@ -359,8 +376,28 @@ void MainWindow::createConnections()
 
     //менеджер тем сообщает об изменении темы -> панели обновляются
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_toolbarPanel, &ToolbarPanelWidget::updateColors);
+    connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_navigationPanel, &NavigationPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_sceneSettingsPanel, &SceneSettingsPanelWidget::updateColors);
     connect(&ThemeManager::instance(), &ThemeManager::themeApplied, m_propertiesPanel, &PropertiesPanelWidget::updateColors);
+    connect(&ThemeManager::instance(), &ThemeManager::themeApplied, this, [this]() {
+        SettingsManager::instance().syncThemeDerivedDefaults();
+
+        const QColor drawingColor = ThemeManager::instance().getColor("drawingColor");
+        for (BaseCreationTool* tool : {static_cast<BaseCreationTool*>(m_segmentCreationTool),
+                                       static_cast<BaseCreationTool*>(m_circleCreationTool),
+                                       static_cast<BaseCreationTool*>(m_rectCreationTool),
+                                       static_cast<BaseCreationTool*>(m_arcCreationTool),
+                                       static_cast<BaseCreationTool*>(m_ellipseCreationTool),
+                                       static_cast<BaseCreationTool*>(m_polygonCreationTool),
+                                       static_cast<BaseCreationTool*>(m_splineCreationTool),
+                                       static_cast<BaseCreationTool*>(m_linearDimCreationTool),
+                                       static_cast<BaseCreationTool*>(m_radialDimCreationTool),
+                                       static_cast<BaseCreationTool*>(m_angularDimCreationTool)}) {
+            if (tool) {
+                tool->setColor(drawingColor);
+            }
+        }
+    });
 }
 
 void MainWindow::createActions()
