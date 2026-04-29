@@ -3,6 +3,7 @@
 #pragma once
 
 #include "EnumManager.h"
+#include "../view/managers/ThemeManager.h"
 
 #include <QObject>
 #include <QColor>
@@ -91,7 +92,7 @@ public:
     /**
      * @brief Получить текущий цвет.
      */
-    virtual QColor getColor() const { return Qt::white; }
+    virtual QColor getColor() const { return ThemeManager::instance().getColor("drawingColor"); }
 
     /**
      * @brief Получить текущий тип линии.

@@ -27,6 +27,7 @@ public:
 
     void setColor(const QColor& color) override { m_currentColor = color; }
     void setLineType(LineType type) override { m_currentLineType = type; }
+    QColor getColor() const override { return m_currentColor; }
 
 signals:
     /**
