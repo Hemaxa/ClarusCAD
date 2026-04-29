@@ -554,13 +554,16 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     LineStyleManager::instance().drawLine(painter, extStart1, extEnd1, m_style.extensionLineTypeId, extensionColor, false);
     LineStyleManager::instance().drawLine(painter, extStart2, extEnd2, m_style.extensionLineTypeId, extensionColor, false);
     
-    QString text = m_customText.isEmpty() ? QString::number(m_measuredValue, 'f', 2) : m_customText;
+    QString text = m_customText.isEmpty()
+        ? QString("%1%2").arg(m_textPrefix, QString::number(m_measuredValue, 'f', 2))
+        : m_customText;
 
     QPointF midPoint = getTextAnchor();
     const QPointF lineDir(std::cos(geom.angle), std::sin(geom.angle));
     if (!hasCustomTextPosition()) {
         midPoint += lineDir * (m_style.textAlongLineOffset / currentScale);
     }
+    const bool useShelf = hasShelf();
 
     QFont font(m_style.fontFamily);
     font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
@@ -569,8 +572,12 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
     const double textMarginWorld = std::max(2.0, m_style.textGap * 0.25) / currentScale;
     const double textAlong = (midPoint.x() - dimStart.x()) * lineDir.x()
                            + (midPoint.y() - dimStart.y()) * lineDir.y();
-    const double minAlong = std::min(0.0, textAlong - textHalfWidthWorld - textMarginWorld);
-    const double maxAlong = std::max(geom.length, textAlong + textHalfWidthWorld + textMarginWorld);
+    const double minAlong = useShelf
+        ? std::min(0.0, textAlong)
+        : std::min(0.0, textAlong - textHalfWidthWorld - textMarginWorld);
+    const double maxAlong = useShelf
+        ? std::max(geom.length, textAlong)
+        : std::max(geom.length, textAlong + textHalfWidthWorld + textMarginWorld);
     const double dimExtension = m_style.dimensionLineExtension / currentScale;
 
     // When the label is dragged beyond an extension line, keep the dimension line attached and extend it.
@@ -593,14 +600,39 @@ void LinearDimensionPrimitive::draw(QPainter& painter, bool isSelected) const {
 
     painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
-    painter.translate(worldTransform.map(midPoint));
-    painter.rotate(textAngle);
-    
     double textWidth = fm.horizontalAdvance(text);
     double textH = fm.height();
     double textOffset = m_style.textGap;
-    
-    painter.drawText(QRectF(-textWidth / 2.0, -textH - textOffset, textWidth, textH), Qt::AlignCenter, text);
+
+    if (useShelf) {
+        const QPointF dimMid((dimStart.x() + dimEnd.x()) * 0.5, (dimStart.y() + dimEnd.y()) * 0.5);
+        const QPointF outward = dist >= 0.0 ? QPointF(nx, ny) : QPointF(-nx, -ny);
+        const double leaderRise = std::max(m_style.textGap, m_style.textHeight * 0.9) / currentScale;
+        double shelfDir = 0.0;
+        if (std::abs(outward.x()) > 0.2) {
+            shelfDir = outward.x() >= 0.0 ? 1.0 : -1.0;
+        } else {
+            shelfDir = midPoint.x() >= dimMid.x() ? 1.0 : -1.0;
+        }
+        const double shelfMargin = std::max(4.0 / currentScale, leaderRise * 0.35);
+        const double shelfLength = std::max(textWidth / currentScale + shelfMargin * 2.0, leaderRise * 1.5);
+        const QPointF elbow = midPoint + outward * leaderRise;
+        const QPointF shelfEnd = elbow + QPointF(shelfDir * shelfLength, 0.0);
+        const QPointF screenAnchor = worldTransform.map(midPoint);
+        const QPointF screenElbow = worldTransform.map(elbow);
+        const QPointF screenShelfEnd = worldTransform.map(shelfEnd);
+        painter.setPen(isSelected ? Qt::red : dimColor);
+        painter.drawLine(screenAnchor, screenElbow);
+        painter.drawLine(screenElbow, screenShelfEnd);
+        painter.setPen(isSelected ? Qt::red : m_style.textColor);
+        const QPointF shelfCenter = (screenElbow + screenShelfEnd) * 0.5;
+        painter.drawText(QRectF(shelfCenter.x() - textWidth / 2.0, shelfCenter.y() - textH - textOffset,
+                                textWidth, textH), Qt::AlignCenter, text);
+    } else {
+        painter.translate(worldTransform.map(midPoint));
+        painter.rotate(textAngle);
+        painter.drawText(QRectF(-textWidth / 2.0, -textH - textOffset, textWidth, textH), Qt::AlignCenter, text);
+    }
     
     painter.restore();
 }
@@ -662,10 +694,19 @@ void LinearDimensionPrimitive::updateFromAttachments()
 
 QRectF LinearDimensionPrimitive::getBoundingBox() const {
     // Упрощенный вариант, охватывающий 3 основные точки (start, end, pos)
-    double minX = std::min({m_startPoint.x(), m_endPoint.x(), m_dimensionLinePos.x()});
-    double maxX = std::max({m_startPoint.x(), m_endPoint.x(), m_dimensionLinePos.x()});
-    double minY = std::min({m_startPoint.y(), m_endPoint.y(), m_dimensionLinePos.y()});
-    double maxY = std::max({m_startPoint.y(), m_endPoint.y(), m_dimensionLinePos.y()});
+    QPointF textAnchor = getTextAnchor();
+    double minX = std::min({m_startPoint.x(), m_endPoint.x(), m_dimensionLinePos.x(), textAnchor.x()});
+    double maxX = std::max({m_startPoint.x(), m_endPoint.x(), m_dimensionLinePos.x(), textAnchor.x()});
+    double minY = std::min({m_startPoint.y(), m_endPoint.y(), m_dimensionLinePos.y(), textAnchor.y()});
+    double maxY = std::max({m_startPoint.y(), m_endPoint.y(), m_dimensionLinePos.y(), textAnchor.y()});
+
+    if (hasShelf()) {
+        const double shelfReach = std::max(60.0, m_style.textHeight * 6.0);
+        minX -= shelfReach;
+        maxX += shelfReach;
+        maxY += shelfReach * 0.5;
+        minY -= shelfReach * 0.5;
+    }
 
     QRectF bbox(QPointF(minX, minY), QPointF(maxX, maxY));
 

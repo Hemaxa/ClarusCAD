@@ -54,9 +54,6 @@
         <file>icons/arrows/arrow-tick.svg</file>
         <file>icons/arrows/arrow-dot.svg</file>
     </qresource>
-    <qresource prefix="/promts">
-        <file>promts/segment-promt.svg</file>
-    </qresource>
     <qresource prefix="/themes">
         <file>themes/ClarusCAD.qss</file>
         <file>themes/Dark.qss</file>

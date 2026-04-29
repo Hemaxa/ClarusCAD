@@ -32,6 +32,7 @@ public slots:
 
 private slots:
     void onCustomTextChanged(const QString& text);
+    void onPrefixChanged(const QString& text);
     void onMeasuredValueChanged(double value);
     void onLayerEdited();
     void onStyleValueChanged();
@@ -49,11 +50,13 @@ private:
     QLabel* m_typeLabel;
     QLabel* m_measuredValueLabel;
     QDoubleSpinBox* m_measuredValueSpinBox;
+    QLineEdit* m_prefixEdit;
     QLineEdit* m_customTextEdit;
     QLineEdit* m_layerEdit;
     QComboBox* m_arrowTypeComboBox;
     QComboBox* m_extensionLineTypeCombo;
     QComboBox* m_dimensionLineTypeCombo;
+    QCheckBox* m_shelfCheckBox;
     QPushButton* m_textColorButton;
     QPushButton* m_extensionColorButton;
     QPushButton* m_dimensionLineColorButton;

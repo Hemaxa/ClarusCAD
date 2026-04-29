@@ -48,6 +48,8 @@ public:
 
     void setMode(LinearDimensionMode mode) { m_mode = mode; recalculateValue(); }
     LinearDimensionMode getMode() const { return m_mode; }
+    void setTextPrefix(const QString& prefix) { m_textPrefix = prefix; }
+    QString getTextPrefix() const { return m_textPrefix; }
 
     virtual void recalculateValue() override;
     bool applyMeasuredValueOverride(double value) override;
@@ -77,4 +79,5 @@ private:
     LinearDimensionMode m_mode = LinearDimensionMode::Aligned;
     Attachment m_startAttachment;
     Attachment m_endAttachment;
+    QString m_textPrefix;
 };

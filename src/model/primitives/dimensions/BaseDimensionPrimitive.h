@@ -64,6 +64,8 @@ public:
     void clearCustomTextPosition() { m_hasCustomTextPosition = false; }
     bool hasCustomTextPosition() const { return m_hasCustomTextPosition; }
     QPointF getCustomTextPosition() const { return m_customTextPosition; }
+    void setShelfEnabled(bool enabled) { m_hasShelf = enabled; }
+    bool hasShelf() const { return m_hasShelf; }
 
     virtual QPointF getDefaultTextAnchor() const = 0;
     virtual QPointF constrainTextAnchor(const QPointF& pos) const = 0;
@@ -86,4 +88,5 @@ protected:
     QString m_customText = "";        ///< Переопределенный текст
     bool m_hasCustomTextPosition = false;
     QPointF m_customTextPosition;
+    bool m_hasShelf = false;
 };

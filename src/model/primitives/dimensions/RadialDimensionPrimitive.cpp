@@ -186,6 +186,7 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
         : m_customText;
 
     QPointF textPoint = getTextAnchor();
+    const bool useShelf = hasShelf();
     const double angleRad = std::atan2(leaderEnd.y() - visibleRadiusPoint.y(), leaderEnd.x() - visibleRadiusPoint.x());
     if (!hasCustomTextPosition()) {
         textPoint += QPointF(std::cos(angleRad), std::sin(angleRad)) * (m_style.textAlongLineOffset / currentScale);
@@ -197,7 +198,9 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
     const double textMarginWorld = std::max(2.0, m_style.textGap * 0.25) / currentScale;
     const double anchorDistance = QLineF(lineOrigin, textPoint).length();
     const double leaderDistance = QLineF(lineOrigin, leaderEnd).length();
-    const double extendedLeaderDistance = std::max(leaderDistance, anchorDistance + textHalfWidthWorld + textMarginWorld);
+    const double extendedLeaderDistance = useShelf
+        ? std::max(leaderDistance, anchorDistance)
+        : std::max(leaderDistance, anchorDistance + textHalfWidthWorld + textMarginWorld);
     leaderEnd = lineOrigin + dir * extendedLeaderDistance;
     LineStyleManager::instance().drawLine(painter, leaderStart, leaderEnd, m_style.dimensionLineTypeId, dimColor, false);
 
@@ -220,11 +223,27 @@ void RadialDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
 
     painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
-    painter.translate(worldTransform.map(textPoint));
-    painter.rotate(textAngle);
     const double textWidth = fm.horizontalAdvance(text);
     const double textHeight = fm.height();
-    painter.drawText(QRectF(-textWidth / 2.0, -textHeight - m_style.textGap, textWidth, textHeight), Qt::AlignCenter, text);
+    if (useShelf) {
+        const double shelfMargin = std::max(4.0 / currentScale, (m_style.textHeight * 0.35) / currentScale);
+        const double shelfLength = std::max(textWidth / currentScale + shelfMargin * 2.0,
+                                            std::max(m_style.textGap, m_style.textHeight * 0.9) / currentScale * 1.5);
+        const double shelfDir = leaderEnd.x() >= lineOrigin.x() ? 1.0 : -1.0;
+        const QPointF shelfEnd = leaderEnd + QPointF(shelfDir * shelfLength, 0.0);
+        const QPointF screenElbow = worldTransform.map(leaderEnd);
+        const QPointF screenShelfEnd = worldTransform.map(shelfEnd);
+        painter.setPen(isSelected ? Qt::red : dimColor);
+        painter.drawLine(screenElbow, screenShelfEnd);
+        painter.setPen(isSelected ? Qt::red : m_style.textColor);
+        const QPointF shelfCenter = (screenElbow + screenShelfEnd) * 0.5;
+        painter.drawText(QRectF(shelfCenter.x() - textWidth / 2.0, shelfCenter.y() - textHeight - m_style.textGap,
+                                textWidth, textHeight), Qt::AlignCenter, text);
+    } else {
+        painter.translate(worldTransform.map(textPoint));
+        painter.rotate(textAngle);
+        painter.drawText(QRectF(-textWidth / 2.0, -textHeight - m_style.textGap, textWidth, textHeight), Qt::AlignCenter, text);
+    }
 
     painter.restore();
 }
@@ -238,10 +257,18 @@ QRectF RadialDimensionPrimitive::getBoundingBox() const
     const QPointF visibleRadiusPoint = m_centerPoint + QPointF(dir.x() * radius, dir.y() * radius);
     const QPointF oppositePoint = m_centerPoint - QPointF(dir.x() * radius, dir.y() * radius);
 
-    const double minX = std::min({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
-    const double maxX = std::max({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x()});
-    const double minY = std::min({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
-    const double maxY = std::max({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y()});
+    const QPointF textAnchor = getTextAnchor();
+    double minX = std::min({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x(), textAnchor.x()});
+    double maxX = std::max({m_centerPoint.x(), m_radiusPoint.x(), visibleRadiusPoint.x(), m_dimensionLinePos.x(), oppositePoint.x(), textAnchor.x()});
+    double minY = std::min({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y(), textAnchor.y()});
+    double maxY = std::max({m_centerPoint.y(), m_radiusPoint.y(), visibleRadiusPoint.y(), m_dimensionLinePos.y(), oppositePoint.y(), textAnchor.y()});
+    if (hasShelf()) {
+        const double shelfReach = std::max(60.0, m_style.textHeight * 6.0);
+        minX -= shelfReach;
+        maxX += shelfReach;
+        minY -= shelfReach * 0.5;
+        maxY += shelfReach * 0.5;
+    }
 
     QRectF bbox(QPointF(minX, minY), QPointF(maxX, maxY));
     bbox.adjust(-25.0, -25.0, 25.0, 25.0);

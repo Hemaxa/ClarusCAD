@@ -231,6 +231,7 @@ static void applyDimensionMeta(BaseDimensionPrimitive* dim, const DxfMeta& meta)
 {
     dim->setStyle(extractDimensionStyle(meta));
     dim->setCustomText(metaValue(meta, "CLARUSCAD_DIM_CUSTOM_TEXT"));
+    dim->setShelfEnabled(metaBool(meta, "CLARUSCAD_DIM_HAS_SHELF", false));
     if (metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false)) {
         dim->setCustomTextPosition(QPointF(metaDouble(meta, "CLARUSCAD_DIM_TEXT_POS_X"), metaDouble(meta, "CLARUSCAD_DIM_TEXT_POS_Y")));
     }
@@ -490,6 +491,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
                 }
             }
             dim->setDimensionLinePos(linePos);
+            dim->setTextPrefix(metaValue(meta, "CLARUSCAD_DIM_PREFIX"));
             applyProps(dim, props);
             applyDimensionMeta(dim, meta);
             dim->recalculateValue();

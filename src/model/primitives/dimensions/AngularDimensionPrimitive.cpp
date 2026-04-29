@@ -245,19 +245,25 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
             m_centerPoint.x() + radius * std::cos(midAngle),
             m_centerPoint.y() + radius * std::sin(midAngle));
     }
+    const bool useShelf = hasShelf();
     const QPointF outwardDir = normalizedDirection(m_centerPoint, anchorPoint);
-    const QPointF textPoint = anchorPoint + outwardDir * (m_style.textGap / currentScale);
+    const QPointF textPoint = useShelf
+        ? anchorPoint
+        : anchorPoint + outwardDir * (m_style.textGap / currentScale);
 
     const double arrowSize = m_style.arrowSize / currentScale;
     drawArrow(painter, startArcPoint, startAngleRad - (M_PI / 2.0), m_style, dimColor, arrowSize);
     drawArrow(painter, endArcPoint, endAngleRad + (M_PI / 2.0), m_style, dimColor, arrowSize);
 
-    const double tangentAngle = midAngle + M_PI / 2.0;
-    const QPointF tangentPoint = textPoint + QPointF(std::cos(tangentAngle), std::sin(tangentAngle));
     const QPointF screenA = worldTransform.map(textPoint);
-    const QPointF screenB = worldTransform.map(tangentPoint);
-    double textAngle = std::atan2(screenB.y() - screenA.y(), screenB.x() - screenA.x()) * 180.0 / M_PI;
-    normalizeReadableScreenAngle(textAngle);
+    double textAngle = 0.0;
+    if (!useShelf) {
+        const double tangentAngle = midAngle + M_PI / 2.0;
+        const QPointF tangentPoint = textPoint + QPointF(std::cos(tangentAngle), std::sin(tangentAngle));
+        const QPointF screenB = worldTransform.map(tangentPoint);
+        textAngle = std::atan2(screenB.y() - screenA.y(), screenB.x() - screenA.x()) * 180.0 / M_PI;
+        normalizeReadableScreenAngle(textAngle);
+    }
 
     painter.restore();
     painter.save();
@@ -267,23 +273,50 @@ void AngularDimensionPrimitive::draw(QPainter& painter, bool isSelected) const
     font.setPixelSize(std::max(1, static_cast<int>(std::round(m_style.textHeight))));
     painter.setFont(font);
     painter.setPen(isSelected ? Qt::red : m_style.textColor);
-    painter.translate(screenA);
-    painter.rotate(textAngle);
 
     QFontMetricsF fm(font);
     const double textWidth = fm.horizontalAdvance(text);
     const double textHeight = fm.height();
-    painter.drawText(QRectF(-textWidth / 2.0, -textHeight / 2.0, textWidth, textHeight), Qt::AlignCenter, text);
+    if (useShelf) {
+        const double leaderRise = std::max(m_style.textGap, m_style.textHeight * 0.9) / currentScale;
+        const double shelfMargin = std::max(4.0 / currentScale, leaderRise * 0.35);
+        const double shelfLength = std::max(textWidth / currentScale + shelfMargin * 2.0, leaderRise * 1.5);
+        const double shelfDir = anchorPoint.x() >= m_centerPoint.x() ? 1.0 : -1.0;
+        const QPointF elbow = anchorPoint + outwardDir * leaderRise;
+        const QPointF shelfEnd = elbow + QPointF(shelfDir * shelfLength, 0.0);
+        const QPointF screenAnchor = worldTransform.map(anchorPoint);
+        const QPointF screenElbow = worldTransform.map(elbow);
+        const QPointF screenShelfEnd = worldTransform.map(shelfEnd);
+        painter.setPen(isSelected ? Qt::red : dimColor);
+        painter.drawLine(screenAnchor, screenElbow);
+        painter.drawLine(screenElbow, screenShelfEnd);
+        painter.setPen(isSelected ? Qt::red : m_style.textColor);
+        const QPointF shelfCenter = (screenElbow + screenShelfEnd) * 0.5;
+        painter.drawText(QRectF(shelfCenter.x() - textWidth / 2.0, shelfCenter.y() - textHeight - m_style.textGap,
+                                textWidth, textHeight), Qt::AlignCenter, text);
+    } else {
+        painter.translate(screenA);
+        painter.rotate(textAngle);
+        painter.drawText(QRectF(-textWidth / 2.0, -textHeight / 2.0, textWidth, textHeight), Qt::AlignCenter, text);
+    }
 
     painter.restore();
 }
 
 QRectF AngularDimensionPrimitive::getBoundingBox() const
 {
-    const double minX = std::min({m_centerPoint.x(), m_startPoint.x(), m_endPoint.x(), m_arcPoint.x()});
-    const double maxX = std::max({m_centerPoint.x(), m_startPoint.x(), m_endPoint.x(), m_arcPoint.x()});
-    const double minY = std::min({m_centerPoint.y(), m_startPoint.y(), m_endPoint.y(), m_arcPoint.y()});
-    const double maxY = std::max({m_centerPoint.y(), m_startPoint.y(), m_endPoint.y(), m_arcPoint.y()});
+    const QPointF textAnchor = getTextAnchor();
+    double minX = std::min({m_centerPoint.x(), m_startPoint.x(), m_endPoint.x(), m_arcPoint.x(), textAnchor.x()});
+    double maxX = std::max({m_centerPoint.x(), m_startPoint.x(), m_endPoint.x(), m_arcPoint.x(), textAnchor.x()});
+    double minY = std::min({m_centerPoint.y(), m_startPoint.y(), m_endPoint.y(), m_arcPoint.y(), textAnchor.y()});
+    double maxY = std::max({m_centerPoint.y(), m_startPoint.y(), m_endPoint.y(), m_arcPoint.y(), textAnchor.y()});
+    if (hasShelf()) {
+        const double shelfReach = std::max(60.0, m_style.textHeight * 6.0);
+        minX -= shelfReach;
+        maxX += shelfReach;
+        minY -= shelfReach * 0.5;
+        maxY += shelfReach * 0.5;
+    }
     QRectF bbox(QPointF(minX, minY), QPointF(maxX, maxY));
     bbox.adjust(-25.0, -25.0, 25.0, 25.0);
     return bbox;

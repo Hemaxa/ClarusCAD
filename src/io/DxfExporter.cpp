@@ -719,6 +719,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
             writeCode(999, QString("CLARUSCAD_DIM_EXT_COLOR:%1").arg(style.extensionLineColor.rgba()));
             writeCode(999, QString("CLARUSCAD_DIM_LINE_COLOR:%1").arg(style.dimensionLineColor.rgba()));
             writeCode(999, QString("CLARUSCAD_DIM_CUSTOM_TEXT:%1").arg(dim->getCustomText()));
+            writeCode(999, QString("CLARUSCAD_DIM_HAS_SHELF:%1").arg(dim->hasShelf() ? 1 : 0));
             writeCode(999, QString("CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS:%1").arg(dim->hasCustomTextPosition() ? 1 : 0));
             if (dim->hasCustomTextPosition()) {
                 const QPointF pos = dim->getCustomTextPosition();
@@ -1174,6 +1175,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 writeClarusEntityId();
                 writeCode(999, "CLARUSCAD_DIM_KIND:LINEAR");
                 writeCode(999, QString("CLARUSCAD_DIM_MODE:%1").arg(linearModeToken(dim->getMode())));
+                writeCode(999, QString("CLARUSCAD_DIM_PREFIX:%1").arg(dim->getTextPrefix()));
                 writeCode(999, QString("CLARUSCAD_DIM_LINE_X:%1").arg(linePos.x(), 0, 'f', 10));
                 writeCode(999, QString("CLARUSCAD_DIM_LINE_Y:%1").arg(linePos.y(), 0, 'f', 10));
                 writeDimensionStyleMeta(dim);

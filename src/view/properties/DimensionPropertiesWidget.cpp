@@ -3,11 +3,13 @@
 #include "DimensionPropertiesWidget.h"
 #include "BaseDimensionPrimitive.h"
 #include "../../model/primitives/dimensions/AngularDimensionPrimitive.h"
+#include "../../model/primitives/dimensions/LinearDimensionPrimitive.h"
 #include "LineStyleManager.h"
 #include "SettingsManager.h"
 #include "ThemeManager.h"
 
 #include <QColorDialog>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -78,6 +80,9 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_measuredValueSpinBox->setObjectName("PropertiesInput");
     m_measuredValueSpinBox->setToolTip("Меняет измеряемую геометрию выбранного размера.");
 
+    m_prefixEdit = new QLineEdit(this);
+    m_prefixEdit->setPlaceholderText("Например: R или Ø");
+
     m_customTextEdit = new QLineEdit(this);
     m_customTextEdit->setPlaceholderText("Авто: вычисленное значение");
 
@@ -87,6 +92,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     m_extensionLineTypeCombo = new QComboBox(this);
     m_dimensionLineTypeCombo = new QComboBox(this);
     m_arrowTypeComboBox = new QComboBox(this);
+    m_shelfCheckBox = new QCheckBox("Добавить полку", this);
     for (auto* combo : {m_extensionLineTypeCombo, m_dimensionLineTypeCombo, m_arrowTypeComboBox}) {
         combo->setObjectName("PropertiesComboBox");
         combo->setMinimumWidth(170);
@@ -108,6 +114,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     formOf(valueGroup)->addRow("Тип:", m_typeLabel);
     formOf(valueGroup)->addRow("Авто:", m_measuredValueLabel);
     formOf(valueGroup)->addRow("Задать:", m_measuredValueSpinBox);
+    formOf(valueGroup)->addRow("Префикс:", m_prefixEdit);
     formOf(valueGroup)->addRow("Текст:", m_customTextEdit);
     formOf(valueGroup)->addRow("Слой:", m_layerEdit);
     formOf(valueGroup)->addRow("", m_toggleAngularArcSideButton);
@@ -115,6 +122,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     formOf(styleGroup)->addRow("Выносные:", m_extensionLineTypeCombo);
     formOf(styleGroup)->addRow("Размерная:", m_dimensionLineTypeCombo);
     formOf(styleGroup)->addRow("Стрелки:", m_arrowTypeComboBox);
+    formOf(styleGroup)->addRow("", m_shelfCheckBox);
 
     formOf(colorGroup)->addRow("Текст:", m_textColorButton);
     formOf(colorGroup)->addRow("Выносные:", m_extensionColorButton);
@@ -123,6 +131,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     columnsLayout->addStretch();
     centralLayout->addLayout(columnsLayout);
 
+    connect(m_prefixEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onPrefixChanged);
     connect(m_customTextEdit, &QLineEdit::textEdited, this, &DimensionPropertiesWidget::onCustomTextChanged);
     connect(m_measuredValueSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &DimensionPropertiesWidget::onMeasuredValueChanged);
     connect(m_layerEdit, &QLineEdit::editingFinished, this, &DimensionPropertiesWidget::onLayerEdited);
@@ -133,6 +142,7 @@ DimensionPropertiesWidget::DimensionPropertiesWidget(QWidget* parent) : BaseProp
     connect(m_extensionColorButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onExtensionColorClicked);
     connect(m_dimensionLineColorButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onDimensionLineColorClicked);
     connect(m_toggleAngularArcSideButton, &QPushButton::clicked, this, &DimensionPropertiesWidget::onToggleAngularArcSideClicked);
+    connect(m_shelfCheckBox, &QCheckBox::toggled, this, [this]() { onStyleValueChanged(); });
 }
 
 void DimensionPropertiesWidget::populateLocalLineTypeCombo(QComboBox* combo)
@@ -197,16 +207,19 @@ void DimensionPropertiesWidget::updateFieldValues()
         : SettingsManager::instance().getDefaultDimensionStyle();
 
     QSignalBlocker b1(m_customTextEdit);
-    QSignalBlocker b2(m_measuredValueSpinBox);
-    QSignalBlocker b3(m_layerEdit);
-    QSignalBlocker b4(m_arrowTypeComboBox);
-    QSignalBlocker b5(m_extensionLineTypeCombo);
-    QSignalBlocker b6(m_dimensionLineTypeCombo);
+    QSignalBlocker b2(m_prefixEdit);
+    QSignalBlocker b3(m_measuredValueSpinBox);
+    QSignalBlocker b4(m_layerEdit);
+    QSignalBlocker b5(m_arrowTypeComboBox);
+    QSignalBlocker b6(m_extensionLineTypeCombo);
+    QSignalBlocker b7(m_dimensionLineTypeCombo);
+    QSignalBlocker b8(m_shelfCheckBox);
 
     if (!m_currentPrimitive) {
         m_typeLabel->setText("-");
         m_measuredValueLabel->setText("Создание нового размера");
         m_measuredValueSpinBox->setValue(1.0);
+        m_prefixEdit->clear();
         m_customTextEdit->clear();
         m_layerEdit->setText("0");
     } else {
@@ -221,14 +234,21 @@ void DimensionPropertiesWidget::updateFieldValues()
         m_typeLabel->setText(m_currentPrimitive->getTypeName());
         m_measuredValueLabel->setText(QString::number(dim->getMeasuredValue(), 'f', 2));
         m_measuredValueSpinBox->setValue(dim->getMeasuredValue());
+        if (type == PrimitiveType::LinearDimension) {
+            m_prefixEdit->setText(static_cast<LinearDimensionPrimitive*>(m_currentPrimitive)->getTextPrefix());
+        } else {
+            m_prefixEdit->clear();
+        }
         m_customTextEdit->setText(dim->getCustomText());
         m_layerEdit->setText(m_currentPrimitive->getLayerName());
     }
 
     m_toggleAngularArcSideButton->setVisible(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::AngularDimension);
+    m_prefixEdit->setEnabled(m_currentPrimitive && m_currentPrimitive->getType() == PrimitiveType::LinearDimension);
     m_arrowTypeComboBox->setCurrentIndex(m_arrowTypeComboBox->findData(static_cast<int>(style.arrowType)));
     m_extensionLineTypeCombo->setCurrentIndex(m_extensionLineTypeCombo->findData(style.extensionLineTypeId));
     m_dimensionLineTypeCombo->setCurrentIndex(m_dimensionLineTypeCombo->findData(style.dimensionLineTypeId));
+    m_shelfCheckBox->setChecked(m_currentPrimitive && static_cast<BaseDimensionPrimitive*>(m_currentPrimitive)->hasShelf());
     updateColorButton(m_textColorButton, style.textColor);
     updateColorButton(m_extensionColorButton, style.extensionLineColor);
     updateColorButton(m_dimensionLineColorButton, style.dimensionLineColor);
@@ -244,6 +264,18 @@ void DimensionPropertiesWidget::onCustomTextChanged(const QString& text)
             || type == PrimitiveType::RadialDimension
             || type == PrimitiveType::AngularDimension) {
             static_cast<BaseDimensionPrimitive*>(prim)->setCustomText(text);
+        }
+    }
+    emit dimensionPropertiesApplied();
+}
+
+void DimensionPropertiesWidget::onPrefixChanged(const QString& text)
+{
+    if (m_selectedPrimitives.isEmpty()) return;
+
+    for (auto* prim : m_selectedPrimitives) {
+        if (prim && prim->getType() == PrimitiveType::LinearDimension) {
+            static_cast<LinearDimensionPrimitive*>(prim)->setTextPrefix(text);
         }
     }
     emit dimensionPropertiesApplied();
@@ -304,6 +336,7 @@ void DimensionPropertiesWidget::applyStyleToSelection()
         style.extensionLineColor = m_extensionColorButton->property("selectedColor").value<QColor>();
         style.dimensionLineColor = m_dimensionLineColorButton->property("selectedColor").value<QColor>();
         dim->setStyle(style);
+        dim->setShelfEnabled(m_shelfCheckBox->isChecked());
     }
 }
 
