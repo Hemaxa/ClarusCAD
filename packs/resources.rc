@@ -1,4 +1,4 @@
-IDI_ICON1               ICON                    "res/icons/app/icon.ico"
+IDI_ICON1               ICON                    "../res/icons/app/icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION     1,0,0,0
