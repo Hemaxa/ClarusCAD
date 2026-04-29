@@ -9,25 +9,25 @@
     <string>APPL</string>
 
     <key>CFBundleName</key>
-    <string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
+    <string>ClarusCAD</string>
 
     <key>CFBundleDisplayName</key>
-    <string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
+    <string>ClarusCAD</string>
 
     <key>CFBundleIdentifier</key>
-    <string>@MACOSX_BUNDLE_GUI_IDENTIFIER@</string>
+    <string>com.claruscad.ru</string>
 
     <key>CFBundleExecutable</key>
     <string>ClarusCAD</string>
 
     <key>CFBundleVersion</key>
-    <string>@MACOSX_BUNDLE_BUNDLE_VERSION@</string>
+    <string>1.0.0</string>
 
     <key>CFBundleShortVersionString</key>
-    <string>@MACOSX_BUNDLE_SHORT_VERSION_STRING@</string>
+    <string>1.0</string>
 
     <key>LSMinimumSystemVersion</key>
-    <string>@CMAKE_OSX_DEPLOYMENT_TARGET@</string>
+    <string>11.0</string>
 
     <key>CFBundleSignature</key>
     <string>????</string>
@@ -39,6 +39,6 @@
     <string>NSApplication</string>
 
     <key>NSHumanReadableCopyright</key>
-    <string>@MACOSX_BUNDLE_COPYRIGHT@</string>
+    <string>Copyright © 2025 Sergey Yashin. All rights reserved.</string>
 </dict>
 </plist>

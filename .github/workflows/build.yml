@@ -99,46 +99,6 @@ jobs:
           arch: ${{ matrix.qt_arch }}
           cache: true
 
-      - name: Import Developer ID certificate
-        if: runner.os == 'macOS' && secrets.MACOS_CERTIFICATE_P12_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_CODESIGN_IDENTITY != ''
-        shell: bash
-        env:
-          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
-        run: |
-          CERT_PATH="$RUNNER_TEMP/claruscad-developer-id.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/claruscad-build.keychain-db"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-
-          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
-          security default-keychain -d user -s "$KEYCHAIN_PATH"
-
-          echo "MACOS_CODESIGN_IDENTITY=$MACOS_CODESIGN_IDENTITY" >> "$GITHUB_ENV"
-
-      - name: Configure notarytool profile
-        if: runner.os == 'macOS' && secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != ''
-        shell: bash
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: |
-          xcrun notarytool store-credentials "ClarusCADNotary" \
-            --apple-id "$APPLE_ID" \
-            --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_APP_SPECIFIC_PASSWORD"
-
-          echo "MACOS_NOTARY_ENABLED=1" >> "$GITHUB_ENV"
-          echo "MACOS_NOTARY_PROFILE=ClarusCADNotary" >> "$GITHUB_ENV"
-
       - name: Configure CMake (Linux/macOS)
         if: runner.os != 'Windows'
         shell: bash
@@ -237,19 +197,13 @@ jobs:
         run: |
           cmake --build build --config Release --target package
 
-          DMG_FILE="build/ClarusCAD_v${VERSION}_macOS.dmg"
-          if [ ! -f "$DMG_FILE" ]; then
-            echo "DMG installer was not created at $DMG_FILE" >&2
+          DMG_FILE=$(find build -name '*.dmg' | head -n1)
+          if [ -z "$DMG_FILE" ]; then
+            echo "DMG installer was not created" >&2
             exit 1
           fi
-          cp "$DMG_FILE" "ClarusCAD_v${VERSION}_macOS.dmg"
 
-      - name: Validate macOS signature
-        if: matrix.package_type == 'dmg' && runner.os == 'macOS' && env.MACOS_CODESIGN_IDENTITY != ''
-        shell: bash
-        run: |
-          codesign --verify --deep --strict --verbose=2 "build/ClarusCAD.app"
-          spctl --assess --type open --context context:primary-signature -v "build/ClarusCAD_v${VERSION}_macOS.dmg"
+          mv "$DMG_FILE" "ClarusCAD_v${VERSION}_macOS.dmg"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

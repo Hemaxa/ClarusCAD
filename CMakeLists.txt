@@ -215,11 +215,6 @@ if(APPLE)
     #задание свойств конечного файла (Info.plist.in)
     set_target_properties(ClarusCAD PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_GUI_IDENTIFIER "ru.claruscad"
-        MACOSX_BUNDLE_BUNDLE_NAME "ClarusCAD"
-        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
-        MACOSX_BUNDLE_COPYRIGHT "Copyright © 2025 Sergey Yashin. All rights reserved."
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packs/Info.plist.in"
     )
 
@@ -227,14 +222,7 @@ if(APPLE)
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/docs/LICENSE.txt")
 
     #поиск необходимых утилит для сборки проекта
-    get_filename_component(QT_DEPLOY_ROOT "${Qt6_DIR}/../../.." ABSOLUTE)
-    set(QT_DEPLOY_LIB_DIR "${QT_DEPLOY_ROOT}/lib")
     find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS ${Qt6_DIR}/../../../bin)
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/packs/package_macos_dmg.sh.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/package_macos_dmg.sh"
-        @ONLY
-    )
 
     #копирование иконки в .app
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/app/icon.icns")
@@ -246,12 +234,14 @@ if(APPLE)
     #создание и настройка .dmg
     if(MACDEPLOYQT_EXECUTABLE)
         add_custom_target(package
-            COMMAND /bin/sh "${CMAKE_CURRENT_BINARY_DIR}/package_macos_dmg.sh"
-                "$<TARGET_BUNDLE_DIR:ClarusCAD>"
+            #деплой зависимостей и создание dmg
+            COMMAND ${MACDEPLOYQT_EXECUTABLE} "$<TARGET_BUNDLE_DIR:ClarusCAD>" -dmg -verbose=1
+
+            #переименование итогового dmg
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/ClarusCAD.dmg"
                 "${CMAKE_BINARY_DIR}/ClarusCAD_v${PROJECT_VERSION}_macOS.dmg"
-                "ClarusCAD"
-                "${MACDEPLOYQT_EXECUTABLE}"
-                "${QT_DEPLOY_LIB_DIR}"
+
             DEPENDS ClarusCAD
             VERBATIM
         )
