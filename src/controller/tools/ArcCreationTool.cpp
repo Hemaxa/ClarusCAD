@@ -31,6 +31,7 @@ void ArcCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPan
                 m_step = 2;
             } else if (m_step == 2) {
                 // End Point
+                m_p3 = pt;
                 double radius = QLineF(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY()).length();
                 double startAngle = QLineF(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY()).angle();
                 double endAngle = QLineF(m_p1.getX(), m_p1.getY(), pt.getX(), pt.getY()).angle();
@@ -56,6 +57,7 @@ void ArcCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPan
                 m_step = 2;
             } else if (m_step == 2) {
                 // End point (pt)
+                m_p3 = pt;
                 // Строим дугу по 3 точкам: m_p1, m_p2, pt
 
                 // 1. Находим центр окружности по 3 точкам (алгоритм как у круга)

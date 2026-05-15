@@ -32,6 +32,10 @@ public:
     void setColor(const QColor& color) override { m_currentColor = color; }
     void setLineType(LineType type) override { m_currentLineType = type; }
     QColor getColor() const override { return m_currentColor; }
+    ArcCreationMode getCreationMode() const { return m_mode; }
+    PointPrimitive getFirstPoint() const { return m_p1; }
+    PointPrimitive getSecondPoint() const { return m_p2; }
+    PointPrimitive getThirdPoint() const { return m_p3; }
 
 signals:
     /**
@@ -46,6 +50,7 @@ private:
 
     PointPrimitive m_p1;
     PointPrimitive m_p2;
+    PointPrimitive m_p3;
     PointPrimitive m_currentPos;
 
     QColor m_currentColor = Qt::white;

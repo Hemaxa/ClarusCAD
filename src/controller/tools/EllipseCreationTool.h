@@ -21,6 +21,9 @@ public:
     void setColor(const QColor& c) override { m_currentColor = c; }
     void setLineType(LineType t) override { m_currentLineType = t; }
     QColor getColor() const override { return m_currentColor; }
+    PointPrimitive getCenterPoint() const { return m_center; }
+    PointPrimitive getAxisPoint1() const { return m_axisPoint1; }
+    PointPrimitive getAxisPoint2() const { return m_currentPos; }
 
 signals:
     /**

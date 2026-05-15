@@ -70,6 +70,7 @@ public:
      */
     QPointF getSnappedPoint(const QPointF& worldPos) const;
     SnapPoint getSnapPoint(const QPointF& worldPos) const;
+    void setPreviewSnapPoint(const SnapPoint& snap) const;
 
     // Методы трансформации координат
     

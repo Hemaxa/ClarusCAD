@@ -3,8 +3,34 @@
 #include <QPainter>
 #include <QtMath>
 #include <QMouseEvent>
+#include <algorithm>
 
 RectangleCreationTool::RectangleCreationTool(QObject* parent) : BaseCreationTool(parent) {}
+
+QPointF RectangleCreationTool::applySquareConstraint(const QPointF& point, Qt::KeyboardModifiers modifiers) const
+{
+    if (!(modifiers & Qt::ShiftModifier) || m_step == 0) {
+        return point;
+    }
+
+    const QPointF anchor(m_p1.getX(), m_p1.getY());
+    const double dx = point.x() - anchor.x();
+    const double dy = point.y() - anchor.y();
+    const double side = std::max(std::abs(dx), std::abs(dy));
+
+    const double sx = (dx < 0.0) ? -1.0 : 1.0;
+    const double sy = (dy < 0.0) ? -1.0 : 1.0;
+
+    switch (m_mode) {
+    case RectangleCreationMode::TwoPoints:
+    case RectangleCreationMode::PointSize:
+        return QPointF(anchor.x() + sx * side, anchor.y() + sy * side);
+    case RectangleCreationMode::CenterSize:
+        return QPointF(anchor.x() + sx * side, anchor.y() + sy * side);
+    default:
+        return point;
+    }
+}
 
 void RectangleCreationTool::setCreationMode(RectangleCreationMode mode) {
     m_mode = mode;
@@ -14,6 +40,7 @@ void RectangleCreationTool::setCreationMode(RectangleCreationMode mode) {
 void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {
     if (event->button() == Qt::LeftButton) {
         QPointF snapped = viewport->getSnappedPoint(event->position());
+        snapped = applySquareConstraint(snapped, event->modifiers());
         PointPrimitive pt(snapped.x(), snapped.y());
 
         if (m_mode == RectangleCreationMode::TwoPoints) {
@@ -23,6 +50,7 @@ void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewp
                 m_currentPos = pt;
                 m_step = 1;
             } else {
+                m_p2 = pt;
                 double w = std::abs(pt.getX() - m_p1.getX());
                 double h = std::abs(pt.getY() - m_p1.getY());
                 double cx = (pt.getX() + m_p1.getX()) / 2.0;
@@ -41,6 +69,7 @@ void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewp
                 m_currentPos = pt;
                 m_step = 1;
             } else {
+                m_p2 = pt;
                 double w = std::abs(pt.getX() - m_p1.getX()) * 2.0;
                 double h = std::abs(pt.getY() - m_p1.getY()) * 2.0;
 
@@ -58,6 +87,7 @@ void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewp
                 m_currentPos = pt;
                 m_step = 1;
             } else {
+                m_p2 = pt;
                 double w = pt.getX() - m_p1.getX();
                 double h = pt.getY() - m_p1.getY();
                 
@@ -81,6 +111,7 @@ void RectangleCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewp
 void RectangleCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport) {
     if (m_step > 0) {
         QPointF snapped = viewport->getSnappedPoint(event->position());
+        snapped = applySquareConstraint(snapped, event->modifiers());
         m_currentPos = PointPrimitive(snapped.x(), snapped.y());
         viewport->update();
     }

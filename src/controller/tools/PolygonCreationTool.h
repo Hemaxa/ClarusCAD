@@ -51,6 +51,8 @@ public:
      * @brief Получить текущий тип многоугольника.
      */
     PolygonCreationMode getPolygonType() const;
+    PointPrimitive getCenterPoint() const { return m_center; }
+    PointPrimitive getRadiusPoint() const { return m_currentMousePos; }
 
 signals:
     /**

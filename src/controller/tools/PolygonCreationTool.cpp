@@ -19,6 +19,7 @@ void PolygonCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
     if (event->button() != Qt::LeftButton) return;
     
     QPointF worldPos = viewport->getSnappedPoint(event->position());
+    m_currentMousePos = PointPrimitive(worldPos.x(), worldPos.y());
     
     if (m_step == 0) {
         // Первый клик — центр

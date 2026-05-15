@@ -10,6 +10,7 @@ void EllipseCreationTool::onMousePress(QMouseEvent* event, Scene*, ViewportPanel
     if (event->button() == Qt::LeftButton) {
         QPointF snapped = viewport->getSnappedPoint(event->position());
         PointPrimitive pt(snapped.x(), snapped.y());
+        m_currentPos = pt;
 
         if (m_step == 0) {
             m_center = pt;

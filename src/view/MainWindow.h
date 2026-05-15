@@ -8,6 +8,8 @@
 #include <QShowEvent>
 #include <QKeyEvent>
 #include <QList>
+#include <QHash>
+#include <QVector>
 
 //предварительные объявления всех классов
 class Scene;
@@ -140,6 +142,34 @@ protected:
     void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
+    struct PrimitiveSnapBinding {
+        BasePrimitive* source = nullptr;
+        int snapIndex = -1;
+    };
+
+    enum class PrimitiveBindingRecipe {
+        None,
+        SegmentTwoPoints,
+        CircleCenterRadius,
+        CircleCenterDiameter,
+        CircleTwoPoints,
+        CircleThreePoints,
+        ArcCenterStartEnd,
+        ArcThreePoints,
+        RectangleTwoPoints,
+        RectangleCenterSize,
+        RectanglePointSize,
+        EllipseCenterAxes,
+        PolygonCenterRadius,
+        SplineControlPoints
+    };
+
+    struct PrimitiveBindingState {
+        PrimitiveBindingRecipe recipe = PrimitiveBindingRecipe::None;
+        QVector<QPointF> definitionPoints;
+        QVector<PrimitiveSnapBinding> bindings;
+    };
+
     void createTools(); //метод создания инструментов
     void createPanelWindows(); //метод создания интерфейсных панелей
     void createConnections(); //метод создания взаимодействий
@@ -147,6 +177,11 @@ private:
     void createActions(); //метод для создания QAction
 
     void addPrimitiveToScene(BasePrimitive* primitive); //метод добавления примитива в сцену
+    PrimitiveSnapBinding detectPrimitiveSnapBinding(const QPointF& point) const;
+    void registerPrimitiveBindings(BasePrimitive* primitive, PrimitiveBindingRecipe recipe, const QVector<QPointF>& definitionPoints);
+    void synchronizePrimitiveBindingDefinition(BasePrimitive* primitive);
+    bool rebuildPrimitiveFromBinding(BasePrimitive* primitive, PrimitiveBindingState& state);
+    void refreshPrimitiveBindings();
     void refreshAssociativeDimensions();
     void applyGlobalDimensionStyleToScene();
 
@@ -186,4 +221,6 @@ private:
     QAction* m_settingsAction;
     QAction* m_exportDxfAction;
     QAction* m_importDxfAction;
+
+    QHash<BasePrimitive*, PrimitiveBindingState> m_primitiveBindingStates;
 };

@@ -37,6 +37,11 @@ public:
     void setColor(const QColor& color) override;
     void setLineType(LineType type) override;
     QColor getColor() const override;
+    CircleCreationMode getCreationMode() const { return m_mode; }
+    PointPrimitive getFirstPoint() const { return m_p1; }
+    PointPrimitive getSecondPoint() const { return m_p2; }
+    PointPrimitive getThirdPoint() const { return m_p3; }
+    PointPrimitive getCurrentMousePos() const { return m_currentMousePos; }
 
 signals:
     /**

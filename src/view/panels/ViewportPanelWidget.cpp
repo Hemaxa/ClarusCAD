@@ -902,6 +902,11 @@ SnapPoint ViewportPanelWidget::getSnapPoint(const QPointF& worldPos) const
     return result;
 }
 
+void ViewportPanelWidget::setPreviewSnapPoint(const SnapPoint& snap) const
+{
+    m_lastSnapPoint = snap;
+}
+
 void ViewportPanelWidget::panWorld(const QPointF& worldDelta)
 {
     m_camera->panWorld(worldDelta);
