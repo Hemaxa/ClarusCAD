@@ -56,6 +56,82 @@
 #include <QCursor>
 #include <QApplication>
 #include <QToolButton>
+#include <QSet>
+
+#include <cmath>
+
+namespace {
+constexpr double kBindingEps = 1e-6;
+
+bool pointsEqual(const QPointF& a, const QPointF& b, double eps = kBindingEps)
+{
+    return QLineF(a, b).length() <= eps;
+}
+
+QPointF pointOnArcQt(const QPointF& center, double radius, double angleDeg)
+{
+    const double angleRad = angleDeg * M_PI / 180.0;
+    return QPointF(center.x() + radius * std::cos(angleRad),
+                   center.y() - radius * std::sin(angleRad));
+}
+
+QPointF safeNormalized(const QPointF& v, const QPointF& fallback = QPointF(1.0, 0.0))
+{
+    const double len = std::hypot(v.x(), v.y());
+    if (len <= kBindingEps) {
+        return fallback;
+    }
+    return QPointF(v.x() / len, v.y() / len);
+}
+
+bool computeCircleFromThreePoints(const QPointF& p1, const QPointF& p2, const QPointF& p3,
+                                  QPointF& center, double& radius)
+{
+    const double x1 = p1.x(), y1 = p1.y();
+    const double x2 = p2.x(), y2 = p2.y();
+    const double x3 = p3.x(), y3 = p3.y();
+    const double d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+    if (std::abs(d) <= kBindingEps) {
+        return false;
+    }
+
+    const double cx = ((x1 * x1 + y1 * y1) * (y2 - y3)
+                     + (x2 * x2 + y2 * y2) * (y3 - y1)
+                     + (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
+    const double cy = ((x1 * x1 + y1 * y1) * (x3 - x2)
+                     + (x2 * x2 + y2 * y2) * (x1 - x3)
+                     + (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
+
+    center = QPointF(cx, cy);
+    radius = QLineF(center, p1).length();
+    return radius > kBindingEps;
+}
+
+bool applyArcFromThreePoints(ArcPrimitive* arc, const QPointF& p1, const QPointF& p2, const QPointF& p3)
+{
+    QPointF center;
+    double radius = 0.0;
+    if (!computeCircleFromThreePoints(p1, p2, p3, center, radius)) {
+        return false;
+    }
+
+    const double a1 = QLineF(center, p1).angle();
+    const double a2 = QLineF(center, p2).angle();
+    const double a3 = QLineF(center, p3).angle();
+
+    double a2Rel = a2 - a1;
+    if (a2Rel < 0.0) a2Rel += 360.0;
+    double a3Rel = a3 - a1;
+    if (a3Rel < 0.0) a3Rel += 360.0;
+
+    const double span = (a2Rel < a3Rel) ? a3Rel : (a3Rel - 360.0);
+    arc->setCenter(PointPrimitive(center.x(), center.y()));
+    arc->setRadius(radius);
+    arc->setStartAngle(a1);
+    arc->setSpanAngle(span);
+    return true;
+}
+}
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_currentTool(nullptr)
 {
@@ -227,12 +303,15 @@ void MainWindow::createConnections()
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::intersectionSnapToggled, this, [](bool enabled) {
         SnapManager::instance().setSnapTypeEnabled(SnapType::Intersection, enabled);
     });
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::intersectionSnapToggled, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::perpendicularSnapToggled, this, [](bool enabled) {
         SnapManager::instance().setSnapTypeEnabled(SnapType::Perpendicular, enabled);
     });
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::perpendicularSnapToggled, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::tangentSnapToggled, this, [](bool enabled) {
         SnapManager::instance().setSnapTypeEnabled(SnapType::Tangent, enabled);
     });
+    connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::tangentSnapToggled, m_viewportPanel, QOverload<>::of(&ViewportPanelWidget::update));
 
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_propertiesPanel, &PropertiesPanelWidget::setCoordinateSystem);
     connect(m_sceneSettingsPanel, &SceneSettingsPanelWidget::coordinateSystemChanged, m_viewportPanel, &ViewportPanelWidget::setCoordinateSystem);
@@ -247,6 +326,40 @@ void MainWindow::createConnections()
     connect(m_segmentCreationTool, &SegmentCreationTool::segmentDataReady, this, &MainWindow::applySegmentChanges);
     connect(m_circleCreationTool, &CircleCreationTool::circleDataReady, this, [this](CirclePrimitive* circle){
         circle->setLayerName(m_currentLayer);
+        PrimitiveBindingRecipe recipe = PrimitiveBindingRecipe::None;
+        QVector<QPointF> definitionPoints;
+        switch (m_circleCreationTool->getCreationMode()) {
+        case CircleCreationMode::CenterRadius:
+            recipe = PrimitiveBindingRecipe::CircleCenterRadius;
+            definitionPoints = {
+                QPointF(m_circleCreationTool->getFirstPoint().getX(), m_circleCreationTool->getFirstPoint().getY()),
+                QPointF(m_circleCreationTool->getCurrentMousePos().getX(), m_circleCreationTool->getCurrentMousePos().getY())
+            };
+            break;
+        case CircleCreationMode::CenterDiameter:
+            recipe = PrimitiveBindingRecipe::CircleCenterDiameter;
+            definitionPoints = {
+                QPointF(m_circleCreationTool->getFirstPoint().getX(), m_circleCreationTool->getFirstPoint().getY()),
+                QPointF(m_circleCreationTool->getCurrentMousePos().getX(), m_circleCreationTool->getCurrentMousePos().getY())
+            };
+            break;
+        case CircleCreationMode::TwoPoints:
+            recipe = PrimitiveBindingRecipe::CircleTwoPoints;
+            definitionPoints = {
+                QPointF(m_circleCreationTool->getFirstPoint().getX(), m_circleCreationTool->getFirstPoint().getY()),
+                QPointF(m_circleCreationTool->getSecondPoint().getX(), m_circleCreationTool->getSecondPoint().getY())
+            };
+            break;
+        case CircleCreationMode::ThreePoints:
+            recipe = PrimitiveBindingRecipe::CircleThreePoints;
+            definitionPoints = {
+                QPointF(m_circleCreationTool->getFirstPoint().getX(), m_circleCreationTool->getFirstPoint().getY()),
+                QPointF(m_circleCreationTool->getSecondPoint().getX(), m_circleCreationTool->getSecondPoint().getY()),
+                QPointF(m_circleCreationTool->getThirdPoint().getX(), m_circleCreationTool->getThirdPoint().getY())
+            };
+            break;
+        }
+        registerPrimitiveBindings(circle, recipe, definitionPoints);
         addPrimitiveToScene(circle);
     });
     connect(m_rectCreationTool, &RectangleCreationTool::rectangleDataReady, this, [this](const PointPrimitive& center, double w, double h, double rot){
@@ -254,12 +367,50 @@ void MainWindow::createConnections()
         rect->setColor(m_rectCreationTool->getColor());
         rect->setLineType((int)m_rectCreationTool->getLineType());
         rect->setLayerName(m_currentLayer);
+        PrimitiveBindingRecipe recipe = PrimitiveBindingRecipe::None;
+        QVector<QPointF> definitionPoints = {
+            QPointF(m_rectCreationTool->getFirstPoint().getX(), m_rectCreationTool->getFirstPoint().getY()),
+            QPointF(m_rectCreationTool->getSecondPoint().getX(), m_rectCreationTool->getSecondPoint().getY())
+        };
+        switch (m_rectCreationTool->getCreationMode()) {
+        case RectangleCreationMode::TwoPoints:
+            recipe = PrimitiveBindingRecipe::RectangleTwoPoints;
+            break;
+        case RectangleCreationMode::CenterSize:
+            recipe = PrimitiveBindingRecipe::RectangleCenterSize;
+            break;
+        case RectangleCreationMode::PointSize:
+            recipe = PrimitiveBindingRecipe::RectanglePointSize;
+            break;
+        }
+        registerPrimitiveBindings(rect, recipe, definitionPoints);
         addPrimitiveToScene(rect);
     });
 
     // Коннект для ДУГИ (оставляем, он был верным)
     connect(m_arcCreationTool, &ArcCreationTool::arcDataReady, this, [this](ArcPrimitive* arc){
         arc->setLayerName(m_currentLayer);
+        PrimitiveBindingRecipe recipe = PrimitiveBindingRecipe::None;
+        QVector<QPointF> definitionPoints;
+        switch (m_arcCreationTool->getCreationMode()) {
+        case ArcCreationMode::CenterStartEnd:
+            recipe = PrimitiveBindingRecipe::ArcCenterStartEnd;
+            definitionPoints = {
+                QPointF(m_arcCreationTool->getFirstPoint().getX(), m_arcCreationTool->getFirstPoint().getY()),
+                QPointF(m_arcCreationTool->getSecondPoint().getX(), m_arcCreationTool->getSecondPoint().getY()),
+                QPointF(m_arcCreationTool->getThirdPoint().getX(), m_arcCreationTool->getThirdPoint().getY())
+            };
+            break;
+        case ArcCreationMode::ThreePoints:
+            recipe = PrimitiveBindingRecipe::ArcThreePoints;
+            definitionPoints = {
+                QPointF(m_arcCreationTool->getFirstPoint().getX(), m_arcCreationTool->getFirstPoint().getY()),
+                QPointF(m_arcCreationTool->getSecondPoint().getX(), m_arcCreationTool->getSecondPoint().getY()),
+                QPointF(m_arcCreationTool->getThirdPoint().getX(), m_arcCreationTool->getThirdPoint().getY())
+            };
+            break;
+        }
+        registerPrimitiveBindings(arc, recipe, definitionPoints);
         addPrimitiveToScene(arc);
     });
 
@@ -269,6 +420,11 @@ void MainWindow::createConnections()
         ell->setColor(m_ellipseCreationTool->getColor());
         ell->setLineType((int)m_ellipseCreationTool->getLineType());
         ell->setLayerName(m_currentLayer);
+        registerPrimitiveBindings(ell, PrimitiveBindingRecipe::EllipseCenterAxes, {
+            QPointF(m_ellipseCreationTool->getCenterPoint().getX(), m_ellipseCreationTool->getCenterPoint().getY()),
+            QPointF(m_ellipseCreationTool->getAxisPoint1().getX(), m_ellipseCreationTool->getAxisPoint1().getY()),
+            QPointF(m_ellipseCreationTool->getAxisPoint2().getX(), m_ellipseCreationTool->getAxisPoint2().getY())
+        });
         addPrimitiveToScene(ell);
     });
 
@@ -284,6 +440,10 @@ void MainWindow::createConnections()
     // Коннект для МНОГОУГОЛЬНИКА
     connect(m_polygonCreationTool, &PolygonCreationTool::polygonDataReady, this, [this](PolygonPrimitive* polygon){
         polygon->setLayerName(m_currentLayer);
+        registerPrimitiveBindings(polygon, PrimitiveBindingRecipe::PolygonCenterRadius, {
+            QPointF(m_polygonCreationTool->getCenterPoint().getX(), m_polygonCreationTool->getCenterPoint().getY()),
+            QPointF(m_polygonCreationTool->getRadiusPoint().getX(), m_polygonCreationTool->getRadiusPoint().getY())
+        });
         addPrimitiveToScene(polygon);
     });
 
@@ -296,6 +456,7 @@ void MainWindow::createConnections()
     // Коннект для СПЛАЙНА
     connect(m_splineCreationTool, &SplineCreationTool::splineDataReady, this, [this](SplinePrimitive* spline){
         spline->setLayerName(m_currentLayer);
+        registerPrimitiveBindings(spline, PrimitiveBindingRecipe::SplineControlPoints, m_splineCreationTool->getControlPoints());
         addPrimitiveToScene(spline);
     });
 
@@ -332,6 +493,7 @@ void MainWindow::createConnections()
     });
 
     connect(m_propertiesPanel, &PropertiesPanelWidget::dimensionPropertiesApplied, this, [this](){
+        refreshPrimitiveBindings();
         refreshAssociativeDimensions();
         emit sceneChanged(m_scene);
     });
@@ -347,6 +509,7 @@ void MainWindow::createConnections()
         if (!ok) return;
         if (dim->applyMeasuredValueOverride(value)) {
             dim->setCustomText(QString());
+            refreshPrimitiveBindings();
             refreshAssociativeDimensions();
             emit sceneChanged(m_scene);
             onSelectionChanged(m_selectedPrimitives);
@@ -683,6 +846,8 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         newSegment->setColor(color);
         newSegment->setLineType(static_cast<int>(lineType)); // Приведение к int
         newSegment->setLayerName(m_currentLayer);
+        registerPrimitiveBindings(newSegment, PrimitiveBindingRecipe::SegmentTwoPoints,
+                                  { QPointF(start.getX(), start.getY()), QPointF(end.getX(), end.getY()) });
         addPrimitiveToScene(newSegment);
         return;
     }
@@ -719,6 +884,8 @@ void MainWindow::applySegmentChanges(SegmentPrimitive* segment, const PointPrimi
         segment->setLineType(static_cast<int>(lineType));
     }
 
+    synchronizePrimitiveBindingDefinition(segment);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     // Сигнал об изменении сцены обновит список объектов
     emit sceneChanged(m_scene);
@@ -755,6 +922,8 @@ void MainWindow::applyCircleChanges(CirclePrimitive* circle, const PointPrimitiv
         circle->setColor(color);
         circle->setLineType(static_cast<int>(lineType));
     }
+    synchronizePrimitiveBindingDefinition(circle);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -780,6 +949,8 @@ void MainWindow::applyRectangleChanges(RectanglePrimitive* rect, const PointPrim
     rect->setCornerRadius(cornerRadius);
     rect->setColor(color);
     rect->setLineType((int)type);
+    synchronizePrimitiveBindingDefinition(rect);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -797,6 +968,374 @@ void MainWindow::addPrimitiveToScene(BasePrimitive* primitive)
 
         // Принудительно устанавливаем выделение нового объекта
         onSelectionChanged(newSelection);
+    }
+}
+
+MainWindow::PrimitiveSnapBinding MainWindow::detectPrimitiveSnapBinding(const QPointF& point) const
+{
+    if (!m_scene) {
+        return {};
+    }
+
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        const QVector<QPointF> snapPoints = primitive->getSnapPoints();
+        for (int i = 0; i < snapPoints.size(); ++i) {
+            if (pointsEqual(snapPoints[i], point)) {
+                return { primitive.get(), i };
+            }
+        }
+    }
+
+    return {};
+}
+
+void MainWindow::registerPrimitiveBindings(BasePrimitive* primitive, PrimitiveBindingRecipe recipe,
+                                           const QVector<QPointF>& definitionPoints)
+{
+    if (!primitive || recipe == PrimitiveBindingRecipe::None || definitionPoints.isEmpty()) {
+        return;
+    }
+
+    PrimitiveBindingState state;
+    state.recipe = recipe;
+    state.definitionPoints = definitionPoints;
+    state.bindings.reserve(definitionPoints.size());
+
+    bool hasAnyBinding = false;
+    for (const QPointF& point : definitionPoints) {
+        PrimitiveSnapBinding binding = detectPrimitiveSnapBinding(point);
+        if (binding.source) {
+            hasAnyBinding = true;
+        }
+        state.bindings.append(binding);
+    }
+
+    if (hasAnyBinding) {
+        m_primitiveBindingStates.insert(primitive, state);
+    }
+}
+
+void MainWindow::synchronizePrimitiveBindingDefinition(BasePrimitive* primitive)
+{
+    auto it = m_primitiveBindingStates.find(primitive);
+    if (it == m_primitiveBindingStates.end()) {
+        return;
+    }
+
+    PrimitiveBindingState& state = it.value();
+    auto isBound = [&](int index) {
+        return index >= 0 && index < state.bindings.size() && state.bindings[index].source;
+    };
+
+    switch (state.recipe) {
+    case PrimitiveBindingRecipe::SegmentTwoPoints: {
+        auto* seg = static_cast<SegmentPrimitive*>(primitive);
+        if (!isBound(0)) state.definitionPoints[0] = QPointF(seg->getStart().getX(), seg->getStart().getY());
+        if (!isBound(1)) state.definitionPoints[1] = QPointF(seg->getEnd().getX(), seg->getEnd().getY());
+        break;
+    }
+    case PrimitiveBindingRecipe::CircleCenterRadius:
+    case PrimitiveBindingRecipe::CircleCenterDiameter: {
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        const QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+        const QPointF oldCenter = state.definitionPoints.value(0, center);
+        const QPointF oldRadiusPoint = state.definitionPoints.value(1, center + QPointF(circle->getRadius(), 0.0));
+        if (!isBound(0)) state.definitionPoints[0] = center;
+        if (!isBound(1)) {
+            const QPointF dir = safeNormalized(oldRadiusPoint - oldCenter);
+            const double length = (state.recipe == PrimitiveBindingRecipe::CircleCenterDiameter)
+                ? (circle->getRadius() * 2.0)
+                : circle->getRadius();
+            state.definitionPoints[1] = center + dir * length;
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::CircleTwoPoints: {
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        const QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+        const QPointF dir = safeNormalized(state.definitionPoints.value(1) - state.definitionPoints.value(0));
+        if (!isBound(0)) state.definitionPoints[0] = center - dir * circle->getRadius();
+        if (!isBound(1)) state.definitionPoints[1] = center + dir * circle->getRadius();
+        break;
+    }
+    case PrimitiveBindingRecipe::CircleThreePoints: {
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        const QPointF center(circle->getCenter().getX(), circle->getCenter().getY());
+        QPointF oldCenter;
+        double oldRadius = 0.0;
+        if (!computeCircleFromThreePoints(state.definitionPoints[0], state.definitionPoints[1], state.definitionPoints[2], oldCenter, oldRadius)) {
+            oldCenter = center;
+        }
+        for (int i = 0; i < state.definitionPoints.size(); ++i) {
+            if (isBound(i)) continue;
+            const QPointF dir = safeNormalized(state.definitionPoints[i] - oldCenter);
+            state.definitionPoints[i] = center + dir * circle->getRadius();
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::ArcCenterStartEnd: {
+        auto* arc = static_cast<ArcPrimitive*>(primitive);
+        const QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
+        if (!isBound(0)) state.definitionPoints[0] = center;
+        if (!isBound(1)) {
+            state.definitionPoints[1] = pointOnArcQt(center, arc->getRadius(), arc->getStartAngle());
+        }
+        if (!isBound(2)) {
+            state.definitionPoints[2] = pointOnArcQt(center, arc->getRadius(), arc->getStartAngle() + arc->getSpanAngle());
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::ArcThreePoints: {
+        auto* arc = static_cast<ArcPrimitive*>(primitive);
+        const QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
+        if (!isBound(0)) state.definitionPoints[0] = pointOnArcQt(center, arc->getRadius(), arc->getStartAngle());
+        if (!isBound(1)) state.definitionPoints[1] = pointOnArcQt(center, arc->getRadius(), arc->getStartAngle() + arc->getSpanAngle() / 2.0);
+        if (!isBound(2)) state.definitionPoints[2] = pointOnArcQt(center, arc->getRadius(), arc->getStartAngle() + arc->getSpanAngle());
+        break;
+    }
+    case PrimitiveBindingRecipe::RectangleTwoPoints:
+    case PrimitiveBindingRecipe::RectanglePointSize: {
+        auto* rect = static_cast<RectanglePrimitive*>(primitive);
+        const QVector<QPointF> snaps = rect->getSnapPoints();
+        if (snaps.size() >= 5) {
+            if (!isBound(0)) state.definitionPoints[0] = snaps[1];
+            if (!isBound(1)) state.definitionPoints[1] = snaps[3];
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::RectangleCenterSize: {
+        auto* rect = static_cast<RectanglePrimitive*>(primitive);
+        const QPointF center(rect->getCenter().getX(), rect->getCenter().getY());
+        if (!isBound(0)) state.definitionPoints[0] = center;
+        if (!isBound(1)) {
+            const QVector<QPointF> snaps = rect->getSnapPoints();
+            if (snaps.size() >= 2) state.definitionPoints[1] = snaps[1];
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::EllipseCenterAxes: {
+        auto* ell = static_cast<EllipsePrimitive*>(primitive);
+        const QPointF center(ell->getCenter().getX(), ell->getCenter().getY());
+        const double rot = ell->getRotation() * M_PI / 180.0;
+        const double cosA = std::cos(rot);
+        const double sinA = std::sin(rot);
+        if (!isBound(0)) state.definitionPoints[0] = center;
+        if (!isBound(1)) {
+            state.definitionPoints[1] = center + QPointF(ell->getRadiusX() * cosA, ell->getRadiusX() * sinA);
+        }
+        if (!isBound(2)) {
+            state.definitionPoints[2] = center + QPointF(-ell->getRadiusY() * sinA, ell->getRadiusY() * cosA);
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::PolygonCenterRadius: {
+        auto* poly = static_cast<PolygonPrimitive*>(primitive);
+        const QPointF center(poly->getCenter().getX(), poly->getCenter().getY());
+        if (!isBound(0)) state.definitionPoints[0] = center;
+        if (!isBound(1)) {
+            const QVector<QPointF> verts = poly->getVertices();
+            if (!verts.isEmpty()) state.definitionPoints[1] = verts.first();
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::SplineControlPoints: {
+        auto* spline = static_cast<SplinePrimitive*>(primitive);
+        const QVector<QPointF> points = spline->getControlPoints();
+        for (int i = 0; i < points.size() && i < state.definitionPoints.size(); ++i) {
+            if (!isBound(i)) state.definitionPoints[i] = points[i];
+        }
+        break;
+    }
+    case PrimitiveBindingRecipe::None:
+        break;
+    }
+}
+
+bool MainWindow::rebuildPrimitiveFromBinding(BasePrimitive* primitive, PrimitiveBindingState& state)
+{
+    const QVector<QPointF>& pts = state.definitionPoints;
+    if (!primitive || pts.isEmpty()) {
+        return false;
+    }
+
+    switch (state.recipe) {
+    case PrimitiveBindingRecipe::SegmentTwoPoints: {
+        if (pts.size() < 2) return false;
+        auto* seg = static_cast<SegmentPrimitive*>(primitive);
+        seg->setStart(PointPrimitive(pts[0].x(), pts[0].y()));
+        seg->setEnd(PointPrimitive(pts[1].x(), pts[1].y()));
+        return true;
+    }
+    case PrimitiveBindingRecipe::CircleCenterRadius: {
+        if (pts.size() < 2) return false;
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        circle->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        circle->setRadius(QLineF(pts[0], pts[1]).length());
+        return circle->getRadius() > kBindingEps;
+    }
+    case PrimitiveBindingRecipe::CircleCenterDiameter: {
+        if (pts.size() < 2) return false;
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        circle->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        circle->setRadius(QLineF(pts[0], pts[1]).length() / 2.0);
+        return circle->getRadius() > kBindingEps;
+    }
+    case PrimitiveBindingRecipe::CircleTwoPoints: {
+        if (pts.size() < 2) return false;
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        const QPointF center = (pts[0] + pts[1]) / 2.0;
+        circle->setCenter(PointPrimitive(center.x(), center.y()));
+        circle->setRadius(QLineF(pts[0], pts[1]).length() / 2.0);
+        return circle->getRadius() > kBindingEps;
+    }
+    case PrimitiveBindingRecipe::CircleThreePoints: {
+        if (pts.size() < 3) return false;
+        auto* circle = static_cast<CirclePrimitive*>(primitive);
+        QPointF center;
+        double radius = 0.0;
+        if (!computeCircleFromThreePoints(pts[0], pts[1], pts[2], center, radius)) {
+            return false;
+        }
+        circle->setCenter(PointPrimitive(center.x(), center.y()));
+        circle->setRadius(radius);
+        return true;
+    }
+    case PrimitiveBindingRecipe::ArcCenterStartEnd: {
+        if (pts.size() < 3) return false;
+        auto* arc = static_cast<ArcPrimitive*>(primitive);
+        const double radius = QLineF(pts[0], pts[1]).length();
+        if (radius <= kBindingEps) return false;
+        const double startAngle = QLineF(pts[0], pts[1]).angle();
+        double endAngle = QLineF(pts[0], pts[2]).angle();
+        double span = endAngle - startAngle;
+        if (span < 0.0) span += 360.0;
+        arc->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        arc->setRadius(radius);
+        arc->setStartAngle(startAngle);
+        arc->setSpanAngle(span);
+        return true;
+    }
+    case PrimitiveBindingRecipe::ArcThreePoints: {
+        if (pts.size() < 3) return false;
+        return applyArcFromThreePoints(static_cast<ArcPrimitive*>(primitive), pts[0], pts[1], pts[2]);
+    }
+    case PrimitiveBindingRecipe::RectangleTwoPoints:
+    case PrimitiveBindingRecipe::RectanglePointSize: {
+        if (pts.size() < 2) return false;
+        auto* rect = static_cast<RectanglePrimitive*>(primitive);
+        const double width = std::abs(pts[1].x() - pts[0].x());
+        const double height = std::abs(pts[1].y() - pts[0].y());
+        if (width <= kBindingEps || height <= kBindingEps) return false;
+        const QPointF center = (pts[0] + pts[1]) / 2.0;
+        rect->setCenter(PointPrimitive(center.x(), center.y()));
+        rect->setWidth(width);
+        rect->setHeight(height);
+        rect->setRotation(0.0);
+        return true;
+    }
+    case PrimitiveBindingRecipe::RectangleCenterSize: {
+        if (pts.size() < 2) return false;
+        auto* rect = static_cast<RectanglePrimitive*>(primitive);
+        const double width = std::abs(pts[1].x() - pts[0].x()) * 2.0;
+        const double height = std::abs(pts[1].y() - pts[0].y()) * 2.0;
+        if (width <= kBindingEps || height <= kBindingEps) return false;
+        rect->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        rect->setWidth(width);
+        rect->setHeight(height);
+        rect->setRotation(0.0);
+        return true;
+    }
+    case PrimitiveBindingRecipe::EllipseCenterAxes: {
+        if (pts.size() < 3) return false;
+        auto* ell = static_cast<EllipsePrimitive*>(primitive);
+        const double rx = QLineF(pts[0], pts[1]).length();
+        if (rx <= kBindingEps) return false;
+        const double angle = QLineF(pts[0], pts[1]).angle();
+        const double dx = pts[2].x() - pts[0].x();
+        const double dy = pts[2].y() - pts[0].y();
+        const double radAngle = -angle * M_PI / 180.0;
+        const double ry = std::abs(dx * std::sin(radAngle) + dy * std::cos(radAngle));
+        if (ry <= kBindingEps) return false;
+        ell->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        ell->setRadiusX(rx);
+        ell->setRadiusY(ry);
+        ell->setRotation(-angle);
+        return true;
+    }
+    case PrimitiveBindingRecipe::PolygonCenterRadius: {
+        if (pts.size() < 2) return false;
+        auto* poly = static_cast<PolygonPrimitive*>(primitive);
+        const double radius = QLineF(pts[0], pts[1]).length();
+        if (radius <= kBindingEps) return false;
+        const double rotation = std::atan2(pts[1].y() - pts[0].y(), pts[1].x() - pts[0].x()) * 180.0 / M_PI;
+        poly->setCenter(PointPrimitive(pts[0].x(), pts[0].y()));
+        poly->setRadius(radius);
+        poly->setRotation(rotation);
+        return true;
+    }
+    case PrimitiveBindingRecipe::SplineControlPoints: {
+        auto* spline = static_cast<SplinePrimitive*>(primitive);
+        spline->setControlPoints(pts);
+        return pts.size() >= 2;
+    }
+    case PrimitiveBindingRecipe::None:
+        break;
+    }
+
+    return false;
+}
+
+void MainWindow::refreshPrimitiveBindings()
+{
+    QSet<BasePrimitive*> scenePrimitives;
+    for (const auto& primitive : m_scene->getPrimitives()) {
+        scenePrimitives.insert(primitive.get());
+    }
+
+    for (auto it = m_primitiveBindingStates.begin(); it != m_primitiveBindingStates.end(); ) {
+        if (!scenePrimitives.contains(it.key())) {
+            it = m_primitiveBindingStates.erase(it);
+            continue;
+        }
+        ++it;
+    }
+
+    for (int pass = 0; pass < 3; ++pass) {
+        bool changedAny = false;
+
+        for (auto it = m_primitiveBindingStates.begin(); it != m_primitiveBindingStates.end(); ++it) {
+            BasePrimitive* primitive = it.key();
+            PrimitiveBindingState& state = it.value();
+            bool changed = false;
+
+            for (int i = 0; i < state.bindings.size() && i < state.definitionPoints.size(); ++i) {
+                PrimitiveSnapBinding& binding = state.bindings[i];
+                if (!binding.source || !scenePrimitives.contains(binding.source)) {
+                    binding.source = nullptr;
+                    binding.snapIndex = -1;
+                    continue;
+                }
+
+                const QVector<QPointF> sourceSnaps = binding.source->getSnapPoints();
+                if (binding.snapIndex < 0 || binding.snapIndex >= sourceSnaps.size()) {
+                    continue;
+                }
+
+                const QPointF currentPoint = sourceSnaps[binding.snapIndex];
+                if (!pointsEqual(state.definitionPoints[i], currentPoint)) {
+                    state.definitionPoints[i] = currentPoint;
+                    changed = true;
+                }
+            }
+
+            if (changed && rebuildPrimitiveFromBinding(primitive, state)) {
+                changedAny = true;
+            }
+        }
+
+        if (!changedAny) {
+            break;
+        }
     }
 }
 
@@ -843,6 +1382,8 @@ void MainWindow::applyArcChanges(ArcPrimitive* arc, const PointPrimitive& center
     arc->setSpanAngle(span);
     arc->setColor(color);
     arc->setLineType((int)type);
+    synchronizePrimitiveBindingDefinition(arc);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -876,6 +1417,8 @@ void MainWindow::applyEllipseChanges(EllipsePrimitive* ell, const PointPrimitive
         ell->setColor(c);
         ell->setLineType((int)t);
     }
+    synchronizePrimitiveBindingDefinition(ell);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -890,7 +1433,7 @@ void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const 
             newSpline->setLineType((int)t);
             newSpline->setLayerName(m_currentLayer);
             addPrimitiveToScene(newSpline);
-        } else if (m_currentTool == m_splineCreationTool) {
+    } else if (m_currentTool == m_splineCreationTool) {
             // Если пытаемся создать через свойства, пока активен инструмент (и точек нет в UI),
             // завершаем построение сплайна на холсте
             m_splineCreationTool->finishSpline();
@@ -902,6 +1445,8 @@ void MainWindow::applySplineChanges(SplinePrimitive* spline, bool closed, const 
     spline->setClosed(closed);
     spline->setColor(c);
     spline->setLineType((int)t);
+    synchronizePrimitiveBindingDefinition(spline);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -921,6 +1466,8 @@ void MainWindow::applyPolygonChanges(PolygonPrimitive* polygon, int sides, Polyg
         polygon->setColor(color);
         polygon->setLineType((int)lineType);
     }
+    synchronizePrimitiveBindingDefinition(polygon);
+    refreshPrimitiveBindings();
     refreshAssociativeDimensions();
     emit sceneChanged(m_scene);
 }
@@ -943,6 +1490,8 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
             m_scene->removePrimitive(prim);
         }
         m_selectedPrimitives.clear();
+        refreshPrimitiveBindings();
+        refreshAssociativeDimensions();
 
         // Сбрасываем выделение в UI
         onSelectionChanged(m_selectedPrimitives);
@@ -953,6 +1502,8 @@ void MainWindow::deletePrimitive(BasePrimitive* primitive)
     // Если удаляем конкретный примитив (например, инструментом Ластик)
     if (primitive) {
         m_scene->removePrimitive(primitive);
+        refreshPrimitiveBindings();
+        refreshAssociativeDimensions();
         emit sceneChanged(m_scene);
     }
 }

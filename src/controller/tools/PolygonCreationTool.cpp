@@ -19,6 +19,7 @@ void PolygonCreationTool::onMousePress(QMouseEvent* event, Scene* scene, Viewpor
     if (event->button() != Qt::LeftButton) return;
     
     QPointF worldPos = viewport->getSnappedPoint(event->position());
+    m_currentMousePos = PointPrimitive(worldPos.x(), worldPos.y());
     
     if (m_step == 0) {
         // Первый клик — центр
@@ -71,11 +72,13 @@ void PolygonCreationTool::reset()
 void PolygonCreationTool::onPaint(QPainter& painter)
 {
     if (m_step != 1) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
     
     // Стандартный стиль для служебных линий
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
     
     QPointF centerPt(m_center.getX(), m_center.getY());
     QPointF mousePt(m_currentMousePos.getX(), m_currentMousePos.getY());
@@ -95,7 +98,8 @@ void PolygonCreationTool::onPaint(QPainter& painter)
     QColor previewColor = m_currentColor;
     previewColor.setAlpha(180);
     QPen previewPen(previewColor);
-    previewPen.setWidthF(1.5);
+    previewPen.setWidthF(1.5 / currentScale);
+    previewPen.setCosmetic(true);
     painter.setPen(previewPen);
     painter.setBrush(Qt::NoBrush);
     
@@ -110,9 +114,11 @@ void PolygonCreationTool::onPaint(QPainter& painter)
     painter.drawLine(centerPt, mousePt);
     
     // ЖИРНЫЙ МАРКЕР ЦЕНТРА
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen markerPen(Qt::white, 2.0 / currentScale);
+    markerPen.setCosmetic(true);
+    painter.setPen(markerPen);
     painter.setBrush(m_currentColor);
-    painter.drawEllipse(centerPt, 6, 6);
+    painter.drawEllipse(centerPt, 6.0 / currentScale, 6.0 / currentScale);
 }
 
 void PolygonCreationTool::setColor(const QColor& color)

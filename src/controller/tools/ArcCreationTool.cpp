@@ -31,6 +31,7 @@ void ArcCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPan
                 m_step = 2;
             } else if (m_step == 2) {
                 // End Point
+                m_p3 = pt;
                 double radius = QLineF(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY()).length();
                 double startAngle = QLineF(m_p1.getX(), m_p1.getY(), m_p2.getX(), m_p2.getY()).angle();
                 double endAngle = QLineF(m_p1.getX(), m_p1.getY(), pt.getX(), pt.getY()).angle();
@@ -56,6 +57,7 @@ void ArcCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPan
                 m_step = 2;
             } else if (m_step == 2) {
                 // End point (pt)
+                m_p3 = pt;
                 // Строим дугу по 3 точкам: m_p1, m_p2, pt
 
                 // 1. Находим центр окружности по 3 точкам (алгоритм как у круга)
@@ -132,11 +134,13 @@ void ArcCreationTool::reset() { m_step = 0; }
 
 void ArcCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
 
     // Стандартный стиль для служебных линий (белый пунктир)
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
     
     QPointF p1Pt(m_p1.getX(), m_p1.getY());
     QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
@@ -163,7 +167,8 @@ void ArcCreationTool::onPaint(QPainter& painter) {
             QColor previewColor = m_currentColor;
             previewColor.setAlpha(180);
             QPen arcPen(previewColor);
-            arcPen.setWidthF(1.5);
+            arcPen.setWidthF(1.5 / currentScale);
+            arcPen.setCosmetic(true);
             painter.setPen(arcPen);
             painter.setBrush(Qt::NoBrush);
             QRectF arcRect(p1Pt.x() - radius, p1Pt.y() - radius, radius * 2, radius * 2);
@@ -183,9 +188,11 @@ void ArcCreationTool::onPaint(QPainter& painter) {
     }
     
     // ЖИРНЫЕ МАРКЕРЫ ТОЧЕК
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen markerPen(Qt::white, 2.0 / currentScale);
+    markerPen.setCosmetic(true);
+    painter.setPen(markerPen);
     painter.setBrush(m_currentColor);
-    int markerSize = 6;
+    const double markerSize = 6.0 / currentScale;
     
     painter.drawEllipse(p1Pt, markerSize, markerSize);
     

@@ -48,6 +48,7 @@ public:
      * @brief Проверить, будет ли сплайн замкнут.
      */
     bool isClosed() const { return m_closed; }
+    QVector<QPointF> getControlPoints() const { return m_controlPoints; }
 
 signals:
     /**

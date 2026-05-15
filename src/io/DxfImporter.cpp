@@ -26,6 +26,7 @@
 #include <cmath>
 #include <algorithm>
 #include <QDebug>
+#include <QFileInfo>
 
 static QColor getQColorFromAutoCadIndex(int aci) {
     if (aci == 1) return Qt::red;
@@ -98,6 +99,11 @@ struct DxfMeta {
     QHash<QString, QString> values;
 };
 
+struct ParsedDimensionText {
+    QString customText;
+    QString prefix;
+};
+
 static EntityProps extractCommonProps(const QVector<DxfPair>& data) {
     EntityProps props;
     bool hasTrueColor = false;
@@ -137,6 +143,117 @@ static DxfMeta extractMeta(const QVector<DxfPair>& data)
         meta.values.insert(d.value.left(sep), d.value.mid(sep + 1));
     }
     return meta;
+}
+
+static QString dataValue(const QVector<DxfPair>& data, int code, const QString& fallback = QString())
+{
+    for (const auto& d : data) {
+        if (d.code == code) return d.value;
+    }
+    return fallback;
+}
+
+static bool dataHasCode(const QVector<DxfPair>& data, int code)
+{
+    for (const auto& d : data) {
+        if (d.code == code) return true;
+    }
+    return false;
+}
+
+static double dataDouble(const QVector<DxfPair>& data, int code, double fallback = 0.0)
+{
+    bool ok = false;
+    const double value = dataValue(data, code).toDouble(&ok);
+    return ok ? value : fallback;
+}
+
+static int dataInt(const QVector<DxfPair>& data, int code, int fallback = 0)
+{
+    bool ok = false;
+    const int value = dataValue(data, code).toInt(&ok);
+    return ok ? value : fallback;
+}
+
+static QPointF dataPoint(const QVector<DxfPair>& data, int xCode, int yCode, const QPointF& fallback = QPointF())
+{
+    QPointF result = fallback;
+    bool hasX = false;
+    bool hasY = false;
+    for (const auto& d : data) {
+        if (d.code == xCode) { result.setX(d.value.toDouble()); hasX = true; }
+        else if (d.code == yCode) { result.setY(d.value.toDouble()); hasY = true; }
+    }
+    return (hasX || hasY) ? result : fallback;
+}
+
+static bool hasSubclassMarker(const QVector<DxfPair>& data, const QString& subclass)
+{
+    for (const auto& d : data) {
+        if (d.code == 100 && d.value.trimmed() == subclass) return true;
+    }
+    return false;
+}
+
+static double normalizeAngleDegrees(double angle)
+{
+    angle = std::fmod(angle, 360.0);
+    if (angle < 0.0) angle += 360.0;
+    return angle;
+}
+
+static bool lineIntersectionPoint(const QPointF& a1, const QPointF& a2,
+                                  const QPointF& b1, const QPointF& b2,
+                                  QPointF& outPoint)
+{
+    const double x1 = a1.x(), y1 = a1.y();
+    const double x2 = a2.x(), y2 = a2.y();
+    const double x3 = b1.x(), y3 = b1.y();
+    const double x4 = b2.x(), y4 = b2.y();
+    const double denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (std::abs(denom) < 1e-9) return false;
+
+    const double det1 = x1 * y2 - y1 * x2;
+    const double det2 = x3 * y4 - y3 * x4;
+    outPoint.setX((det1 * (x3 - x4) - (x1 - x2) * det2) / denom);
+    outPoint.setY((det1 * (y3 - y4) - (y1 - y2) * det2) / denom);
+    return true;
+}
+
+static QPointF fartherRayPoint(const QPointF& center, const QPointF& a, const QPointF& b)
+{
+    const double da = QLineF(center, a).length();
+    const double db = QLineF(center, b).length();
+    if (da < 1e-6) return b;
+    if (db < 1e-6) return a;
+    return da >= db ? a : b;
+}
+
+static ParsedDimensionText parseDimensionText(const QString& rawText)
+{
+    ParsedDimensionText parsed;
+    const QString trimmed = rawText.trimmed();
+    if (trimmed.isEmpty() || trimmed == "<>") {
+        return parsed;
+    }
+
+    QString normalized = trimmed;
+    normalized.replace("%%c", QString::fromUtf8("Ø"));
+
+    if (normalized.startsWith(QString::fromUtf8("Ø<>"))) {
+        parsed.prefix = QString::fromUtf8("Ø");
+        return parsed;
+    }
+    if (normalized.startsWith("R<>")) {
+        parsed.prefix = "R";
+        return parsed;
+    }
+    if (normalized.contains("<>")) {
+        return parsed;
+    }
+
+    parsed.customText = normalized;
+    return parsed;
 }
 
 static QString metaValue(const DxfMeta& meta, const QString& key, const QString& fallback = QString())
@@ -206,9 +323,9 @@ static LinearDimensionMode linearModeFromToken(const QString& token)
     return LinearDimensionMode::Aligned;
 }
 
-static DimensionStyle extractDimensionStyle(const DxfMeta& meta)
+static DimensionStyle extractDimensionStyle(const DxfMeta& meta, const DimensionStyle& baseStyle)
 {
-    DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
+    DimensionStyle style = baseStyle;
     if (meta.values.contains("CLARUSCAD_DIM_FONT")) style.fontFamily = metaValue(meta, "CLARUSCAD_DIM_FONT");
     if (meta.values.contains("CLARUSCAD_DIM_TEXT_HEIGHT")) style.textHeight = metaDouble(meta, "CLARUSCAD_DIM_TEXT_HEIGHT", style.textHeight);
     if (meta.values.contains("CLARUSCAD_DIM_TEXT_GAP")) style.textGap = metaDouble(meta, "CLARUSCAD_DIM_TEXT_GAP", style.textGap);
@@ -227,9 +344,9 @@ static DimensionStyle extractDimensionStyle(const DxfMeta& meta)
     return style;
 }
 
-static void applyDimensionMeta(BaseDimensionPrimitive* dim, const DxfMeta& meta)
+static void applyDimensionMeta(BaseDimensionPrimitive* dim, const DxfMeta& meta, const DimensionStyle& baseStyle)
 {
-    dim->setStyle(extractDimensionStyle(meta));
+    dim->setStyle(extractDimensionStyle(meta, baseStyle));
     dim->setCustomText(metaValue(meta, "CLARUSCAD_DIM_CUSTOM_TEXT"));
     dim->setShelfEnabled(metaBool(meta, "CLARUSCAD_DIM_HAS_SHELF", false));
     if (metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false)) {
@@ -296,6 +413,7 @@ static void registerImportedEdges(const DxfMeta& meta, const QVector<BasePrimiti
 // Возвращает true, если обработана
 static void processEntity(const DxfEntity& entity, Scene& scene,
                            const QMap<QString, DxfBlock>& blocks,
+                           const QHash<QString, DimensionStyle>& dimStyles,
                            DimensionAssociationMap& associations,
                            int depth = 0);
 
@@ -325,6 +443,7 @@ static QVector<BasePrimitive*> createPolylineSegments(Scene& scene, const QVecto
 
 static void processEntity(const DxfEntity& entity, Scene& scene,
                            const QMap<QString, DxfBlock>& blocks,
+                           const QHash<QString, DimensionStyle>& dimStyles,
                            DimensionAssociationMap& associations,
                            int depth) {
     // Защита от бесконечной рекурсии (максимум 10 уровней вложенности)
@@ -449,14 +568,11 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
     }
     else if (entity.type == "DIMENSION") {
         QString kind = metaValue(meta, "CLARUSCAD_DIM_KIND").trimmed().toUpper();
+        const int dimType = dataInt(data, 70, 0) & 0x0F;
+        const QString styleName = dataValue(data, 3).trimmed();
+        const DimensionStyle baseStyle = dimStyles.value(styleName, SettingsManager::instance().getDefaultDimensionStyle());
+        const ParsedDimensionText parsedText = parseDimensionText(dataValue(data, 1));
         if (kind.isEmpty()) {
-            int dimType = 0;
-            for (const auto& d : data) {
-                if (d.code == 70) {
-                    dimType = d.value.toInt() & 0x0F;
-                    break;
-                }
-            }
             if (dimType == 0 || dimType == 1) kind = "LINEAR";
             else if (dimType == 3) kind = "DIAMETER";
             else if (dimType == 4) kind = "RADIUS";
@@ -466,16 +582,31 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             auto* dim = new LinearDimensionPrimitive();
             QPointF start(metaDouble(meta, "CLARUSCAD_DIM_START_FALLBACK_X"), metaDouble(meta, "CLARUSCAD_DIM_START_FALLBACK_Y"));
             QPointF end(metaDouble(meta, "CLARUSCAD_DIM_END_FALLBACK_X"), metaDouble(meta, "CLARUSCAD_DIM_END_FALLBACK_Y"));
+            QPointF textAnchor;
+            bool hasTextAnchor = false;
             for (const auto& d : data) {
                 if (d.code == 13) start.setX(d.value.toDouble());
                 if (d.code == 23) start.setY(d.value.toDouble());
                 if (d.code == 14) end.setX(d.value.toDouble());
                 if (d.code == 24) end.setY(d.value.toDouble());
+                if (d.code == 11) { textAnchor.setX(d.value.toDouble()); hasTextAnchor = true; }
+                if (d.code == 21) { textAnchor.setY(d.value.toDouble()); hasTextAnchor = true; }
             }
             dim->setStartPoint(start);
             dim->setEndPoint(end);
             dim->setDimensionLinePos(QPointF(0.0, 0.0));
-            dim->setMode(linearModeFromToken(metaValue(meta, "CLARUSCAD_DIM_MODE")));
+            LinearDimensionMode mode = linearModeFromToken(metaValue(meta, "CLARUSCAD_DIM_MODE"));
+            if (!meta.values.contains("CLARUSCAD_DIM_MODE")) {
+                if (dimType == 0) {
+                    const double angle = normalizeAngleDegrees(dataDouble(data, 50, 0.0));
+                    if (std::abs(angle - 90.0) < 1e-3 || std::abs(angle - 270.0) < 1e-3) mode = LinearDimensionMode::Vertical;
+                    else if (std::abs(angle) < 1e-3 || std::abs(angle - 180.0) < 1e-3) mode = LinearDimensionMode::Horizontal;
+                    else mode = LinearDimensionMode::Aligned;
+                } else {
+                    mode = LinearDimensionMode::Aligned;
+                }
+            }
+            dim->setMode(mode);
             dim->setStartAttachment(loadAttachment(meta, "DIM_START", associations));
             dim->setEndAttachment(loadAttachment(meta, "DIM_END", associations));
             dim->updateFromAttachments();
@@ -485,15 +616,19 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             if (hasLineMeta) {
                 linePos = QPointF(metaDouble(meta, "CLARUSCAD_DIM_LINE_X"), metaDouble(meta, "CLARUSCAD_DIM_LINE_Y"));
             } else {
-                for (const auto& d : data) {
-                    if (d.code == 11) linePos.setX(d.value.toDouble());
-                    if (d.code == 21) linePos.setY(d.value.toDouble());
-                }
+                linePos = dataPoint(data, 10, 20);
             }
             dim->setDimensionLinePos(linePos);
-            dim->setTextPrefix(metaValue(meta, "CLARUSCAD_DIM_PREFIX"));
             applyProps(dim, props);
-            applyDimensionMeta(dim, meta);
+            applyDimensionMeta(dim, meta, baseStyle);
+            dim->setTextPrefix(meta.values.contains("CLARUSCAD_DIM_PREFIX") ? metaValue(meta, "CLARUSCAD_DIM_PREFIX")
+                                                                            : parsedText.prefix);
+            if (!meta.values.contains("CLARUSCAD_DIM_CUSTOM_TEXT") && !parsedText.customText.isEmpty()) {
+                dim->setCustomText(parsedText.customText);
+            }
+            if (!metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false) && hasTextAnchor) {
+                dim->setCustomTextPosition(textAnchor);
+            }
             dim->recalculateValue();
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
             registerImportedPrimitive(meta, dim, associations);
@@ -503,15 +638,23 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             QPointF center(metaDouble(meta, "CLARUSCAD_DIM_CENTER_X"), metaDouble(meta, "CLARUSCAD_DIM_CENTER_Y"));
             QPointF radiusPoint(metaDouble(meta, "CLARUSCAD_DIM_RADIUS_X"), metaDouble(meta, "CLARUSCAD_DIM_RADIUS_Y"));
             QPointF linePos(metaDouble(meta, "CLARUSCAD_DIM_LINE_X"), metaDouble(meta, "CLARUSCAD_DIM_LINE_Y"));
+            QPointF textAnchor;
+            bool hasTextAnchor = false;
             if (!meta.values.contains("CLARUSCAD_DIM_CENTER_X") || !meta.values.contains("CLARUSCAD_DIM_RADIUS_X")) {
-                for (const auto& d : data) {
-                    if (d.code == 15) center.setX(d.value.toDouble());
-                    if (d.code == 25) center.setY(d.value.toDouble());
-                    if (d.code == 16) radiusPoint.setX(d.value.toDouble());
-                    if (d.code == 26) radiusPoint.setY(d.value.toDouble());
-                    if (d.code == 11) linePos.setX(d.value.toDouble());
-                    if (d.code == 21) linePos.setY(d.value.toDouble());
+                const QPointF code10 = dataPoint(data, 10, 20);
+                const QPointF code11 = dataPoint(data, 11, 21);
+                const QPointF code15 = dataPoint(data, 15, 25);
+                hasTextAnchor = dataHasCode(data, 11) || dataHasCode(data, 21);
+                textAnchor = code11;
+
+                if (kind == "DIAMETER") {
+                    center = (code10 + code15) * 0.5;
+                    radiusPoint = code15;
+                } else {
+                    center = code10;
+                    radiusPoint = code15;
                 }
+                linePos = hasTextAnchor ? code11 : radiusPoint;
             }
             dim->setCenterPoint(center);
             dim->setRadiusPoint(radiusPoint);
@@ -526,7 +669,13 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             }
 
             applyProps(dim, props);
-            applyDimensionMeta(dim, meta);
+            applyDimensionMeta(dim, meta, baseStyle);
+            if (!meta.values.contains("CLARUSCAD_DIM_CUSTOM_TEXT") && !parsedText.customText.isEmpty()) {
+                dim->setCustomText(parsedText.customText);
+            }
+            if (!metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false) && hasTextAnchor) {
+                dim->setCustomTextPosition(textAnchor);
+            }
             dim->recalculateValue();
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
             registerImportedPrimitive(meta, dim, associations);
@@ -537,16 +686,27 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             QPointF start(metaDouble(meta, "CLARUSCAD_DIM_START_X"), metaDouble(meta, "CLARUSCAD_DIM_START_Y"));
             QPointF end(metaDouble(meta, "CLARUSCAD_DIM_END_X"), metaDouble(meta, "CLARUSCAD_DIM_END_Y"));
             QPointF arcPoint(metaDouble(meta, "CLARUSCAD_DIM_ARC_X"), metaDouble(meta, "CLARUSCAD_DIM_ARC_Y"));
+            QPointF textAnchor;
+            bool hasTextAnchor = false;
             if (!meta.values.contains("CLARUSCAD_DIM_CENTER_X")) {
-                for (const auto& d : data) {
-                    if (d.code == 13) start.setX(d.value.toDouble());
-                    if (d.code == 23) start.setY(d.value.toDouble());
-                    if (d.code == 14) end.setX(d.value.toDouble());
-                    if (d.code == 24) end.setY(d.value.toDouble());
-                    if (d.code == 15) center.setX(d.value.toDouble());
-                    if (d.code == 25) center.setY(d.value.toDouble());
-                    if (d.code == 16) arcPoint.setX(d.value.toDouble());
-                    if (d.code == 26) arcPoint.setY(d.value.toDouble());
+                hasTextAnchor = dataHasCode(data, 11) || dataHasCode(data, 21);
+                textAnchor = dataPoint(data, 11, 21);
+                if (hasSubclassMarker(data, "AcDb2LineAngularDimension") || dimType == 2) {
+                    const QPointF line1a = dataPoint(data, 13, 23);
+                    const QPointF line1b = dataPoint(data, 14, 24);
+                    const QPointF line2a = dataPoint(data, 10, 20);
+                    const QPointF line2b = dataPoint(data, 15, 25);
+                    if (!lineIntersectionPoint(line1a, line1b, line2a, line2b, center)) {
+                        center = line1a;
+                    }
+                    start = fartherRayPoint(center, line1a, line1b);
+                    end = fartherRayPoint(center, line2a, line2b);
+                    arcPoint = dataPoint(data, 16, 26);
+                } else {
+                    start = dataPoint(data, 13, 23);
+                    end = dataPoint(data, 14, 24);
+                    center = dataPoint(data, 15, 25);
+                    arcPoint = dataPoint(data, 10, 20);
                 }
             }
             dim->setCenterPoint(center);
@@ -575,7 +735,13 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
             }
 
             applyProps(dim, props);
-            applyDimensionMeta(dim, meta);
+            applyDimensionMeta(dim, meta, baseStyle);
+            if (!meta.values.contains("CLARUSCAD_DIM_CUSTOM_TEXT") && !parsedText.customText.isEmpty()) {
+                dim->setCustomText(parsedText.customText);
+            }
+            if (!metaBool(meta, "CLARUSCAD_DIM_HAS_CUSTOM_TEXT_POS", false) && hasTextAnchor) {
+                dim->setCustomTextPosition(textAnchor);
+            }
             dim->recalculateValue();
             scene.addPrimitive(std::unique_ptr<BasePrimitive>(dim));
             registerImportedPrimitive(meta, dim, associations);
@@ -599,7 +765,7 @@ static void processEntity(const DxfEntity& entity, Scene& scene,
         if (blocks.contains(blockName)) {
             const DxfBlock& block = blocks[blockName];
             for (const auto& blockEntity : block.entities) {
-                processEntity(blockEntity, scene, blocks, associations, depth + 1);
+                processEntity(blockEntity, scene, blocks, dimStyles, associations, depth + 1);
             }
         }
     }
@@ -647,6 +813,71 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
         }
         return {entityData, pos};
     };
+
+    QHash<QString, QString> textStyleFontsByHandle;
+    QHash<QString, QString> blockRecordNamesByHandle;
+    QHash<QString, DimensionStyle> dimStyles;
+
+    for (int scan = 0; scan < totalPairs; ++scan) {
+        if (pairs[scan].code != 0) continue;
+
+        const QString type = pairs[scan].value;
+        if (type != "STYLE" && type != "BLOCK_RECORD" && type != "DIMSTYLE") continue;
+
+        auto [recordData, nextPos] = collectEntityData(scan + 1);
+        scan = nextPos - 1;
+
+        if (type == "STYLE") {
+            if (!hasSubclassMarker(recordData, "AcDbTextStyleTableRecord")) continue;
+            const QString handle = dataValue(recordData, 5).trimmed();
+            const QString fontToken = dataValue(recordData, 3).trimmed();
+            const QString styleName = dataValue(recordData, 2).trimmed();
+            QString fontFamily = QFileInfo(fontToken).completeBaseName();
+            if (fontFamily.isEmpty()) fontFamily = fontToken;
+            if (fontFamily.isEmpty()) fontFamily = styleName;
+            if (!handle.isEmpty() && !fontFamily.isEmpty()) {
+                textStyleFontsByHandle.insert(handle, fontFamily);
+            }
+        } else if (type == "BLOCK_RECORD") {
+            if (!hasSubclassMarker(recordData, "AcDbBlockTableRecord")) continue;
+            const QString handle = dataValue(recordData, 5).trimmed();
+            const QString blockName = dataValue(recordData, 2).trimmed();
+            if (!handle.isEmpty() && !blockName.isEmpty()) {
+                blockRecordNamesByHandle.insert(handle, blockName);
+            }
+        } else if (type == "DIMSTYLE") {
+            if (!hasSubclassMarker(recordData, "AcDbDimStyleTableRecord")) continue;
+            const QString styleName = dataValue(recordData, 2).trimmed();
+            if (styleName.isEmpty()) continue;
+
+            DimensionStyle style = SettingsManager::instance().getDefaultDimensionStyle();
+            if (dataHasCode(recordData, 140)) style.textHeight = dataDouble(recordData, 140, style.textHeight);
+            if (dataHasCode(recordData, 147)) style.textGap = dataDouble(recordData, 147, style.textGap);
+            if (dataHasCode(recordData, 41)) style.arrowSize = dataDouble(recordData, 41, style.arrowSize);
+            if (dataHasCode(recordData, 42)) style.extensionLineOffset = dataDouble(recordData, 42, style.extensionLineOffset);
+            if (dataHasCode(recordData, 44)) style.extensionLineExtend = dataDouble(recordData, 44, style.extensionLineExtend);
+
+            const QString textStyleHandle = dataValue(recordData, 340).trimmed();
+            if (!textStyleHandle.isEmpty() && textStyleFontsByHandle.contains(textStyleHandle)) {
+                style.fontFamily = textStyleFontsByHandle.value(textStyleHandle);
+            }
+
+            const int dimColor = dataHasCode(recordData, 284) ? dataInt(recordData, 284, -1) : dataInt(recordData, 176, -1);
+            const int extColor = dataHasCode(recordData, 285) ? dataInt(recordData, 285, -1) : dataInt(recordData, 177, -1);
+            const int textColor = dataHasCode(recordData, 286) ? dataInt(recordData, 286, -1) : dataInt(recordData, 178, -1);
+            if (dimColor > 0 && dimColor != 256) style.dimensionLineColor = getQColorFromAutoCadIndex(dimColor);
+            if (extColor > 0 && extColor != 256) style.extensionLineColor = getQColorFromAutoCadIndex(extColor);
+            if (textColor > 0 && textColor != 256) style.textColor = getQColorFromAutoCadIndex(textColor);
+
+            const QString arrowBlock = blockRecordNamesByHandle.value(dataValue(recordData, 342).trimmed());
+            if (!arrowBlock.isEmpty() && arrowBlock.contains("Arrow", Qt::CaseInsensitive)) {
+                style.arrowType = DimensionArrowType::ClosedFilled;
+                style.arrowFilled = true;
+            }
+
+            dimStyles.insert(styleName, style);
+        }
+    }
 
     // 3. Парсинг BLOCKS секции — собираем блоки и их содержимое
     QMap<QString, DxfBlock> blocks;
@@ -805,7 +1036,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
                     polyEntity.data.append({10, QString::number(pt.x(), 'f', 10)});
                     polyEntity.data.append({20, QString::number(pt.y(), 'f', 10)});
                 }
-                processEntity(polyEntity, scene, blocks, associations);
+                processEntity(polyEntity, scene, blocks, dimStyles, associations);
                 readingPolyline = false;
             }
             break;
@@ -843,7 +1074,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
                 polyEntity.data.append({10, QString::number(pt.x(), 'f', 10)});
                 polyEntity.data.append({20, QString::number(pt.y(), 'f', 10)});
             }
-            processEntity(polyEntity, scene, blocks, associations);
+            processEntity(polyEntity, scene, blocks, dimStyles, associations);
             readingPolyline = false;
             currentPolyVertices.clear();
         }
@@ -851,7 +1082,7 @@ bool DxfImporter::importDxfToScene(Scene& scene, const QString& filePath) {
             DxfEntity ent;
             ent.type = entityType;
             ent.data = entData;
-            processEntity(ent, scene, blocks, associations);
+            processEntity(ent, scene, blocks, dimStyles, associations);
         }
     }
 

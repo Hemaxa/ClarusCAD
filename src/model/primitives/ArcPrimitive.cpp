@@ -3,6 +3,15 @@
 
 #include <cmath>
 
+namespace {
+QPointF pointOnArc(const QPointF& center, double radius, double angleDeg)
+{
+    const double angleRad = angleDeg * M_PI / 180.0;
+    return QPointF(center.x() + radius * std::cos(angleRad),
+                   center.y() - radius * std::sin(angleRad));
+}
+}
+
 ArcPrimitive::ArcPrimitive(const PointPrimitive& center, double radius, double startAngle, double spanAngle)
     : m_center(center), m_radius(radius), m_startAngle(startAngle), m_spanAngle(spanAngle) {}
 
@@ -79,21 +88,11 @@ bool ArcPrimitive::inside(const QRectF& rect) const {
 
 QVector<QPointF> ArcPrimitive::getSnapPoints() const {
     QVector<QPointF> points;
-    double cx = m_center.getX();
-    double cy = m_center.getY();
-    points.append(QPointF(cx, cy)); // Центр
-
-    // Начало дуги
-    double radStart = m_startAngle * M_PI / 180.0;
-    points.append(QPointF(cx + m_radius * std::cos(radStart), cy + m_radius * std::sin(radStart)));
-
-    // Конец дуги
-    double radEnd = (m_startAngle + m_spanAngle) * M_PI / 180.0;
-    points.append(QPointF(cx + m_radius * std::cos(radEnd), cy + m_radius * std::sin(radEnd)));
-
-    // Середина дуги
-    double radMid = (m_startAngle + m_spanAngle / 2.0) * M_PI / 180.0;
-    points.append(QPointF(cx + m_radius * std::cos(radMid), cy + m_radius * std::sin(radMid)));
+    const QPointF center(m_center.getX(), m_center.getY());
+    points.append(center); // Центр
+    points.append(pointOnArc(center, m_radius, m_startAngle));
+    points.append(pointOnArc(center, m_radius, m_startAngle + m_spanAngle));
+    points.append(pointOnArc(center, m_radius, m_startAngle + m_spanAngle / 2.0));
 
     return points;
 }

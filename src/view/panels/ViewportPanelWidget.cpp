@@ -559,6 +559,9 @@ void ViewportPanelWidget::paintGrid(QPainter& painter, const QTransform& worldTr
     QPen gridPen(QColor(60, 60, 60), 1.0);
     QPen axisXPen(Qt::red, 1.5);
     QPen axisYPen(Qt::green, 1.5);
+    gridPen.setCosmetic(true);
+    axisXPen.setCosmetic(true);
+    axisYPen.setCosmetic(true);
 
     painter.save(); // Сохраняем состояние (экранные координаты)
     painter.setTransform(worldTransform); // Применяем мировую трансформацию
@@ -897,6 +900,11 @@ SnapPoint ViewportPanelWidget::getSnapPoint(const QPointF& worldPos) const
     }
 
     return result;
+}
+
+void ViewportPanelWidget::setPreviewSnapPoint(const SnapPoint& snap) const
+{
+    m_lastSnapPoint = snap;
 }
 
 void ViewportPanelWidget::panWorld(const QPointF& worldDelta)

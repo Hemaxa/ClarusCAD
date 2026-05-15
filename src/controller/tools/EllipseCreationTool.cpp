@@ -10,6 +10,7 @@ void EllipseCreationTool::onMousePress(QMouseEvent* event, Scene*, ViewportPanel
     if (event->button() == Qt::LeftButton) {
         QPointF snapped = viewport->getSnappedPoint(event->position());
         PointPrimitive pt(snapped.x(), snapped.y());
+        m_currentPos = pt;
 
         if (m_step == 0) {
             m_center = pt;
@@ -68,11 +69,13 @@ void EllipseCreationTool::reset() { m_step = 0; }
 
 void EllipseCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
 
     // Стандартный стиль для служебных линий
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
     
     QPointF centerPt(m_center.getX(), m_center.getY());
     QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
@@ -106,20 +109,25 @@ void EllipseCreationTool::onPaint(QPainter& painter) {
         double ry = std::abs(dx * std::sin(radAngle) + dy * std::cos(radAngle));
 
         QPen ellipsePen(previewColor);
-        ellipsePen.setWidthF(1.5);
+        ellipsePen.setWidthF(1.5 / currentScale);
+        ellipsePen.setCosmetic(true);
         painter.setPen(ellipsePen);
         painter.setBrush(Qt::NoBrush);
         painter.drawEllipse(QPointF(0,0), rx, ry);
         painter.restore();
         
         // Маркер для точки оси 1
-        painter.setPen(QPen(Qt::white, 2.0));
+        QPen markerPen(Qt::white, 2.0 / currentScale);
+        markerPen.setCosmetic(true);
+        painter.setPen(markerPen);
         painter.setBrush(m_currentColor);
-        painter.drawEllipse(axis1Pt, 6, 6);
+        painter.drawEllipse(axis1Pt, 6.0 / currentScale, 6.0 / currentScale);
     }
     
     // ЖИРНЫЙ МАРКЕР ЦЕНТРА
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen centerPen(Qt::white, 2.0 / currentScale);
+    centerPen.setCosmetic(true);
+    painter.setPen(centerPen);
     painter.setBrush(m_currentColor);
-    painter.drawEllipse(centerPt, 6, 6);
+    painter.drawEllipse(centerPt, 6.0 / currentScale, 6.0 / currentScale);
 }

@@ -11,6 +11,13 @@
 #include <algorithm>
 
 namespace {
+QPointF pointOnArcQt(const QPointF& center, double radius, double angleDeg)
+{
+    const double angleRad = angleDeg * M_PI / 180.0;
+    return QPointF(center.x() + radius * std::cos(angleRad),
+                   center.y() - radius * std::sin(angleRad));
+}
+
 void drawDimensionArrow(QPainter& painter, const QPointF& tip, double angle, const DimensionStyle& style,
                         const QColor& color, double size)
 {
@@ -95,10 +102,15 @@ QPointF resolveAttachment(const LinearDimensionPrimitive::Attachment& a)
         auto* arc = static_cast<ArcPrimitive*>(a.source);
         QPointF center(arc->getCenter().getX(), arc->getCenter().getY());
         if (a.snapType == SnapType::Center) return center;
-        double angle = a.param;
-        if (a.snapType == SnapType::Endpoint) angle = (a.index == 0 ? arc->getStartAngle() : arc->getStartAngle() + arc->getSpanAngle()) * M_PI / 180.0;
-        if (a.snapType == SnapType::Midpoint) angle = (arc->getStartAngle() + arc->getSpanAngle() / 2.0) * M_PI / 180.0;
-        return QPointF(center.x() + arc->getRadius() * std::cos(angle), center.y() + arc->getRadius() * std::sin(angle));
+        if (a.snapType == SnapType::Endpoint) {
+            return pointOnArcQt(center, arc->getRadius(),
+                                a.index == 0 ? arc->getStartAngle() : (arc->getStartAngle() + arc->getSpanAngle()));
+        }
+        if (a.snapType == SnapType::Midpoint) {
+            return pointOnArcQt(center, arc->getRadius(), arc->getStartAngle() + arc->getSpanAngle() / 2.0);
+        }
+        return QPointF(center.x() + arc->getRadius() * std::cos(a.param),
+                       center.y() + arc->getRadius() * std::sin(a.param));
     }
     case PrimitiveType::Ellipse: {
         auto* e = static_cast<EllipsePrimitive*>(a.source);

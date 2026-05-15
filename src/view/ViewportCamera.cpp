@@ -6,9 +6,9 @@
 
 ViewportCamera::ViewportCamera(QObject* parent) : QObject(parent)
 {
-    //начальная позиция камеры (дальше от начала координат)
-    m_panOffset = QPointF(200.0, 200.0);
-    m_zoomFactor = 0.8; // Начальный зум меньше для более широкого обзора
+    // Начальная позиция камеры ближе к рабочей области и с более комфортным зумом.
+    m_panOffset = QPointF(120.0, 120.0);
+    m_zoomFactor = 1.15;
 
     //создание и настройка анимации вращения
     m_rotationAnimation = new QPropertyAnimation(this, "rotationAngle", this);

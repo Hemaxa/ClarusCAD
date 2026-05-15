@@ -121,6 +121,7 @@ QColor CircleCreationTool::getColor() const { return m_currentColor; }
 void CircleCreationTool::onPaint(QPainter& painter)
 {
     if (m_step == 0) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
 
     QColor previewColor = m_currentColor;
     previewColor.setAlpha(180);
@@ -131,7 +132,8 @@ void CircleCreationTool::onPaint(QPainter& painter)
     // Стандартный стиль для ВСЕХ служебных линий
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
 
     // Временные переменные для расчета параметров предпросмотра
     QPointF center;
@@ -198,9 +200,11 @@ void CircleCreationTool::onPaint(QPainter& painter)
     }
     
     // ЖИРНЫЕ МАРКЕРЫ ТОЧЕК ПОЛЬЗОВАТЕЛЯ
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen markerPen(Qt::white, 2.0 / currentScale);
+    markerPen.setCosmetic(true);
+    painter.setPen(markerPen);
     painter.setBrush(m_currentColor);
-    int markerSize = 6;
+    const double markerSize = 6.0 / currentScale;
     
     // Первая точка
     painter.drawEllipse(p1Pt, markerSize, markerSize);

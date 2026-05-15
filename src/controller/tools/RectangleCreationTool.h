@@ -28,6 +28,9 @@ public:
     void setColor(const QColor& color) override { m_currentColor = color; }
     void setLineType(LineType type) override { m_currentLineType = type; }
     QColor getColor() const override { return m_currentColor; }
+    RectangleCreationMode getCreationMode() const { return m_mode; }
+    PointPrimitive getFirstPoint() const { return m_p1; }
+    PointPrimitive getSecondPoint() const { return m_p2; }
 
 signals:
     /**
@@ -40,6 +43,8 @@ signals:
     void rectangleDataReady(const PointPrimitive& center, double width, double height, double rotation);
 
 private:
+    QPointF applySquareConstraint(const QPointF& point, Qt::KeyboardModifiers modifiers) const;
+
     RectangleCreationMode m_mode = RectangleCreationMode::TwoPoints;
     int m_step = 0;
 

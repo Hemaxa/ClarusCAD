@@ -97,11 +97,13 @@ void SplineCreationTool::finishSpline()
 void SplineCreationTool::onPaint(QPainter& painter)
 {
     if (m_controlPoints.isEmpty()) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
     
     // Стандартный стиль для служебных линий
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
     
     // Рисуем линии между контрольными точками (белые пунктирные)
     painter.setPen(guidePen);
@@ -121,23 +123,26 @@ void SplineCreationTool::onPaint(QPainter& painter)
     QColor previewColor = m_currentColor;
     previewColor.setAlpha(180);
     QPen previewPen(previewColor);
-    previewPen.setWidthF(1.5);
+    previewPen.setWidthF(1.5 / currentScale);
+    previewPen.setCosmetic(true);
     painter.setPen(previewPen);
     painter.setBrush(Qt::NoBrush);
     
     tempSpline.draw(painter, false);
     
     // ЖИРНЫЕ МАРКЕРЫ КОНТРОЛЬНЫХ ТОЧЕК
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen markerPen(Qt::white, 2.0 / currentScale);
+    markerPen.setCosmetic(true);
+    painter.setPen(markerPen);
     painter.setBrush(m_currentColor);
     
     for (const auto& pt : m_controlPoints) {
-        painter.drawEllipse(pt, 6, 6);
+        painter.drawEllipse(pt, 6.0 / currentScale, 6.0 / currentScale);
     }
     
     // Текущая позиция мыши
     painter.setBrush(QColor(0, 255, 127, 200));
-    painter.drawEllipse(m_currentMousePos, 5.0, 5.0);
+    painter.drawEllipse(m_currentMousePos, 5.0 / currentScale, 5.0 / currentScale);
 }
 
 void SplineCreationTool::setColor(const QColor& color)

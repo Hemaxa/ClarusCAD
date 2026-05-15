@@ -4,8 +4,10 @@
 
 #include "BaseCreationTool.h"
 #include "PointPrimitive.h"
+#include "SnapManager.h"
 
 #include <QColor>
+#include <QPointF>
 
 class SegmentPrimitive;
 
@@ -52,6 +54,11 @@ signals:
     void segmentDataReady(SegmentPrimitive* segment, const PointPrimitive& start, const PointPrimitive& end, const QColor& color, LineType lineType);
 
 private:
+    struct ResolvedSnap {
+        QPointF position;
+        SnapType type = SnapType::None;
+    };
+
     //состояние ввода
     enum class State {
         Idle,
@@ -63,4 +70,8 @@ private:
     PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
     QColor m_currentColor = Qt::white; //переменная хранения цвета
     LineType m_currentLineType = LineType::SolidMain; //переменная хранения типа линии
+
+    ResolvedSnap resolveSecondPoint(const QPointF& rawWorldPos, Qt::KeyboardModifiers modifiers,
+                                    Scene* scene, ViewportPanelWidget* viewport) const;
+    QPointF constrainToOrthoAxis(const QPointF& worldPos) const;
 };
