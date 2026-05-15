@@ -321,6 +321,38 @@ static QString snapTypeToken(SnapType type)
     }
 }
 
+static QString encodeDimensionText(const QString& customText, const QString& prefix)
+{
+    if (!customText.isEmpty()) {
+        QString text = customText;
+        text.replace(QString::fromUtf8("Ø"), "%%c");
+        return text;
+    }
+    if (prefix == "R") return "R<>";
+    if (prefix == QString::fromUtf8("Ø")) return "%%c<>";
+    return QString();
+}
+
+static QString dimensionStyleSignature(const DimensionStyle& style)
+{
+    return QStringLiteral("%1|%2|%3|%4|%5|%6|%7|%8|%9|%10|%11|%12|%13|%14|%15")
+        .arg(style.fontFamily)
+        .arg(style.textHeight, 0, 'f', 6)
+        .arg(style.textGap, 0, 'f', 6)
+        .arg(style.textAlongLineOffset, 0, 'f', 6)
+        .arg(style.arrowSize, 0, 'f', 6)
+        .arg(static_cast<int>(style.arrowType))
+        .arg(style.arrowFilled ? 1 : 0)
+        .arg(style.extensionLineOffset, 0, 'f', 6)
+        .arg(style.extensionLineExtend, 0, 'f', 6)
+        .arg(style.dimensionLineExtension, 0, 'f', 6)
+        .arg(style.extensionLineTypeId)
+        .arg(style.dimensionLineTypeId)
+        .arg(style.textColor.rgba())
+        .arg(style.extensionLineColor.rgba())
+        .arg(style.dimensionLineColor.rgba());
+}
+
 bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -336,7 +368,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     out.setRealNumberNotation(QTextStream::FixedNotation);
     out.setRealNumberPrecision(10);
 
-    // Счётчик уникальных handle'ов для AC1015
+    // Счётчик уникальных handle'ов для DXF 2010
     int handleCounter = 1;
     auto nextHandle = [&handleCounter]() -> QString {
         return QString::number(handleCounter++, 16).toUpper();
@@ -363,6 +395,21 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     // Всегда включаем слой "0"
     layerNames.insert("0");
 
+    QVector<const BaseDimensionPrimitive*> dimensionPrimitives;
+    QHash<const BasePrimitive*, QString> dimensionBlockNames;
+    QHash<const BasePrimitive*, QString> dimensionBlockRecordHandles;
+    QHash<const BasePrimitive*, QString> dimensionBlockHandles;
+    QHash<const BasePrimitive*, QString> dimensionBlockEndHandles;
+    QHash<const BaseDimensionPrimitive*, QString> dimensionStyleNames;
+    struct ExportDimStyleEntry {
+        QString name;
+        QString handle;
+        QString fontKey;
+        DimensionStyle style;
+    };
+    QVector<ExportDimStyleEntry> exportDimStyles;
+    QHash<QString, QString> fontStyleHandles;
+
     // Pre-allocate handles для таблиц и блоков
     // Резервируем начальные handle'ы для системных объектов
     QString hVportTable = nextHandle();   // 1
@@ -370,16 +417,45 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     QString hLtypeTable = nextHandle();   // 3
     // handle'ы для LTYPE записей выделяются далее
     QString hLayerTable, hStyleTable, hAppIdTable, hDimStyleTable, hBlockRecordTable;
+    QString hStandardTextStyle;
     // handle'ы для блоков
     QString hModelSpaceBlock, hPaperSpaceBlock;
     QString hModelSpaceBlockEnd, hPaperSpaceBlockEnd;
     QString hModelSpaceBlockRecord, hPaperSpaceBlockRecord;
 
+    QHash<QString, QString> dimStyleBySignature;
+    for (const auto& prim : primitives) {
+        if (const auto* dim = dynamic_cast<const BaseDimensionPrimitive*>(prim.get())) {
+            dimensionPrimitives.append(dim);
+
+            const QString blockName = QString("*D%1").arg(dimensionPrimitives.size());
+            dimensionBlockNames.insert(prim.get(), blockName);
+            dimensionBlockRecordHandles.insert(prim.get(), nextHandle());
+            dimensionBlockHandles.insert(prim.get(), nextHandle());
+            dimensionBlockEndHandles.insert(prim.get(), nextHandle());
+
+            const DimensionStyle style = dim->getStyle();
+            const QString fontKey = style.fontFamily.trimmed().isEmpty() ? QStringLiteral("STANDARD") : style.fontFamily.trimmed();
+            if (fontKey != "STANDARD" && !fontStyleHandles.contains(fontKey)) {
+                fontStyleHandles.insert(fontKey, nextHandle());
+            }
+
+            const QString signature = dimensionStyleSignature(style) + "|" + fontKey + "|" + QString::number(style.dimensionLineColor.rgba());
+            QString styleName = dimStyleBySignature.value(signature);
+            if (styleName.isEmpty()) {
+                styleName = QString("DIM_ST_%1").arg(exportDimStyles.size() + 1);
+                dimStyleBySignature.insert(signature, styleName);
+                exportDimStyles.append({styleName, nextHandle(), fontKey, style});
+            }
+            dimensionStyleNames.insert(dim, styleName);
+        }
+    }
+
     // ================= HEADER SECTION =================
     writeCode(0, "SECTION");
     writeCode(2, "HEADER");
     writeCode(9, "$ACADVER");
-    writeCode(1, "AC1015");
+    writeCode(1, "AC1024");
     writeCode(9, "$HANDSEED");
     // placeholder — обновим потом; пока Ставим большое значение
     writeCode(5, "FFFF");
@@ -538,11 +614,11 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(2, "STYLE");
     writeCode(5, hStyleTable);
     writeCode(100, "AcDbSymbolTable");
-    writeCode(70, 1);
+    writeCode(70, 1 + fontStyleHandles.size());
     {
-        QString h = nextHandle();
+        hStandardTextStyle = nextHandle();
         writeCode(0, "STYLE");
-        writeCode(5, h);
+        writeCode(5, hStandardTextStyle);
         writeCode(100, "AcDbSymbolTableRecord");
         writeCode(100, "AcDbTextStyleTableRecord");
         writeCode(2, "STANDARD");
@@ -553,6 +629,21 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         writeCode(71, 0);
         writeCode(42, 2.5);
         writeCode(3, "txt");
+        writeCode(4, "");
+    }
+    for (auto it = fontStyleHandles.cbegin(); it != fontStyleHandles.cend(); ++it) {
+        writeCode(0, "STYLE");
+        writeCode(5, it.value());
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbTextStyleTableRecord");
+        writeCode(2, it.key());
+        writeCode(70, 0);
+        writeCode(40, 0.0);
+        writeCode(41, 1.0);
+        writeCode(50, 0.0);
+        writeCode(71, 0);
+        writeCode(42, 2.5);
+        writeCode(3, it.key());
         writeCode(4, "");
     }
     writeCode(0, "ENDTAB");
@@ -581,7 +672,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(2, "DIMSTYLE");
     writeCode(5, hDimStyleTable);
     writeCode(100, "AcDbSymbolTable");
-    writeCode(70, 1);
+    writeCode(70, 1 + exportDimStyles.size());
     writeCode(100, "AcDbDimStyleTable");
     {
         QString h = nextHandle();
@@ -591,6 +682,25 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
         writeCode(100, "AcDbDimStyleTableRecord");
         writeCode(2, "STANDARD");
         writeCode(70, 0);
+    }
+    for (const auto& entry : exportDimStyles) {
+        const QString textStyleHandle = entry.fontKey == "STANDARD" ? hStandardTextStyle
+                                                                    : fontStyleHandles.value(entry.fontKey, hStandardTextStyle);
+        writeCode(0, "DIMSTYLE");
+        writeCode(5, entry.handle);
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbDimStyleTableRecord");
+        writeCode(2, entry.name);
+        writeCode(70, 0);
+        writeCode(41, entry.style.arrowSize);
+        writeCode(42, entry.style.extensionLineOffset);
+        writeCode(44, entry.style.extensionLineExtend);
+        writeCode(140, entry.style.textHeight);
+        writeCode(147, entry.style.textGap);
+        writeCode(284, getAutoCadColorIndex(entry.style.dimensionLineColor));
+        writeCode(285, getAutoCadColorIndex(entry.style.extensionLineColor));
+        writeCode(286, getAutoCadColorIndex(entry.style.textColor));
+        writeCode(340, textStyleHandle);
     }
     writeCode(0, "ENDTAB");
 
@@ -602,7 +712,7 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(2, "BLOCK_RECORD");
     writeCode(5, hBlockRecordTable);
     writeCode(100, "AcDbSymbolTable");
-    writeCode(70, 2);
+    writeCode(70, 2 + dimensionPrimitives.size());
 
     writeCode(0, "BLOCK_RECORD");
     writeCode(5, hModelSpaceBlockRecord);
@@ -615,6 +725,15 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(100, "AcDbSymbolTableRecord");
     writeCode(100, "AcDbBlockTableRecord");
     writeCode(2, "*Paper_Space");
+
+    for (const auto* dim : dimensionPrimitives) {
+        const BasePrimitive* prim = dim;
+        writeCode(0, "BLOCK_RECORD");
+        writeCode(5, dimensionBlockRecordHandles.value(prim));
+        writeCode(100, "AcDbSymbolTableRecord");
+        writeCode(100, "AcDbBlockTableRecord");
+        writeCode(2, dimensionBlockNames.value(prim));
+    }
 
     writeCode(0, "ENDTAB");
 
@@ -661,6 +780,26 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
     writeCode(100, "AcDbEntity");
     writeCode(8, "0");
     writeCode(100, "AcDbBlockEnd");
+
+    for (const auto* dim : dimensionPrimitives) {
+        const BasePrimitive* prim = dim;
+        writeCode(0, "BLOCK");
+        writeCode(5, dimensionBlockHandles.value(prim));
+        writeCode(330, dimensionBlockRecordHandles.value(prim));
+        writeCode(100, "AcDbEntity");
+        writeCode(8, "0");
+        writeCode(100, "AcDbBlockBegin");
+        writeCode(2, dimensionBlockNames.value(prim));
+        writeCode(70, 1);
+        writeCode(10, 0.0); writeCode(20, 0.0); writeCode(30, 0.0);
+        writeCode(3, dimensionBlockNames.value(prim));
+        writeCode(1, "");
+        writeCode(0, "ENDBLK");
+        writeCode(5, dimensionBlockEndHandles.value(prim));
+        writeCode(100, "AcDbEntity");
+        writeCode(8, "0");
+        writeCode(100, "AcDbBlockEnd");
+    }
 
     writeCode(0, "ENDSEC");
 
@@ -1133,8 +1272,12 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 const QPointF end = dim->getEndPoint();
                 const QPointF linePos = dim->getDimensionLinePos();
                 const QPointF textAnchor = dim->getTextAnchor();
-                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
-                const bool hasCustomText = !dim->getCustomText().isEmpty();
+                const QString blockName = dimensionBlockNames.value(prim.get());
+                const QString encodedText = encodeDimensionText(dim->getCustomText(), dim->getTextPrefix());
+                const int typeBits = (dim->getMode() == LinearDimensionMode::Aligned ? 1 : 0)
+                    + 32
+                    + (dim->hasCustomTextPosition() ? 128 : 0);
+                const QString dimStyleName = dimensionStyleNames.value(dim, "STANDARD");
 
                 writeCode(0, "DIMENSION");
                 writeCode(5, nextHandle());
@@ -1144,18 +1287,20 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 writeCode(420, getTrueColor24Bit(prim->getColor()));
                 writeCode(370, getDxfLineWeight(prim->getLineType()));
                 writeCode(100, "AcDbDimension");
+                writeCode(280, 0);
                 writeCode(2, blockName);
-                writeCode(10, textAnchor.x());
-                writeCode(20, textAnchor.y());
+                writeCode(10, linePos.x());
+                writeCode(20, linePos.y());
                 writeCode(30, 0.0);
-                writeCode(11, linePos.x());
-                writeCode(21, linePos.y());
+                writeCode(11, textAnchor.x());
+                writeCode(21, textAnchor.y());
                 writeCode(31, 0.0);
-                writeCode(70, dim->getMode() == LinearDimensionMode::Aligned ? 1 : 0);
-                if (hasCustomText) {
-                    writeCode(1, dim->getCustomText());
+                writeCode(70, typeBits);
+                writeCode(71, 5);
+                if (!encodedText.isEmpty()) {
+                    writeCode(1, encodedText);
                 }
-                writeCode(3, "STANDARD");
+                writeCode(3, dimStyleName);
                 writeCode(42, dim->getMeasuredValue());
                 writeCode(100, "AcDbAlignedDimension");
                 writeCode(13, start.x());
@@ -1164,12 +1309,10 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 writeCode(14, end.x());
                 writeCode(24, end.y());
                 writeCode(34, 0.0);
-                writeCode(15, linePos.x());
-                writeCode(25, linePos.y());
-                writeCode(35, 0.0);
                 if (dim->getMode() != LinearDimensionMode::Aligned) {
                     const double angleDeg = dim->getMode() == LinearDimensionMode::Vertical ? 90.0 : 0.0;
                     writeCode(50, angleDeg);
+                    writeCode(100, "AcDbRotatedDimension");
                 }
                 writeXData();
                 writeClarusEntityId();
@@ -1190,9 +1333,12 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 const QPointF radiusPoint = dim->getRadiusPoint();
                 const QPointF linePos = dim->getDimensionLinePos();
                 const QPointF textAnchor = dim->getTextAnchor();
-                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
-                const bool hasCustomText = !dim->getCustomText().isEmpty();
-                const double leaderLength = QLineF(center, linePos).length();
+                const QString blockName = dimensionBlockNames.value(prim.get());
+                const QString encodedText = encodeDimensionText(dim->getCustomText(), QString());
+                const QPointF oppositePoint = center - (radiusPoint - center);
+                const double leaderLength = std::max(0.0, QLineF(radiusPoint, linePos).length());
+                const int typeBits = (dim->isDiameterMode() ? 3 : 4) + 32 + (dim->hasCustomTextPosition() ? 128 : 0);
+                const QString dimStyleName = dimensionStyleNames.value(dim, "STANDARD");
 
                 writeCode(0, "DIMENSION");
                 writeCode(5, nextHandle());
@@ -1202,26 +1348,25 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 writeCode(420, getTrueColor24Bit(prim->getColor()));
                 writeCode(370, getDxfLineWeight(prim->getLineType()));
                 writeCode(100, "AcDbDimension");
+                writeCode(280, 0);
                 writeCode(2, blockName);
-                writeCode(10, textAnchor.x());
-                writeCode(20, textAnchor.y());
+                writeCode(10, dim->isDiameterMode() ? oppositePoint.x() : center.x());
+                writeCode(20, dim->isDiameterMode() ? oppositePoint.y() : center.y());
                 writeCode(30, 0.0);
-                writeCode(11, linePos.x());
-                writeCode(21, linePos.y());
+                writeCode(11, textAnchor.x());
+                writeCode(21, textAnchor.y());
                 writeCode(31, 0.0);
-                writeCode(70, dim->isDiameterMode() ? 3 : 4);
-                if (hasCustomText) {
-                    writeCode(1, dim->getCustomText());
+                writeCode(70, typeBits);
+                writeCode(71, 5);
+                if (!encodedText.isEmpty()) {
+                    writeCode(1, encodedText);
                 }
-                writeCode(3, "STANDARD");
+                writeCode(3, dimStyleName);
                 writeCode(42, dim->getMeasuredValue());
                 writeCode(100, dim->isDiameterMode() ? "AcDbDiametricDimension" : "AcDbRadialDimension");
-                writeCode(15, center.x());
-                writeCode(25, center.y());
+                writeCode(15, radiusPoint.x());
+                writeCode(25, radiusPoint.y());
                 writeCode(35, 0.0);
-                writeCode(16, radiusPoint.x());
-                writeCode(26, radiusPoint.y());
-                writeCode(36, 0.0);
                 writeCode(40, leaderLength);
                 writeXData();
                 writeClarusEntityId();
@@ -1248,8 +1393,10 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 const QPointF end = dim->getEndPoint();
                 const QPointF arcPoint = dim->getArcPoint();
                 const QPointF textAnchor = dim->getTextAnchor();
-                const QString blockName = QString("*D%1").arg(clarusIds.value(prim.get(), 0));
-                const bool hasCustomText = !dim->getCustomText().isEmpty();
+                const QString blockName = dimensionBlockNames.value(prim.get());
+                const QString encodedText = encodeDimensionText(dim->getCustomText(), QString());
+                const int typeBits = 2 + 32 + (dim->hasCustomTextPosition() ? 128 : 0);
+                const QString dimStyleName = dimensionStyleNames.value(dim, "STANDARD");
 
                 writeCode(0, "DIMENSION");
                 writeCode(5, nextHandle());
@@ -1259,28 +1406,30 @@ bool DxfExporter::exportSceneToDxf(const Scene& scene, const QString& filePath) 
                 writeCode(420, getTrueColor24Bit(prim->getColor()));
                 writeCode(370, getDxfLineWeight(prim->getLineType()));
                 writeCode(100, "AcDbDimension");
+                writeCode(280, 0);
                 writeCode(2, blockName);
-                writeCode(10, textAnchor.x());
-                writeCode(20, textAnchor.y());
+                writeCode(10, center.x());
+                writeCode(20, center.y());
                 writeCode(30, 0.0);
-                writeCode(11, arcPoint.x());
-                writeCode(21, arcPoint.y());
+                writeCode(11, textAnchor.x());
+                writeCode(21, textAnchor.y());
                 writeCode(31, 0.0);
-                writeCode(70, 5);
-                if (hasCustomText) {
-                    writeCode(1, dim->getCustomText());
+                writeCode(70, typeBits);
+                writeCode(71, 5);
+                if (!encodedText.isEmpty()) {
+                    writeCode(1, encodedText);
                 }
-                writeCode(3, "STANDARD");
+                writeCode(3, dimStyleName);
                 writeCode(42, dim->getMeasuredValue());
-                writeCode(100, "AcDb3PointAngularDimension");
-                writeCode(13, start.x());
-                writeCode(23, start.y());
+                writeCode(100, "AcDb2LineAngularDimension");
+                writeCode(13, center.x());
+                writeCode(23, center.y());
                 writeCode(33, 0.0);
-                writeCode(14, end.x());
-                writeCode(24, end.y());
+                writeCode(14, start.x());
+                writeCode(24, start.y());
                 writeCode(34, 0.0);
-                writeCode(15, center.x());
-                writeCode(25, center.y());
+                writeCode(15, end.x());
+                writeCode(25, end.y());
                 writeCode(35, 0.0);
                 writeCode(16, arcPoint.x());
                 writeCode(26, arcPoint.y());

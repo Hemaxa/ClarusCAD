@@ -6,6 +6,7 @@
 #include "PointPrimitive.h"
 
 #include <QColor>
+#include <QPointF>
 
 class SegmentPrimitive;
 
@@ -63,4 +64,8 @@ private:
     PointPrimitive m_currentMousePos; //переменная хранения текущей позиции мыши
     QColor m_currentColor = Qt::white; //переменная хранения цвета
     LineType m_currentLineType = LineType::SolidMain; //переменная хранения типа линии
+
+    QPointF resolveSecondPoint(const QPointF& rawWorldPos, Qt::KeyboardModifiers modifiers,
+                               ViewportPanelWidget* viewport) const;
+    QPointF constrainToOrthoAxis(const QPointF& worldPos) const;
 };

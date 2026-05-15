@@ -5,16 +5,62 @@
 
 #include <QMouseEvent>
 #include <QPainter>
+#include <cmath>
 
 //вызывается конструктор базового класса и устанавливается начальное состояние в Idle (покой)
 SegmentCreationTool::SegmentCreationTool(QObject* parent) : BaseCreationTool(parent), m_currentState(State::Idle) {}
+
+QPointF SegmentCreationTool::constrainToOrthoAxis(const QPointF& worldPos) const
+{
+    const QPointF firstPt(m_firstPoint.getX(), m_firstPoint.getY());
+    const QPointF delta = worldPos - firstPt;
+
+    if (std::abs(delta.x()) >= std::abs(delta.y())) {
+        return QPointF(worldPos.x(), firstPt.y());
+    }
+    return QPointF(firstPt.x(), worldPos.y());
+}
+
+QPointF SegmentCreationTool::resolveSecondPoint(const QPointF& rawWorldPos, Qt::KeyboardModifiers modifiers,
+                                                ViewportPanelWidget* viewport) const
+{
+    if (!viewport) {
+        return rawWorldPos;
+    }
+
+    if (!(modifiers & Qt::ShiftModifier) || m_currentState != State::WaitingForSecondPoint) {
+        return viewport->getSnappedPoint(rawWorldPos);
+    }
+
+    const QPointF firstPt(m_firstPoint.getX(), m_firstPoint.getY());
+    const QPointF orthoCandidate = constrainToOrthoAxis(rawWorldPos);
+    const SnapPoint snap = viewport->getSnapPoint(orthoCandidate);
+
+    QPointF result = orthoCandidate;
+    if (snap.type != SnapType::None) {
+        QPointF projectedSnap = snap.position;
+        if (std::abs(orthoCandidate.y() - firstPt.y()) < 1e-9) {
+            if (std::abs(projectedSnap.y() - firstPt.y()) <= (12.0 / viewport->getZoomFactor())) {
+                projectedSnap.setY(firstPt.y());
+                result = projectedSnap;
+            }
+        } else {
+            if (std::abs(projectedSnap.x() - firstPt.x()) <= (12.0 / viewport->getZoomFactor())) {
+                projectedSnap.setX(firstPt.x());
+                result = projectedSnap;
+            }
+        }
+    }
+
+    return result;
+}
 
 void SegmentCreationTool::onMousePress(QMouseEvent* event, Scene* scene, ViewportPanelWidget* viewport)
 {
     //создание нового примитива
     if (event->button() == Qt::LeftButton) {
         //определение координат, в зависимости от активации опции "Привязка к сетке"
-        QPointF snappedPos = viewport->getSnappedPoint(event->position());
+        QPointF snappedPos = resolveSecondPoint(event->position(), event->modifiers(), viewport);
 
         //первый клик
         if (m_currentState == State::Idle) {
@@ -47,7 +93,7 @@ void SegmentCreationTool::onMouseMove(QMouseEvent* event, Scene* scene, Viewport
 {
     //приклеивание к сетке, если включена опция "Привязка к сетке"
     if (m_currentState == State::WaitingForSecondPoint) {
-        QPointF snappedPos = viewport->getSnappedPoint(event->position());
+        QPointF snappedPos = resolveSecondPoint(event->position(), event->modifiers(), viewport);
         m_currentMousePos.setX(snappedPos.x());
         m_currentMousePos.setY(snappedPos.y());
     }
