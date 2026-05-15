@@ -50,6 +50,26 @@ bool angleOnArc(double angle, double start, double span)
     return rel >= (360.0 + span);
 }
 
+double snapPriorityFactor(SnapType type)
+{
+    switch (type) {
+    case SnapType::Endpoint:
+        return 0.35;
+    case SnapType::Midpoint:
+        return 0.30;
+    case SnapType::Center:
+        return 0.35;
+    case SnapType::Quadrant:
+        return 0.40;
+    case SnapType::Nearest:
+        return 1.35;
+    case SnapType::Grid:
+        return 1.10;
+    default:
+        return 1.0;
+    }
+}
+
 QVector<QPointF> buildRectanglePolyline(const RectanglePrimitive* rect)
 {
     QVector<QPointF> points;
@@ -238,7 +258,7 @@ QVector<SnapPoint> SnapManager::findSnapPointsInRadius(const QPointF& mousePos, 
         SnapPoint gridSnap = snapToGrid(mousePos);
         double dist = QLineF(mousePos, gridSnap.position).length();
         if (dist < worldRadius) {
-            gridSnap.distance = dist;
+            gridSnap.distance = dist * snapPriorityFactor(SnapType::Grid);
             result.append(gridSnap);
         }
     }
@@ -306,10 +326,12 @@ void SnapManager::collectSnapPoints(const QPointF& mousePos, BasePrimitive* prim
     
     // Расчет расстояний и фильтрация по толерансу
     for (int i = outPoints.size() - 1; i >= 0; --i) {
-        outPoints[i].distance = QLineF(mousePos, outPoints[i].position).length();
-        if (outPoints[i].distance > tolerance) {
+        const double rawDistance = QLineF(mousePos, outPoints[i].position).length();
+        if (rawDistance > tolerance) {
             outPoints.removeAt(i);
+            continue;
         }
+        outPoints[i].distance = rawDistance * snapPriorityFactor(outPoints[i].type);
     }
 }
 

@@ -122,11 +122,13 @@ void RectangleCreationTool::reset() { m_step = 0; }
 
 void RectangleCreationTool::onPaint(QPainter& painter) {
     if (m_step == 0) return;
+    const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
 
     // Стандартный стиль для служебных линий
     QPen guidePen(Qt::white);
     guidePen.setStyle(Qt::DashLine);
-    guidePen.setWidthF(1.0);
+    guidePen.setWidthF(1.0 / currentScale);
+    guidePen.setCosmetic(true);
     
     QPointF p1Pt(m_p1.getX(), m_p1.getY());
     QPointF currentPt(m_currentPos.getX(), m_currentPos.getY());
@@ -135,7 +137,8 @@ void RectangleCreationTool::onPaint(QPainter& painter) {
     QColor previewColor = m_currentColor;
     previewColor.setAlpha(180);
     QPen rectPen(previewColor);
-    rectPen.setWidthF(1.5);
+    rectPen.setWidthF(1.5 / currentScale);
+    rectPen.setCosmetic(true);
 
     if (m_mode == RectangleCreationMode::TwoPoints) {
         double w = currentPt.x() - p1Pt.x();
@@ -178,7 +181,9 @@ void RectangleCreationTool::onPaint(QPainter& painter) {
     }
     
     // ЖИРНЫЙ МАРКЕР ПЕРВОЙ ТОЧКИ
-    painter.setPen(QPen(Qt::white, 2.0));
+    QPen markerPen(Qt::white, 2.0 / currentScale);
+    markerPen.setCosmetic(true);
+    painter.setPen(markerPen);
     painter.setBrush(m_currentColor);
-    painter.drawEllipse(p1Pt, 6, 6);
+    painter.drawEllipse(p1Pt, 6.0 / currentScale, 6.0 / currentScale);
 }

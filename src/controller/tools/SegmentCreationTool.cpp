@@ -487,6 +487,7 @@ void SegmentCreationTool::onPaint(QPainter& painter)
 {
     //если запущен процесс создания отрезка
     if (m_currentState == State::WaitingForSecondPoint) {
+        const double currentScale = std::max(1e-6, std::hypot(painter.transform().m11(), painter.transform().m12()));
 
         //формируем полупрозрачный цвет для предпросмотра
         QColor previewColor = m_currentColor;
@@ -505,9 +506,11 @@ void SegmentCreationTool::onPaint(QPainter& painter)
             );
         
         // ЖИРНЫЙ МАРКЕР ПЕРВОЙ ТОЧКИ
-        painter.setPen(QPen(Qt::white, 2.0));
+        QPen markerPen(Qt::white, 2.0 / currentScale);
+        markerPen.setCosmetic(true);
+        painter.setPen(markerPen);
         painter.setBrush(m_currentColor);
-        painter.drawEllipse(firstPt, 6, 6);
+        painter.drawEllipse(firstPt, 6.0 / currentScale, 6.0 / currentScale);
     }
 }
 
