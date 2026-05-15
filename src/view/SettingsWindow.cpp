@@ -300,7 +300,7 @@ QWidget* SettingsWindow::createViewportTab()
 
     //настройка шага сетки
     m_gridStepSpinBox = new QSpinBox();
-    m_gridStepSpinBox->setRange(10, 200);
+    m_gridStepSpinBox->setRange(5, 200);
     m_gridStepSpinBox->setSingleStep(5);
     m_gridStepSpinBox->setSuffix(" px");
     m_gridStepSpinBox->setFixedHeight(30);

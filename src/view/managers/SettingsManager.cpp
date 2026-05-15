@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QColor>
 #include <QFontDatabase>
+#include <algorithm>
 
 namespace {
 QString defaultDimensionFontFamily()
@@ -40,7 +41,7 @@ void SettingsManager::loadSettings()
 {
     //шаблон: "ключ настройки", "значение по умолчанию"
     m_currentThemeName = m_settings.value("theme/name", "ClarusCAD").toString();
-    m_gridStep = m_settings.value("grid/step", 50).toInt();
+    m_gridStep = std::max(5, m_settings.value("grid/step", 50).toInt());
     m_zoomStep = m_settings.value("zoom/step", 1.25).toDouble();
     m_angleUnit = static_cast<AngleUnit>(m_settings.value("angle/unit", static_cast<int>(AngleUnit::Degrees)).toInt());
     m_baseLineThickness = m_settings.value("line/base_thickness", 2.0).toDouble();
@@ -202,6 +203,7 @@ void SettingsManager::setThemeName(const QString& themeName)
 
 void SettingsManager::setGridStep(int step)
 {
+    step = std::max(5, step);
     if (m_gridStep != step) {
         m_gridStep = step;
         emit gridStepChanged(m_gridStep);
