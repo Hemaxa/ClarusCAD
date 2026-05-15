@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.21.1)
 
 #определение версии проекта
-project(ClarusCAD VERSION 1.0 LANGUAGES CXX)
+project(ClarusCAD VERSION 1.1 LANGUAGES CXX)
 
 #определение стандарта C++
 set(CMAKE_CXX_STANDARD 17)
